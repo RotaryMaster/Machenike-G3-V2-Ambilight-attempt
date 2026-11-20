@@ -1793,3 +1793,9 @@ names are stored XOR 0x80. The tool has been corrected.
 The high whole-image entropy is now explained by the encrypted XCOD/XRES/tail
 occupying almost all of the image; it must not be used to classify the
 plaintext metadata/header as random data.
+
+
+Added \`tools/analyze-g3v2-fot-crypto-surface.py\` for a focused read-only
+verification of the corrected container model: region hashes/entropy,
+directory-copy equality, KEY bytes, XCOD/XRES section headers, repeated
+16-byte block counts and plaintext strings from metadata/config only.

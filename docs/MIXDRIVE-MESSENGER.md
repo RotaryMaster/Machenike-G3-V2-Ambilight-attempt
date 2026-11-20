@@ -452,9 +452,9 @@ SeqMap.Remove(seq);
 task.SetResult(result);
 ```
 
-The same branch also proves how multi-packet CustomData reads continue. If the current packet is not the last expected packet, managed code updates `IndexMap`, migrates to a fresh managed sequence with `MigrateSeq`, calls `readDeviceCustomData(currentIndex + 1)`, and immediately sends the returned native request with `SendNextPacketOrFail`.
+The same branch proves how multi-packet reads continue, and the exact criterion is now closed by `CheckPacketIndex`. On the first response packet, managed code calls native `receiveDataLength`, computes `packet_count = ceil(total/20)`, stores it in `LengthMap`, and appends the received bytes to `DataMap`. A handler requests `readDeviceCustomData(currentIndex + 1)` only when `currentIndex != LengthMap[seq] - 1`.
 
-If the managed OTA read yields a 20-byte logical CustomData object, its encoded native representation spans 31 bytes and would require two native read requests through the 20-byte outer transport. However, live reads have also produced a complete 10-byte logical response in one 16-byte native frame. The exact condition under which managed code continues with `readDeviceCustomData(index+1)` is therefore still the critical discriminator; the two-read OTA timeline remains conditional until that criterion is recovered.
+Therefore a second CustomData selector is conditional on the value returned by native `receiveDataLength`; it is not implied merely by the writer's ability to encode a 20-byte object. Live 6-byte and 16-byte `0x19` responses must be evaluated through `receiveDataLength` before their managed behavior can be stated.
 
 Fresh/default observed progression:
 

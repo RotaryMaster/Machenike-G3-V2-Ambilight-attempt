@@ -384,3 +384,34 @@ Operation type 29 does not call `receiveDeviceCustomData`. Once its normal respo
 
 One small static gap remains in operation type 28: the previous extraction script stopped at the `ret` belonging only to the invalid-result branch and omitted the valid branch beginning at IL offset `0x153B`. That branch must be dumped before claiming the exact managed copy from native `DeviceDataStruct` into the final byte[] result.
 
+### CustomData managed layer closed; OTA read consumes two native request states
+
+The previously missing valid branch of operation type 28 is now statically proven. After `receiveDeviceCustomData` returns a valid `DeviceDataStruct` (`data != NULL`, `0 < length <= 100`), managed code allocates `new byte[length]`, executes `Marshal.Copy(native.data, result, 0, native.length)`, removes the pending ResultMap/SeqMap entries, and completes the task with that byte array. Therefore the array consumed by the OTA MainViewModel is a direct byte-for-byte copy of the native decoder output.
+
+A second, more important consequence is now proven by the full case-28 branch. If the native encoded response spans more than one 20-byte managed HID transport payload, the dispatcher increments its packet index, migrates the managed sequence, calls `readDeviceCustomData(index + 1)`, and sends that request before completing the read. A 20-byte logical CustomData object produces 31 encoded native bytes (20-byte first frame + 11-byte second frame), so the official managed read necessarily performs two native read requests:
+
+```text
+selector 0 -> first native response chunk
+selector 1 -> second native response chunk
+```
+
+Each `readDeviceCustomData` call executes native helper `0x1800014C0` and one `rand()`. For the observed fresh/default sequence this advances:
+
+```text
+request 0: SEQ=00 RAND=29 selector=00
+request 1: SEQ=81 RAND=23 selector=01
+writer start state: E67C=0, E68C=2
+next rand low byte: BE
+```
+
+The exact second read plaintext request is `BB 06 81 23 01 B9`; its KeyLinker-encoded form is `C2 37 F2 B7 A4 28`.
+
+This supersedes the earlier one-read conditional writer headers. If `E670=7` at OTA writer entry and no other native PRNG consumer intervenes, the corrected write headers are now:
+
+```text
+fragment 0: 3B F4 02 BE
+fragment 1: 3B CB 8B 84
+```
+
+These remain conditional only on the unresolved OTA-time value of E670 and the absence of an unrelated rand() consumer outside the now-closed CustomData read/managed path.
+

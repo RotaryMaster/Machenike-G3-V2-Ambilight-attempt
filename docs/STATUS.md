@@ -195,7 +195,9 @@ This establishes that MixDrive enters update mode by setting bit `0x80` in byte 
 
 Static IL of `GamepadDeviceManager` now clarifies that the argument `10` passed to `GetDeviceCustomDataAsync(10)` is a **timeout in seconds**, not a requested payload length. The read state machine calls `readDeviceCustomData(0)`, then waits through `GetResultAsync(..., timeoutSeconds)`. The write state machine calls `writeDeviceCustomData(data, data.Length)` and waits with a 10-second timeout.
 
-**Highest-priority target:** inspect the native `GamepadInterop` / `KeyLinkerlib.dll` implementations of `readDeviceCustomData`, `receiveDeviceCustomData`, and `writeDeviceCustomData` to map managed buffer index `11` to the exact BB/CustomData on-wire byte.
+Native `KeyLinkerlib.dll` analysis now shows that `readDeviceCustomData` constructs a six-byte `BB 06 ...` read request and returns a pointer+length descriptor after KeyLinker transformation. `receiveDeviceCustomData` is a thin wrapper over helper `0x180001760`, which actually supplies the received buffer. `writeDeviceCustomData` prepends one byte containing `data.Length`, processes `[length][data...]`, fragments it into chunks of at most 15 bytes, adds a four-byte header plus CRC, and applies the same KeyLinker transform.
+
+**Highest-priority target:** reconstruct helper `0x180001760` and its backing receive state to determine the exact array presented to managed code and map `data[11] |= 0x80` to the on-wire CustomData field.
 
 ## Next steps
 

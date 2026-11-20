@@ -141,3 +141,18 @@ Confirmed:
 - real readback works
 
 More lighting-field semantics should be documented here as they are decoded.
+
+
+### Outer HID transport envelope (managed layer)
+
+Direct managed IL establishes the outer transport independent of the KeyLinker inner codec:
+
+```text
+Host -> device:
+80 F9 SEQ 00 LEN PAYLOAD...
+
+Device -> host (generic):
+81 F9 SEQ FLAGS LEN PAYLOAD...
+```
+
+On host TX, `SendDeviceData` creates `LEN+5` bytes, places the native/KeyLinker payload at offset 5, and calls `HidDevice.Write`. On RX, HidLibrary exposes `0x81` separately as `HidReport.ReportId`, so `HidReport.Data` begins at `F9`. The manager then reads sequence from Data[1], flags from Data[2], length from Data[3], and payload from Data[4]. If `FLAGS & 1` is set, it is handled as an ACK and the matching sequence entry in `AckMap` is completed successfully.

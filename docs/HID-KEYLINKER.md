@@ -168,3 +168,16 @@ The 20-byte cap is statically tied to `Math.Min(source_length, 20)`. The two `Ge
 ### Cross-check against captured G3V2 traffic
 
 The statically proven envelope exactly matches the earlier live vectors. Example host packet `80 F9 04 00 07 CB B2 40 70 99 EB 1E` decomposes as report ID `80`, marker `F9`, sequence `04`, flags `00`, length `07`, followed by the seven-byte KeyLinker payload. The observed response beginning `81 F9 04 00 10 ...` likewise decomposes as input report ID `81`, marker `F9`, sequence `04`, flags `00`, length `0x10`, then 16 payload bytes. This confirms that 80/81 belong to the outer HID layer and are not part of the KeyLinker inner transform.
+
+### Managed fragmentation, ACK and retry behavior
+
+The async managed transport is now fully reconstructed.
+
+Native buffers longer than 20 bytes are segmented into 20-byte outer HID payload units. Fragment 0 uses the original managed sequence. Every later fragment gets a fresh nonzero 8-bit sequence, and the manager migrates the pending result/operation bookkeeping to that sequence.
+
+For non-final fragments, the manager creates an `AckMap` completion source, writes the report, and races that ACK against a 5-second delay. A timeout causes retransmission. The retry counter accepts values 0, 1, and 2, so a fragment can be written at most three times before the send operation fails.
+
+The final fragment is written once without the intermediate ACK wait. Overall operation completion still comes from the generic result path.
+
+`CheckTaskTimeoutAsync` independently applies the caller's operation timeout and removes stale entries from all transport maps before signaling timeout. For CustomData reads/writes, the previously established 10-second operation timeout therefore wraps the complete managed transaction, while the 5-second timer is the per-intermediate-fragment ACK retry timer.
+

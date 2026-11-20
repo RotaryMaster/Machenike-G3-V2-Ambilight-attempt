@@ -474,3 +474,18 @@ Gamepad Updater         1.00
 The matching drive index (A=0..Z=25) is stored globally; no match is represented by `0xFF`. The scan repeats every 200 ms.
 
 The signature is exactly 28 characters and decomposes as 8 + 16 + 4 bytes, strongly matching standard SCSI INQUIRY Vendor/Product/Revision widths. Static confirmation inside `deviceUsb_GetInfo` is the next target.
+
+
+### Bootloader identity source confirmed in DeviceUsb
+
+`DeviceUsb.dll!deviceUsb_GetInfo` uses `DeviceIoControl(..., 0x002D1400, ...)` = `IOCTL_STORAGE_QUERY_PROPERTY`, rejects descriptors whose `STORAGE_DEVICE_DESCRIPTOR.BusType` is not `BusTypeUsb (7)`, and reads `VendorIdOffset`, `ProductIdOffset`, and `ProductRevisionOffset`.
+
+This confirms the update-device identity fields:
+
+```text
+Vendor   = "Gamepad "
+Product  = "Updater         "
+Revision = "1.00"
+```
+
+The firmware request path remains separate: `deviceUsb_Request` uses `0x0004D014` = `IOCTL_SCSI_PASS_THROUGH_DIRECT` for F0/F1/F2.

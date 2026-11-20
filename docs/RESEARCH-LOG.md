@@ -1363,3 +1363,32 @@ follow any of the reported CMP clusters as handlers.
 The anomalous edge entropy remains useful evidence: the first 4 KiB are less
 random than the body and 0x59000-0x59FFF drops to ~6.42 bits/byte. Inspect the
 full updater/container surface and edge metadata next.
+
+
+## 2026-11-20 — Reanalysis corrects FOT-container classification
+
+The full updater scan found a valid FOT container starting exactly at the first
+byte sent by F0 (file+0x1712F0). The earlier scout missed this because its
+marker list omitted FOT\\0 and looked for XCOD/XRES in raw ASCII instead of
+their XOR-0x80 representation.
+
+Key structure:
+- FOT header/directory: 0x000000-0x0001FF
+- XCOD: starts 0x000200
+- XRES: starts 0x058600
+- directory copy: 0x059200
+- config start: 0x059400
+- total: 0x05A400
+
+The DATA record itself encodes 0x200 / 0x59000 / 0x59200 / 0x59400, so these
+boundaries are internally self-consistent. The second FOT magic at 0x59200 is
+the directory copy, not another embedded firmware.
+
+The eight-byte KEY payload is 00 00 00 01 EA E3 2E 09, identical to the value
+reported in same-family public ZXD/EPIC FOT work. The INFO area also contains
+the exact G3V2 hardware ID and version 148.
+
+This changes the classification from "entire FOT is opaque transformed data"
+to "plaintext FOT metadata/container wrapping high-entropy encrypted payload
+sections." The previous statistical CMP conclusion still stands for the
+encrypted payload: raw Thumb-looking hits there remain random false positives.

@@ -181,7 +181,122 @@ for fragment_index, off in enumerate(range(0, len(stream), 15)):
     wire = encode(plain)
 ```
 
-The remaining missing part for a byte-for-byte standalone writer is only the exact formula implemented by `0x180001C90` for header bytes 1..3.
+Static disassembly now closes most of the four-byte header builder. The only two small items still requiring direct confirmation are the polarity of the single-bit string stored at `0x18000B214/0x18000B218` and the identity of the no-argument function imported at IAT `0x18000B150`.
+
+
+## Header builder `0x180001C90`
+
+Signature inferred from all callers:
+
+```c
+uint8_t *build_header(uint8_t command, uint8_t fragment_index, uint8_t frame_len);
+```
+
+The function always allocates and returns four bytes.
+
+Final stores prove:
+
+```text
+header[0] = command
+header[1] = packed counter/length byte
+header[2] = packed toggle/fragment/counter byte
+header[3] = low byte returned by IAT function 0x18000B150
+```
+
+### Header byte 1
+
+The routine converts `frame_len` into a 5-character binary string and global `E670` into a 3-character binary string, concatenates them in that order, then evaluates the resulting binary text with the recurrence:
+
+```text
+value = 2 * value + bit
+```
+
+Therefore this byte is exact:
+
+```python
+header1 = ((E670 & 0x07) << 5) | (frame_len & 0x1F)
+```
+
+### Header byte 2
+
+The routine converts `fragment_index` into four binary characters and `E68C` into three binary characters. It prepends one single-character string selected from `0x18000B214` or `0x18000B218` according to `E67C`, concatenates the three parts through helper `0x180001400`, then evaluates the result as binary.
+
+Thus the field layout is confirmed as:
+
+```text
+bit 7    = toggle bit selected by E67C
+bits 6:3 = fragment_index & 0x0F
+bits 2:0 = E68C & 0x07
+```
+
+Equivalent formula, with only the polarity of `toggle_bit(E67C)` still to be read from the two one-character constants:
+
+```python
+header2 = (toggle_bit(E67C) << 7) | ((fragment_index & 0x0F) << 3) | (E68C & 0x07)
+```
+
+### Header byte 3
+
+The function at IAT `0x18000B150` is called with no arguments and its return value is reduced to one byte before being stored as `header[3]`.
+
+The call pattern is consistent with a byte nonce/random source, but the exact imported symbol must be confirmed from the import table before naming it definitively.
+
+### State evolution after every encoded fragment
+
+The write loop updates the three header state globals after each fragment:
+
+```python
+E67C = 1 if E67C == 0 else 0
+E68C = (E68C + 1) % 8
+E670 = (E670 - 1) % 8
+```
+
+The native implementation expresses the last line as:
+
+```text
+if E670 == 0:
+    E670 = 7
+else:
+    E670 -= 1
+```
+
+This means a multi-frame write has fully deterministic state progression once the initial three state values are known.
+
+### Two-frame G3 V2 CustomData write
+
+Let initial state before fragment 0 be:
+
+```text
+A = E670 & 7
+B = E67C
+C = E68C & 7
+```
+
+For the 20-byte G3 V2 logical object, fragment 0 has `frame_len=20` and index 0:
+
+```python
+h0_0 = 0x3B
+h0_1 = (A << 5) | 20
+h0_2 = (toggle_bit(B) << 7) | C
+h0_3 = source_byte_0
+```
+
+Then:
+
+```python
+A1 = (A - 1) & 7
+B1 = 1 if B == 0 else 0
+C1 = (C + 1) & 7
+```
+
+Fragment 1 has `frame_len=11` and index 1:
+
+```python
+h1_0 = 0x3B
+h1_1 = (A1 << 5) | 11
+h1_2 = (toggle_bit(B1) << 7) | 0x08 | C1
+h1_3 = source_byte_1
+```
 
 ## Receive deframer `0x180001760`
 

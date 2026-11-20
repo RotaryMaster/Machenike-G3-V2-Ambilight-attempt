@@ -1681,3 +1681,15 @@ and mode changes.
 
 Do not yet attribute persistence to \`0x37\` alone: the exact write sequence that originally
 committed the state must be isolated before using that command at realtime Ambilight rates.
+
+
+## 2026-11-20 — live unit suffix is external to the known FOT payload
+
+After mapping E8/E9/EA/ED personalities, all live Bluetooth identities share the same
+per-unit lower-24-bit suffix. Earlier exhaustive FOT scanning found that suffix nowhere in
+either v1.48 image.
+
+This is strong evidence that the runtime device-specific Bluetooth identity is sourced
+from persistent per-unit storage outside the generic FOT or is derived from another unique
+hardware value. This model naturally explains why the official generic updater does not
+clone Bluetooth addresses across units.

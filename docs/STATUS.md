@@ -520,3 +520,24 @@ The earlier successful live CustomData path used two `ZXPC_APP` identity pings f
 
 Next step: run the corrected probe **without `--execute` first**. No SCSI F0/F1/F2 is involved.
 
+### Live CustomData length contradiction: write remains blocked
+
+A second corrected dry-run reproduced the known-good outer sequence (drain -> two `ZXPC_APP` pings -> selector 0 at outer seq 3) but the controller returned:
+
+```text
+wire : B4 7B 0E 42 F1 DB
+plain: 19 06 00 58 00 4A
+```
+
+The frame is CRC-valid and declares zero logical payload. The probe aborted before any OTA write.
+
+This conflicts with an earlier successful live A/B read, where selector 0 returned a 16-byte native frame decoding to:
+
+```text
+19 10 00 6B 0A 00 01 00 00 00 00 40 04 00 02 28
+```
+
+and selector 1 returned another 10-byte logical payload. Therefore the repository must not treat a 20-byte logical CustomData object as universally proven from live behavior. The static `MainViewModel` access to `data[11]`, the native receive deframing, and the managed continuation logic still need to be reconciled with the live 10-byte and zero-byte responses before `--execute` is used again.
+
+Immediate policy: no OTA write while the read path does not reproduce a non-empty known-good response.
+

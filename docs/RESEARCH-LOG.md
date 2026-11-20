@@ -517,3 +517,10 @@ The firmware command path is distinct: `deviceUsb_Request` uses `IOCTL_SCSI_PASS
 Static disassembly of `deviceUsb_Request` proved the official updater ABI `(handle, data_in, cdb, cdb_len, buffer, buffer_len)`. F0 passes data_in=0; F1 and F2 pass data_in=1. The function constructs a 0x2C-byte x86 `SCSI_PASS_THROUGH_DIRECT`, sets PathId=0, TargetId=1, Lun=0, SenseInfoLength=0x20, TimeOutValue=5, SenseInfoOffset=0x30, copies the caller CDB, and issues `IOCTL_SCSI_PASS_THROUGH_DIRECT (0x0004D014)` using a 0x50-byte local buffer for both input and output. Failed IOCTLs retry up to 10 attempts with 20 ms sleeps, except error 0x37 which terminates immediately.
 
 The remaining GetInfo CRT ambiguity was also removed: IAT slots 0x10002090 and 0x1000208C are `strcpy_s` and `strcat_s`.
+
+
+## 2026-11-20 — Official updater sends uninitialized bytes in 10-byte vendor CDBs
+
+The updater initializes only six bytes of each local F0/F1/F2 CDB despite passing a length of 10 to `deviceUsb_Request`. F0/F1 bytes 6..9 are uninitialized stack contents. F2 is stronger evidence: its byte range overlaps the stack-cookie slot, so CDB bytes 8..9 are the low two bytes of the function cookie. This confirms an implementation bug in the original updater and argues against byte-for-byte emulation of its stack garbage.
+
+Canonical clean-room plan: zero all 10 CDB bytes and set only opcode byte 0; validate F1/F2 first; never infer that trailing garbage is protocol-significant without device evidence.

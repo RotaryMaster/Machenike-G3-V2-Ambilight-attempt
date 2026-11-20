@@ -1083,3 +1083,66 @@ suitable for high-rate color updates.
 A new static tool, `tools/dump-gamepad-manager-read-paths.py`, maps the
 normal manager getters to their underlying GamepadInterop/KeyLinkerlib calls.
 Its first use should precede another live warm-up attempt.
+
+
+### Managed warm-up getters mapped to native KeyLinker exports
+
+The managed-to-native bridge for the normal hardware warm-up is now closed.
+
+```text
+GetDeviceBeforeKeyChangeListAsync
+  operation 9  -> readDeviceBeforeKeyChangeList(0)
+
+GetDeviceRockerAsync
+  operation 12 -> readRockerData()
+
+GetDeviceTriggerAsync
+  operation 14 -> readTriggerData()
+
+GetDeviceSupportTurboAsync
+  operation 16 -> readDeviceSupportTurboList(0)
+
+GetDeviceCurrentTurboAsync
+  operation 17 -> readDeviceTurboData(0)
+
+GetDeviceMotorAsync
+  operation 19 -> readDeviceMotorData()
+
+GetDeviceLamplightAsync
+  operation 21 -> readDeviceLamplightData(0)
+
+GetDeviceCustomDataAsync
+  operation 28 -> readDeviceCustomData(0)
+```
+
+These operation numbers are internal `SeqMap` / result-dispatch types, not task
+IDs and not native command bytes.
+
+The corresponding receive-side functions are also confirmed:
+
+```text
+receiveDeviceBeforeKeyChangeList
+receiveRockerData
+receiveTriggerData
+receiveDeviceSupportTurboList
+receiveDeviceTurboData
+receiveDeviceMotorData
+receiveDeviceLamplightData
+receiveDeviceCustomData
+```
+
+For list/segmented reads, `HandleGenericDeviceData` advances the logical
+packet index, migrates the managed sequence number and calls the same native
+read builder again with `index + 1`. This is visible for BeforeKeyChange,
+SupportTurbo, CurrentTurbo and CustomData. The outer managed transport
+therefore performs request continuation rather than treating the first native
+read as necessarily complete.
+
+All of these P/Invokes resolve directly to
+`Libs\\Gamepad\\KeyLinkerlib.dll`.
+
+The next static step is native disassembly of those exports, especially
+`readDeviceLamplightData`, `writeDeviceLamplightData` and the warm-up
+reads preceding CustomData. The existing
+`tools/dump-keylinker-warmup-native.py` already targets exactly these read
+builders and should be used before modifying the live warm-up.

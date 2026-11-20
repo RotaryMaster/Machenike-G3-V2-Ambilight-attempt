@@ -26,6 +26,7 @@ before the next high-level loader operation, just as MixDrive does.
 
 from __future__ import annotations
 
+import argparse
 import importlib.util
 import pathlib
 import sys
@@ -200,9 +201,63 @@ def send_read(
     return outer_seq, logical_len, responses
 
 
+def print_cold_baseline_plan():
+    rs = ReadState()
+    rows = [
+        ("1 BeforeKeyChangeList", lambda: generic_list_frame(rs, 0, 3)),
+        ("2 SupportTurbo", lambda: generic_list_frame(rs, 0, 4)),
+        ("3 CurrentTurbo", lambda: indexed_frame(rs, 0xB4, 0)),
+        ("4 Rocker", lambda: fixed_zero_frame(rs, 0xB1)),
+        ("5 CustomData #1", lambda: indexed_frame(rs, 0xBB, 0)),
+        ("6 Trigger", lambda: fixed_zero_frame(rs, 0xB2)),
+        ("7 Motor", lambda: fixed_zero_frame(rs, 0xB3)),
+        ("8 CustomData #2", lambda: indexed_frame(rs, 0xBB, 0)),
+        ("9 Lamplight", lambda: indexed_frame(rs, 0xB7, 0)),
+        ("10 CustomData #3", lambda: indexed_frame(rs, 0xBB, 0)),
+        ("11 CustomData #4/final", lambda: indexed_frame(rs, 0xBB, 0)),
+    ]
+
+    print("=== COLD BASELINE PLAN (NO CONTINUATIONS / NO RETRIES) ===")
+    for label, build in rows:
+        request_no, plain, wire, state, rnd = build()
+        print(
+            f"{request_no:2d}. {label:<26} "
+            f"state={state:02X} rand={rnd:02X} "
+            f"plain=[{base.hx(plain)}] wire=[{base.hx(wire)}]"
+        )
+
+    print()
+    print(
+        "Note: this table is only the cold success-path baseline. "
+        "Any managed continuation consumes another state/rand pair and shifts "
+        "all later rows dynamically."
+    )
+
+
 def main():
+    ap = argparse.ArgumentParser(
+        description="G3 V2 MixDrive warm-up reproduction (read requests only)"
+    )
+    ap.add_argument(
+        "--run-readonly",
+        action="store_true",
+        help=(
+            "send the proven MixDrive read-request warm-up sequence; "
+            "no CustomData write, OTA mutation, or SCSI command exists here"
+        ),
+    )
+    args = ap.parse_args()
+
     if base.encode(base.READ0_PLAIN) != base.READ0_WIRE:
         raise RuntimeError("base codec self-test failed")
+
+    print_cold_baseline_plan()
+
+    if not args.run_readonly:
+        print()
+        print("PLAN ONLY: no HID device was opened and no request was sent.")
+        print("Use --run-readonly only for the bounded read-request experiment.")
+        return
 
     dev, sysfs = base.discover()
     print("=== G3V2 MIXDRIVE WARM-UP — READ ONLY ===")

@@ -538,3 +538,9 @@ The repository was audited after the cold-state and updater-stack findings. An o
 
 The updater documentation was also normalized around a key engineering rule: the original vendor application contains at least one confirmed implementation bug. It declares 10-byte F0/F1/F2 CDBs while leaving trailing bytes uninitialized, including stack-cookie overlap in F2. Those bytes are therefore not treated as protocol semantics. Clean-room implementations should prefer deterministic zero-filled CDBs and validate read-only behavior first.
 
+## 2026-11-20 — Live probe parser correction before OTA write
+
+The first controlled Linux transition attempt aborted safely before any OTA write. The probe sent selector 0 as outer sequence 1 without first reproducing the two successful `ZXPC_APP` identity pings. The controller returned a valid six-byte KeyLinker response which decodes to `19 06 00 24 00 B2`, i.e. command `0x19` with zero logical payload. The probe then rejected it because it had incorrectly hard-coded a 20-byte native selector-0 response.
+
+Earlier successful live evidence is more authoritative for this read path: after two `ZXPC_APP` pings, selector 0 at outer sequence 3 returned a 16-byte encoded response decoding to `19 10 00 6B 0A <10 data bytes> 28`. The probe has therefore been corrected to reproduce the two identity pings first, use outer sequences 3/4 for selectors 0/1, parse response command `0x19` by its declared logical length, and combine two 10-byte selector payloads into the 20-byte logical CustomData object. No OTA bit was written during the failed attempt.
+

@@ -445,3 +445,12 @@ Static IL confirms that `WriteDeviceCustomDataAsync` creates task-completion typ
 `GamepadDeviceManager` exposes the downstream transport methods `SendDeviceData`, `SendNextPacketOrFail`, and `SendDeviceDataAsync`, while `OnReport` is the receive-side entry point. Their bodies are the remaining managed slice needed to reconstruct packetization, HID output-report construction, retry/sequence handling, and the ACK that resolves task 29.
 
 The broad raw-byte scan for `80 F9` / `81 F9` produced hits across many unrelated assemblies and is therefore classified as false-positive-prone/non-evidentiary. Only context-validated IL/dataflow or longer signatures should be used for the final envelope reconstruction.
+
+
+### 2026-11-20 — HID envelope and ACK semantics proven
+
+Static IL of `GamepadDeviceManager.SendDeviceData` proves the exact host write buffer: `80 F9 <seq> 00 <len> <payload>`, followed by a direct call to `HidLibrary.HidDevice.Write(byte[])`. `OnReport` proves the inverse generic receive framing: report ID `81`, marker `F9`, sequence at Data[1], flags at Data[2], payload length at Data[3], and payload starting at Data[4]. A set bit 0 in flags resolves the sequence's `AckMap` entry as success; otherwise the payload is sent through the receive path.
+
+This matches the previously observed live packets and upgrades the `80 F9 / 81 F9` envelope from empirical/inferred to statically proven. The earlier broad two-byte signature scan remains classified as non-evidentiary; the proof comes from managed IL dataflow.
+
+`GetNextSeq` is lock-protected, increments a byte counter, skips zero, and therefore cycles through 1..255.

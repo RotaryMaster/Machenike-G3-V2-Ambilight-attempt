@@ -2055,3 +2055,20 @@ Interpretation:
 - do not infer from this that the FOT E9 field is absent from the physical controller,
   because the gameplay personality may use a different transport, may require a different
   discoverable/pairing state, or may not be exposed by the same BlueZ discovery path.
+
+
+### X+HOME automatic scan did not expose gameplay Bluetooth identity
+
+User test in X+HOME mode:
+- active BlueZ scan showed only \`98:B6:ED:68:58:43 G3V2 APP\`
+- no \`Xbox Wireless Controller\`
+- no additional \`98:B6:E*\` device
+
+External G3V2 manuals corroborate the user-verified mode map:
+- B+HOME = 2.4 GHz dongle mode
+- X+HOME = PC/mobile Bluetooth mode, expected pairing name \`Xbox Wireless Controller\`
+- pairing state requires holding X+HOME from power-off until the indicator flashes rapidly
+
+Because BlueZ automatic discovery may interleave LE and BR/EDR, the next read-only test is
+to force BR/EDR-only and LE-only discovery separately. Do not interpret the absent gameplay
+device from the auto scan as evidence that the FOT E9 identity is not used by the controller.

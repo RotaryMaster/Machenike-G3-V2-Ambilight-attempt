@@ -1,6 +1,6 @@
 # Machenike G3 V2 — Ambilight / Reverse Engineering
 
-Private research repository for documenting and reproducing the Machenike G3 V2 controller protocol on Linux, with emphasis on lighting control, the MixDrive/KeyLinker HID protocol, OTA capability, and the official firmware update path.
+Public research repository for documenting and reproducing the Machenike G3 V2 controller protocol on Linux, with emphasis on lighting control, the MixDrive/KeyLinker HID protocol, OTA capability, and the official firmware update path.
 
 > Current status: the normal HID protocol and firmware identity are substantially understood, the official firmware API identity is confirmed, the Windows updater's SCSI transport and embedded FOT layout have been reconstructed statically, and MixDrive's exact pre-updater message has been identified as `EnterUpdateModeMessage`. The remaining critical gap is the receiver-side HID command that transitions the controller into its firmware-update USB personality.
 
@@ -60,3 +60,27 @@ structure, while the 20-byte CustomData/0xBB object supplies light
 mode/brightness and several rocker/motor settings. The current read-only
 warm-up work is now focused on mapping each managed manager getter to its
 native KeyLinkerlib call before another live CustomData probe.
+
+
+## License
+
+The original source code and documentation in this repository are licensed under the
+[Apache License 2.0](LICENSE).
+
+This repository documents interoperability and reverse-engineering research involving
+third-party hardware, software, protocols, trademarks, and firmware formats. The Apache
+License applies only to the original material published in this repository; it does not
+grant rights to third-party firmware, binaries, trademarks, or other proprietary material.
+
+No official Machenike/MixDrive firmware, executable, DLL, APK, or other vendor binary is
+redistributed by this repository. Analysis tools expect researchers to provide any
+third-party artifacts themselves where legally permitted.
+
+## Safety and project status
+
+Some tools in this repository inspect or exercise low-level HID/USB protocol behavior.
+Firmware-write and update-mode work is intentionally gated behind documented validation
+steps. Read the current status and safety notes before running any live hardware test.
+
+This is an independent community research project and is not affiliated with or endorsed by
+Machenike, MixDrive, KeyLinker, or their respective owners.

@@ -809,3 +809,41 @@ Added `tools/dump-gamepad-manager-read-paths.py` to bridge the normal manager
 getters to their underlying `GamepadInterop`/KeyLinkerlib calls. This is the
 next step toward replacing the approximate Linux warm-up with the exact
 read-only MixDrive initialization sequence.
+
+
+## 2026-11-20 — Managed getters mapped to KeyLinkerlib exports
+
+The new `dump-gamepad-manager-read-paths.py` output closed the
+GamepadDeviceManager-to-KeyLinkerlib bridge for the normal initialization
+sequence.
+
+Confirmed operation/result types and native builders:
+
+```text
+9  -> readDeviceBeforeKeyChangeList(0)
+12 -> readRockerData()
+14 -> readTriggerData()
+16 -> readDeviceSupportTurboList(0)
+17 -> readDeviceTurboData(0)
+19 -> readDeviceMotorData()
+21 -> readDeviceLamplightData(0)
+28 -> readDeviceCustomData(0)
+```
+
+Receive-side dispatch is symmetric and resolves to the matching
+`receive*` exports. The operation values are internal managed dispatcher
+types and must not be confused with native KeyLinker commands.
+
+`HandleGenericDeviceData` also confirms continuation semantics for segmented
+reads: after a partial response, it increments the packet index, migrates the
+managed sequence and invokes the same native read function with the next
+index. This behavior is explicitly visible for BeforeKeyChange,
+SupportTurbo, CurrentTurbo and CustomData.
+
+All confirmed functions are direct P/Invokes into
+`Libs\\Gamepad\\KeyLinkerlib.dll`.
+
+Next target: run `tools/dump-keylinker-warmup-native.py` against the extracted
+KeyLinker DLL to recover the actual native command builders. Priority is
+LampLight read/write for Ambilight and the exact warm-up reads needed before
+CustomData.

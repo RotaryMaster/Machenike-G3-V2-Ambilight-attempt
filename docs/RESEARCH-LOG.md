@@ -1753,3 +1753,21 @@ separate CustomData LightModeIndex already identified at data[1].
 Since CustomData was zero-length throughout the Linux test, that mode value was never
 captured and therefore could not be restored. Do not claim the original visual state was
 fully restored.
+
+
+## 2026-11-20 — FN+Right changes breathing without changing B7
+
+The controller was solid cyan/light-blue after the isolated 0x37 restore. The user then
+used FN+Right until the original-looking blue breathing effect returned.
+
+A read-only capture immediately afterward still returned exactly:
+\`B7 = 00 FF FF 00 00 FF\`
+
+with packed effect bytes 0x0000, while the LEDs were visibly breathing. BB remained zero
+length.
+
+This conclusively shows that the visible solid/breathing mode is separate from the six-byte
+B7 payload. FN+Right changes an internal effect/mode state while leaving B7 unchanged.
+
+Next target: capture USB/HID traffic during FN+Right to determine whether the mode transition
+is controller-local or accompanied by any host-visible command/report.

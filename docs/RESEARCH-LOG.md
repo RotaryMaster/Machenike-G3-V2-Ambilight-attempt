@@ -440,9 +440,9 @@ This closes the managed-index/native-frame ambiguity. The remaining byte-identic
 
 ### Managed dispatch path narrowed to four methods
 
-Static IL confirms that `WriteDeviceCustomDataAsync` creates task-completion type `29`, invokes native `writeDeviceCustomData(data, data.Length)`, and forwards the returned encoded buffer to `GetResultAsync` with a 10-second timeout. The read state machine uses task type `28`.
+Static IL confirms that `WriteDeviceCustomDataAsync` creates operation/result type `29`, invokes native `writeDeviceCustomData(data, data.Length)`, and forwards the returned encoded buffer to `GetResultAsync` with a 10-second timeout. The read state machine uses operation/result type `28`.
 
-`GamepadDeviceManager` exposes the downstream transport methods `SendDeviceData`, `SendNextPacketOrFail`, and `SendDeviceDataAsync`, while `OnReport` is the receive-side entry point. Their bodies are the remaining managed slice needed to reconstruct packetization, HID output-report construction, retry/sequence handling, and the ACK that resolves task 29.
+`GamepadDeviceManager` exposes the downstream transport methods `SendDeviceData`, `SendNextPacketOrFail`, and `SendDeviceDataAsync`, while `OnReport` is the receive-side entry point. Their bodies are the remaining managed slice needed to reconstruct packetization, HID output-report construction, retry/sequence handling, and the ACK that resolves operation/result type 29.
 
 The broad raw-byte scan for `80 F9` / `81 F9` produced hits across many unrelated assemblies and is therefore classified as false-positive-prone/non-evidentiary. Only context-validated IL/dataflow or longer signatures should be used for the final envelope reconstruction.
 
@@ -454,3 +454,6 @@ Static IL of `GamepadDeviceManager.SendDeviceData` proves the exact host write b
 This matches the previously observed live packets and upgrades the `80 F9 / 81 F9` envelope from empirical/inferred to statically proven. The earlier broad two-byte signature scan remains classified as non-evidentiary; the proof comes from managed IL dataflow.
 
 `GetNextSeq` is lock-protected, increments a byte counter, skips zero, and therefore cycles through 1..255.
+
+
+Correction: values 28/29 are not task IDs. `CreateTaskCompletionSource` stores the supplied value in `SeqMap[seq]`; they are internal operation/result type values associated with a sequence. The actual object-return completion source is stored in `ResultMap`, while write acknowledgements are tracked separately in `AckMap`.

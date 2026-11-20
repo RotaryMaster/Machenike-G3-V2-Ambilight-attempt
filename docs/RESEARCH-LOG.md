@@ -1585,3 +1585,16 @@ this unit. The two FOT suffixes B0:25:BE and CE:4B:03 do not occur in the live i
 
 The next read-only experiment is to map Y+HOME and A+HOME in the same way and see whether
 their gameplay personalities preserve the same suffix under other family prefixes.
+
+
+## 2026-11-20 — Y+HOME did not connect to Bazzite
+
+Post-capture inspection found no connection event in btmon and no connected BlueZ device.
+Only \`98:B6:ED:68:58:43 G3V2 APP\` remained visible.
+
+So the user's observation that Y+HOME "connected" was not a connection to this Bazzite
+adapter. Most likely it reattached to another already-paired host. The Y+HOME gameplay
+identity is still unknown.
+
+Next safe test: temporarily make the previously paired host unavailable, then repeat
+Y+HOME discovery with btmon; do not erase pairing data from the controller.

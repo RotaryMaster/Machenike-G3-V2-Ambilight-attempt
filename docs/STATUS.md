@@ -1710,3 +1710,25 @@ be exposed by the latest-version route even if historical files still exist.
 Added tools/probe-firmware-history-api.py, a deliberately small GET-only probe
 for likely history/id route shapes using product id 8 and firmware id 11.
 It performs no device access and is not a brute-force scanner.
+
+
+### Scope correction — historical firmware is not required for the current goal
+
+The current G3V2 reports firmware 1.48, and the updater downloaded from the
+official MixDrive API is byte-identical (same SHA256) to the v1.48 updater
+already under analysis.
+
+Therefore historical firmware discovery is NOT a prerequisite for the current
+reverse-engineering path. Older versions may be useful later for differential
+analysis, but they are now explicitly deprioritized.
+
+Important distinction:
+- we have the official v1.48 updater EXE;
+- it contains the known embedded FOT payload used by the updater;
+- this is sufficient for static analysis of the current firmware/update path;
+- it is not yet proven to be a byte-for-byte dump of the controller's entire
+  currently installed flash, because bootloader/config/calibration/NVM regions
+  may be outside the update payload and the FOT may be a container/encoded image.
+
+Current priority returns to static analysis of the v1.48 embedded FOT and the
+0x37 LampLight handler/persistence behavior.

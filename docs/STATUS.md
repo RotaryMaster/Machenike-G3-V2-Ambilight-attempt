@@ -1411,3 +1411,40 @@ this hardware revision.
 
 The per-unit serial/production code visible on the label is intentionally not
 recorded in the repository.
+
+
+### Updater readback path closed
+
+The G3V2 v1.48 updater's actual `deviceUsb_Request` call pattern is now
+statically closed from the exact executable.
+
+Recovered six-argument ABI at the host call sites:
+
+`deviceUsb_Request(handle, data_in, cdb_ptr, cdb_len, data_ptr, data_len)`
+
+Exact firmware-update calls:
+- `0x402644`: F1, `data_in=1`, 20 bytes;
+- `0x402872`: F0, `data_in=0`, variable final chunk but capped at 512 bytes;
+- `0x402897`: F2, `data_in=1`, 20 bytes;
+- `0x4028DE`: F2, `data_in=1`, 20 bytes.
+
+The F0 call sits in the 512-byte firmware loop over the embedded FOT payload.
+F1 is the initial 20-byte identity/hardware-information read and F2 is used as
+20-byte status polling around/after writes.
+
+Therefore the official host updater contains **no bulk or addressable DATA_IN
+request that can back up controller firmware**. This closes the updater itself
+as a software dump path. It does not prove the bootloader firmware has no
+undocumented vendor opcode; probing unknown SCSI commands remains blocked
+without stronger recovery evidence.
+
+The normal KeyLinker surface was also inventoried. Its exposed gamepad reads
+are configuration/status records (feature, battery, key maps, macro data,
+rocker, trigger, motor, LampLight, CustomData, etc.). No exported or managed
+firmware/flash/ROM/memory read primitive and no suspicious large-transfer
+builder was found. This closes the **exposed MixDrive/KeyLinker API** as a
+firmware-backup path, while leaving undocumented native commands as an
+unproven possibility.
+
+Added `tools/dump-g3v2-updater-request-table.py` to verify the exact updater
+hash and print the four firmware-request call sites without device I/O.

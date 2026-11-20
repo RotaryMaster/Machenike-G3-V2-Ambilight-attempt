@@ -1082,3 +1082,34 @@ This makes the `2BBT5-G3V2` FCC filing an exact-hardware reference for this
 unit rather than a same-family inference. Any unique per-unit production or
 serial code visible in the photograph is deliberately excluded from project
 documentation.
+
+
+## 2026-11-20 — G3V2 updater request directions closed
+
+The focused static run against the exact official v1.48 updater resolves the
+argument pattern of the dynamically loaded `deviceUsb_Request` function as:
+
+`(handle, data_in, cdb_ptr, cdb_len, data_ptr, data_len)`
+
+The firmware-update path contains:
+- F1 / DATA_IN / 20 bytes at 0x402644;
+- F0 / DATA_OUT / <=512 bytes at 0x402872;
+- F2 / DATA_IN / 20 bytes at 0x402897;
+- F2 / DATA_IN / 20 bytes at 0x4028DE.
+
+The F0 site is in the loop that copies 0x200-byte chunks from the embedded FOT
+before sending them. The F2 sites poll one-byte status inside a fixed 20-byte
+response buffer. No bulk or addressable DATA_IN call appears in the official
+updater firmware-transfer path.
+
+Conclusion: the official updater itself offers no firmware backup/readback
+route. This matches the behavior independently documented for another
+ZhiXu/KeyLinker Downloader-family updater, but the G3V2 conclusion is based on
+our own binary, not that prior art.
+
+The concurrent KeyLinker inventory also found no exposed
+firmware/flash/ROM/memory read API in normal mode. Existing exports are
+configuration/status readers only.
+
+Created `tools/dump-g3v2-updater-request-table.py` for a concise,
+hash-guarded static proof of the exact request table.

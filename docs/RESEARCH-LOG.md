@@ -475,3 +475,8 @@ A full `.data`/xref audit corrected the previous conditional assumption that the
 Because the two native CustomData reads advance only `E67C/E68C`, the cold OTA writer begins with `E670=0, E67C=0, E68C=2`. The resulting default-observed headers are `3B 14 02 BE` and, after zero wraps to seven, `3B EB 8B 84`.
 
 This supersedes `3B F4 02 BE / 3B CB 8B 84` as the cold-sequence candidate. That older pair remains possible only after prior write-style traffic has advanced process-global `E670`.
+
+
+### 2026-11-20 — E670 proven as write-frame phase
+
+A complete write-xref audit showed that every confirmed `E670` update is the same wrap/decrement operation performed after native write-frame generation. `writeDeviceCustomData` (`0x3B`) is one such writer; two other multipart writers use commands `0x36` and `0x37`. This establishes `E670 = (-W) mod 8` from cold state and explains why a warm MixDrive session can enter OTA with a different first-header high field than a freshly loaded DLL.

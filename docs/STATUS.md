@@ -1237,17 +1237,22 @@ for lamp n:
   byte 2+6n = G & 0xFF
   byte 3+6n = B & 0xFF
 
-  packed = ((breathSpeed & 0x7FFF) << 1) | (breathSwitch & 1)
+  byte 4+6n = packed_byte_0
+  byte 5+6n = packed_byte_1
 
-  byte 4+6n = packed & 0xFF
-  byte 5+6n = (packed >> 8) & 0xFF
+  # packed_byte_0/1 are produced from a 16-character binary string
+  # built from breathSpeed (15 bits) and breathSwitch (1 bit).
+  # Exact bit order is pending IAT resolution for the CRT string helpers
+  # at 0x18000B130 / 0x18000B138 / 0x18000B140.
   byte 6+6n = brightness & 0xFF
 ```
 
 The apparently complex ASCII `'0'/'1'` conversion in the optimized native
-code is just a roundabout implementation of that 16-bit packing. The receive
-path performs the inverse operation and expands each six-byte record back to
-six `int32` fields.
+code implements a 16-bit packing of one switch bit plus fifteen speed bits.
+The receive path performs the inverse operation and expands each six-byte
+record back to six `int32` fields. The exact position of the switch bit is
+not yet marked confirmed because the writer concatenation order depends on
+identifying three CRT IAT entries.
 
 For one lamp the logical stream is therefore only seven bytes:
 

@@ -702,8 +702,7 @@ CustomData          (op 28)
 CustomData          (op 28)
 ```
 
-All eleven are read paths. No `WriteDeviceCustomDataAsync` occurs in the
-initializer/load path. The next static target is to inspect the native
+All eleven baseline operations are read paths. No `WriteDeviceCustomDataAsync` occurs in the initializer/load path. Retries and multi-packet continuation can increase the actual native request count beyond eleven. The next static target is to inspect the native
 KeyLinkerlib implementations of these request builders and determine which
 ones share the same state/rand generator as `readDeviceCustomData`.
 

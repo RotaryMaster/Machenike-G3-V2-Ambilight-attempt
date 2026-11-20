@@ -96,3 +96,78 @@ The next step is entirely receiver-side:
 6. only after static reconstruction, consider passive/live enumeration of the resulting USB personality.
 
 No controller access is required for these steps.
+
+
+## Receiver now confirmed
+
+The generated messenger registration metadata points to:
+
+```text
+Machenik.ViewModels.MainViewModel
+```
+
+which explicitly implements:
+
+```text
+CommunityToolkit.Mvvm.Messaging.IRecipient<Machenik.Messages.EnterUpdateModeMessage>
+```
+
+The concrete async receive state machine that reads `EnterUpdateModeMessage.Device` is:
+
+```text
+<Receive>d__21::MoveNext
+RID   = 2291
+token = 0x060008F3
+```
+
+Important calls in that state machine:
+
+```text
+IL+0x001F  EnterUpdateModeMessage::get_Device
+IL+0x002B  DeviceModel::get_HidDevice
+IL+0x0037  HidDevice::get_DevicePath
+
+IL+0x0053  DeviceManagerCache
+IL+0x0059  ContainsKey
+IL+0x0067  get_Item
+
+IL+0x007A  EnterUpdateModeMessage::get_Device
+IL+0x0086  DeviceModel::get_HidDevice
+IL+0x008B  GamepadDeviceManager::.ctor
+IL+0x00A1  DeviceManagerCache.Add
+
+IL+0x00AE  GamepadDeviceManager::GetDeviceCustomDataAsync
+...
+IL+0x0122  GamepadDeviceManager::WriteDeviceCustomDataAsync
+```
+
+Therefore the official pre-updater path is now narrowed to:
+
+```text
+Send<EnterUpdateModeMessage>
+        ↓
+MainViewModel.Receive
+        ↓
+GamepadDeviceManager.GetDeviceCustomDataAsync
+        ↓
+modify CustomData
+        ↓
+GamepadDeviceManager.WriteDeviceCustomDataAsync
+        ↓
+external updater launch
+```
+
+This is a major correction to the earlier expectation that the transition might be a separate special HID command. The current evidence instead strongly indicates that MixDrive uses the already-known normal **CustomData** channel to request OTA/update mode.
+
+The exact mutation is still unresolved because the current token-oriented dump does not show the non-call IL instructions between the two async operations.
+
+## Current exact target
+
+Decode `<Receive>d__21::MoveNext` instruction-by-instruction around the first await completion and the later `WriteDeviceCustomDataAsync` call, resolving:
+
+- the returned type of `GetDeviceCustomDataAsync`;
+- any `stfld`, `stelem`, property setter, enum constant or literal applied to that object;
+- the exact argument passed to `WriteDeviceCustomDataAsync`;
+- whether one byte/bit is toggled or a whole CustomData object is rebuilt.
+
+Once that mutation is known it can be mapped to the 10-byte CustomData payload already validated against the G3 V2.

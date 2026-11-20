@@ -985,3 +985,31 @@ ResetLightAsync, ApplyCurrentConfigAsync and ChangeGamepadConfigAsync, while
 ChangeLightAsync itself only updates the view model. That pattern is
 compatible with a settings write and should not be assumed safe for high-rate
 streaming until persistence is proven.
+
+
+## 2026-11-20 — 0x3B is not a LampLight commit
+
+A focused audit of the managed lighting persistence paths resolves the
+host-side ordering question.
+
+`WriteDeviceLamplightAsync` creates operation/result type 22 and directly
+invokes native `writeDeviceLamplightData` / command 0x37. CustomData write
+remains operation type 29 / command 0x3B.
+
+`SaveLightAsync` first performs `GetDeviceCustomDataAsync(10)`, updates
+CustomData byte 0 with UI light brightness and byte 1 with LightModeIndex,
+then calls `WriteDeviceCustomDataAsync`. The applicable LampLight branch is
+built and written only afterwards. `ResetLightAsync` has the same broad
+ordering: CustomData write first, LampLight write later.
+
+Conversely, other apply/config-change flows contain the reverse order:
+LampLight 0x37 first, then CustomData read/update and 0x3B.
+
+This rules out the working hypothesis that 0x3B is a mandatory commit/finalize
+step for a preceding 0x37. 0x3B and 0x37 carry two different lighting-related
+state layers whose ordering varies by caller. No additional managed
+gamepad-lighting commit call was found after 0x37.
+
+The remaining unresolved question is firmware-side persistence of 0x37
+itself. Static host code cannot distinguish an immediate NVM write from a
+volatile apply followed by firmware-internal retention.

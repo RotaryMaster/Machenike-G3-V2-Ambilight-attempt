@@ -2491,3 +2491,55 @@ Revised persistence conclusion:
 The original breathing mode should be restored through the normal MixDrive save path (or
 after its CustomData mode value is safely recovered), rather than by guessing a 20-byte
 CustomData write.
+
+
+### FN+Right proves visual effect state is independent of the 6-byte B7 LampLight payload
+
+After the isolated 0x37 test had left the controller visually in a solid cyan/light-blue
+state with B7 payload:
+
+\`00 FF FF 00 00 FF\`
+
+the user restored the original-looking blue breathing effect directly on the controller
+with FN+Right, without using MixDrive/KeyLinker.
+
+A subsequent **read-only** Linux capture returned the exact same B7 payload:
+
+\`00 FF FF 00 00 FF\`
+
+Decoded:
+- R=0
+- G=255
+- B=255
+- packed=0x0000
+- breathSwitch=0
+- breathSpeed=0
+- lamp brightness=255
+
+At the same time the controller was visibly breathing.
+
+Every BB CustomData read in the same session still returned logical length 0.
+
+This is direct empirical proof that the current visible breathing-vs-solid distinction is
+**not encoded by the six-byte B7 LampLight payload**. The exact same B7 bytes can correspond
+to at least two different visual states:
+- solid cyan/light-blue
+- blue/cyan breathing
+
+Therefore the prior semantic labels \`breathSwitch\` / \`breathSpeed\` describe how the
+native DLL serializes those struct fields, but they are not sufficient to identify the
+controller's currently active visual effect in this G3V2 state.
+
+Current strongest model:
+- B7/0x37 = persistent base color / lamp parameters;
+- active lighting effect/mode = separate firmware state;
+- that state may correspond to the known CustomData LightModeIndex concept, but BB returning
+  zero means it is not currently observable through this USB BB read path/session;
+- FN+Right can mutate the effect state internally without altering B7.
+
+Do NOT infer that the effect state is absent from CustomData storage globally; only that the
+current BB read path does not expose a populated CustomData object.
+
+Next high-value experiment: capture host/controller HID/USB traffic while pressing FN+Right.
+If no host->device command occurs, the effect transition is entirely controller-local and
+should be investigated as firmware-internal/NVM state rather than a host-side command.

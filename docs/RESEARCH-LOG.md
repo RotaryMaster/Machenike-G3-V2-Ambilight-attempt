@@ -1882,3 +1882,39 @@ It belongs to the fragmented key-change writer and is not a lighting path.
 No live 0x1B/0x1C command was sent. The static result does not connect test-mode mode values
 to FN+Right's 13 lighting effects, so these commands remain excluded from live lighting
 experiments unless a new independent static clue links them to LED control.
+
+
+## 2026-11-20 — 0x37 timing data recovered; BLE family comparison sharpened
+
+A separate controlled timing run performed four isolated 0x37 LampLight writes while
+alternating a marker colour and the original value. No 0x3B, OTA or SCSI command was sent.
+
+Measured:
+- B7 baseline median about 4–5 ms;
+- 0x37 ACK times: 3.84, 9.94, 7.95, 9.97 ms (median 8.95 ms);
+- B7 immediately after writes: 4.01, 30.00, 6.00, 4.01 ms;
+- final B7 matched the original state.
+
+This adds evidence that 0x37 does more controller-side work than a simple B7 query in many
+samples, but timing alone cannot identify whether/when NVM is programmed. The single 30 ms
+readback is retained as an outlier, not treated as proof of a flash commit. No endurance
+lifetime calculation is considered established without MCU/NVM data and firmware behavior.
+
+Current x20ctl main was also inspected as external family evidence. Its X20 Pro path:
+- uses the same d7f010e0/e1/e2 KeyLinker BLE GATT service;
+- writes encoded KeyLinker frames directly to e1 and decodes e2 notifications, with no USB
+  80 F9 outer envelope;
+- verifies identity with read opcode 0x91 before model-specific operations;
+- reads a 24-byte lighting record via B7 in two pieces;
+- writes that record through 0x37 in two chunks;
+- contains a persistent BLE session for software-generated lighting effects including
+  screen ambient sampling.
+
+This does not establish a safe realtime 0x37 path on G3 V2. X20 Pro's 24-byte lighting
+record differs materially from the six-byte G3 V2 LampLight object already observed over
+USB, and x20ctl's current changelog itself still calls for final physical verification of
+the newest packaged simultaneous dongle+BLE behavior.
+
+The useful conclusion is narrower: direct KeyLinker-over-GATT is now independently
+corroborated by another implementation, and the G3 V2 BLE read-only probe is justified as
+the next safe transport experiment. A G3 V2 lighting write over BLE remains deferred.

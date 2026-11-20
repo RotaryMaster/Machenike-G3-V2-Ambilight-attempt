@@ -156,19 +156,46 @@ IL+0x02F1  Process::WaitForExit
 
 `CheckFirmwareUpdateMessage` is therefore **not** the pre-updater transition message.
 
-**Highest-priority target:** locate the receiver(s) registered for `EnterUpdateModeMessage` and follow that handler to the exact HID bootloader/OTA command.
+The receiver side is now also identified.
+
+`Machenik.ViewModels.MainViewModel` implements:
+
+```text
+IRecipient<Machenik.Messages.EnterUpdateModeMessage>
+```
+
+The corresponding async receive state machine is `<Receive>d__21::MoveNext` (RID 2291 / token `0x060008F3`).
+
+Its confirmed flow is:
+
+```text
+message.Device
+  -> DeviceModel.get_HidDevice()
+  -> HidDevice.get_DevicePath()
+  -> DeviceManagerCache lookup
+  -> reuse or construct GamepadDeviceManager(HidDevice)
+  -> GetDeviceCustomDataAsync()
+  -> [mutate returned custom data: exact field/bytes not yet decoded]
+  -> WriteDeviceCustomDataAsync()
+```
+
+This is the strongest evidence yet that MixDrive enters update mode by changing the controller's normal CustomData and writing it back through the normal HID/KeyLinker path.
+
+**Highest-priority target:** decode the IL between the completion of `GetDeviceCustomDataAsync()` and the call to `WriteDeviceCustomDataAsync()`, identify the exact changed field/value, and map that change to the 10-byte CustomData packet already understood on Linux.
 
 ## Next steps
 
-1. Locate every `Register<EnterUpdateModeMessage>` / `IRecipient<EnterUpdateModeMessage>` receiver.
-2. Recover the receiver method and follow its calls into the gamepad manager/native KeyLinker layer.
-3. Reconstruct the exact normal-HID OTA/bootloader packet without sending it.
-4. Determine the update-mode USB identity and interface class from code or passive observation.
-5. Implement a Linux read-only probe for the update personality.
-6. Issue only `F1` and `F2` in the first live SCSI test.
-7. Compare returned hardware ID/version with the embedded updater metadata.
-8. Document recovery/rollback possibilities before any `F0` write.
-9. Only after the above, implement a Linux updater with explicit write safeguards.
+1. Decode the full `<Receive>d__21::MoveNext` IL, especially IL roughly `0x0103..0x0122`.
+2. Resolve all field/property tokens touched after `GetDeviceCustomDataAsync()`.
+3. Identify the exact object/value passed to `WriteDeviceCustomDataAsync()`.
+4. Map that mutation onto the known 10-byte CustomData representation and KeyLinker write packet.
+5. Reconstruct the exact normal-HID OTA/bootloader packet without sending it.
+6. Determine the update-mode USB identity and interface class from code or passive observation.
+7. Implement a Linux read-only probe for the update personality.
+8. Issue only `F1` and `F2` in the first live SCSI test.
+9. Compare returned hardware ID/version with the embedded updater metadata.
+10. Document recovery/rollback possibilities before any `F0` write.
+11. Only after the above, implement a Linux updater with explicit write safeguards.
 
 ## Conditions before a write test
 

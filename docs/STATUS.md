@@ -2032,3 +2032,26 @@ still unproven.
 
 Next safe discriminator: scan each gameplay Bluetooth mode separately and record the
 advertised address/name in addition to the always-visible \`G3V2 APP\` peripheral.
+
+
+### Mode-map correction and X+HOME discovery result
+
+User-verified correction:
+- B + HOME is the dongle mode.
+- In dongle mode the controller enumerates as an Xbox 360 Controller.
+
+This overrides the earlier external-manual interpretation that had been treated too
+confidently.
+
+Read-only Bluetooth discovery while the controller was started with X + HOME found only:
+- \`98:B6:ED:68:58:43 G3V2 APP\`
+
+No second \`98:B6:E*\` gameplay identity was visible in that scan, and neither known FOT
+E9 address appeared.
+
+Interpretation:
+- the always-visible \`G3V2 APP\` configuration peripheral remains independently confirmed;
+- the X+HOME gameplay personality was not discoverable in this scan;
+- do not infer from this that the FOT E9 field is absent from the physical controller,
+  because the gameplay personality may use a different transport, may require a different
+  discoverable/pairing state, or may not be exposed by the same BlueZ discovery path.

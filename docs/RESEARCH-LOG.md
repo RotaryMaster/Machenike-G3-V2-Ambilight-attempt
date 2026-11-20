@@ -1347,3 +1347,19 @@ Do not equate the embedded update payload with a complete raw flash dump yet:
 bootloader, per-device configuration/calibration, or other NVM regions may be
 outside the OTA image. Resume FOT/container analysis and trace firmware-side
 handling of LampLight command 0x37.
+
+
+## 2026-11-20 — FOT Thumb hits match random expectation
+
+The exact v1.48 FOT produced 201 aligned halfword patterns that superficially
+match Thumb \`CMP Rn,#imm8\` for the nine known command constants. Under a
+uniform-random model the expected count is 203.0625, so the observation is
+statistically indistinguishable from random data.
+
+This strengthens the classification of the 0x1712F0/0x5A400 transfer payload
+as encrypted/compressed/transformed rather than plaintext MCU code. Do not
+follow any of the reported CMP clusters as handlers.
+
+The anomalous edge entropy remains useful evidence: the first 4 KiB are less
+random than the body and 0x59000-0x59FFF drops to ~6.42 bits/byte. Inspect the
+full updater/container surface and edge metadata next.

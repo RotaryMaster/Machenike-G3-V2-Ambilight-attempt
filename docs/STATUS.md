@@ -2183,3 +2183,27 @@ The Y+HOME gameplay Bluetooth address/name remains unmapped. To capture it non-d
 prevent the previously paired host from accepting the connection (e.g. temporarily disable
 Bluetooth on that host) and repeat the same real discovery/btmon capture while forcing
 Y+HOME into pairing mode. No controller pairing records need to be erased.
+
+
+### Correction: Y+HOME test ended connected to Bazzite through the 2.4 GHz dongle path
+
+User clarified that at the end of the Y+HOME test the controller did connect to the same
+Bazzite machine, but it appeared as an Xbox 360 Controller.
+
+This resolves the apparent contradiction with the btmon/BlueZ evidence:
+- btmon on hci0 showed no Bluetooth connection event;
+- BlueZ showed no connected gameplay device;
+- the controller nevertheless became usable on the same PC as Xbox 360 Controller.
+
+The consistent explanation is that the final connection occurred through the separate
+2.4 GHz USB dongle path, which does not traverse the Bazzite Bluetooth HCI adapter and is
+therefore invisible to btmon/bluetoothctl.
+
+This supersedes the previous inference that the controller likely reconnected to another
+host.
+
+Implication for further Y+HOME Bluetooth identity mapping:
+- the USB dongle must be temporarily unplugged/disabled during the scan, otherwise an
+  automatic 2.4 GHz reconnection can terminate or obscure the intended Bluetooth pairing
+  state.
+- no controller pairing data needs to be erased.

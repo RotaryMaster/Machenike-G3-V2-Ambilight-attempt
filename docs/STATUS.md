@@ -1638,3 +1638,35 @@ The remaining missing piece is the exact HTTP route and parameter names behind
 \`IFirmwareUpdateApiService.GetLatestVersionAsync\`. Added
 \`tools/dump-firmware-api-contract.py\` to recover those from the
 \`Machenik.HttpApi*.dll\` metadata without network or device access.
+
+
+### Exact firmware catalog route recovered
+
+Static metadata/IL inspection of \`Machenik.HttpApi.dll\` closed the exact
+firmware lookup contract used by MixDrive.
+
+Service method:
+
+\`IFirmwareUpdateApiService.GetLatestVersionAsync(productType, brand, productName)\`
+
+Implementation route and query keys:
+
+\`GET /firmware/by-product-info\`
+
+with:
+- \`brand\`
+- \`product_name\`
+- \`product_type\`
+
+For the known G3V2/MACHENIKE mapping, the safe catalog request is therefore:
+
+\`https://mixdriver.thunderobot.com/api/firmware/by-product-info?brand=MACHENIKE&product_name=G3V2&product_type=2\`
+
+The same assembly shows the client updater route separately as
+\`/software/latest\`.
+
+Added \`tools/get-g3v2-firmware.py\`, a network-only client that reproduces
+the firmware catalog stage and optionally downloads the returned updater.
+It never opens HID/USB, sends EnterUpdateMode, modifies CustomData or launches
+the downloaded executable. Default mode is catalog-only; \`--download\` must be
+passed explicitly.

@@ -2000,3 +2000,35 @@ a confirmed mapping.
 Added \`tools/inspect-g3v2-bluetooth-identities.py\` to scan FOT header/config regions for
 all \`98:B6:E*\` six-byte sequences and compare them against the observed live address,
 suffix and reversed forms without any device I/O.
+
+
+### G3V2_APP identified as a separate configuration BLE personality
+
+The physical G3V2 advertised live as:
+- \`98:B6:ED:68:58:43 G3V2 APP\`
+
+The observed live MAC/suffix does not occur anywhere in either known FOT, including
+header/config, reversed forms, or under E9/EC/ED prefixes.
+
+External G3V2 manual evidence clarifies this: the KeyLinker instructions state that
+\`G3V2_APP\` is discoverable when the controller is started in any mode and that this
+configuration function does not require the controller to be paired to the phone as the
+gamepad Bluetooth device. This strongly supports a separate app/configuration BLE
+personality.
+
+The same manual documents distinct gameplay Bluetooth personalities:
+- X + HOME: PC/mobile Bluetooth, shown as Xbox Wireless Controller;
+- Y + HOME: Switch Bluetooth, shown as Pro Controller;
+- A + HOME: Android/DInput Bluetooth, shown as MACHENIKE G3 V2.
+
+Therefore the live ED \`G3V2 APP\` address must not be compared directly against the FOT
+E9 field as if they were the same interface.
+
+FOT family evidence remains notable: G3V2 and a public same-family ZXD2055 image both show,
+at the same offsets, a concrete \`98:B6:E9:xx:xx:xx\` value plus
+\`98:B6:E9:00:00:00\` and \`98:B6:E9:FF:FF:FF\`. This is consistent with a
+standard-gamepad identity/range/template structure, but the precise field semantics are
+still unproven.
+
+Next safe discriminator: scan each gameplay Bluetooth mode separately and record the
+advertised address/name in addition to the always-visible \`G3V2 APP\` peripheral.

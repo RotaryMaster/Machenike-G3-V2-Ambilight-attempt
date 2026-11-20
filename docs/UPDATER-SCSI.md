@@ -388,7 +388,7 @@ The function builds an x86 `SCSI_PASS_THROUGH_DIRECT` beginning at its local buf
 
 ```text
 +0x00 Length             = 0x002C
-+0x02 ScsiStatus         = 0 (initially)
++0x02 ScsiStatus         = output field; no explicit initialization observed
 +0x03 PathId             = 0
 +0x04 TargetId           = 1
 +0x05 Lun                = 0

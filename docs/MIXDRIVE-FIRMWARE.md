@@ -161,24 +161,40 @@ System.Diagnostics.Process::Start
 
 The assembly also contains many generic `MethodSpec` instances of `Send` and `Register`.
 
-### Important interpretation
+### Pre-updater message now confirmed
 
-This evidence proves:
-- the firmware updater view model is present;
-- CommunityToolkit messenger registration/sending is used in the same application;
-- the async/lambda state machines around `UpdateFirmwareAsync` exist;
-- a firmware-check message type exists;
-- the earlier scan that reported no relevant methods was a tooling false negative.
-
-It does **not** yet prove that `CheckFirmwareUpdateMessage` is the gamepad pre-updater transition message.
-
-The current parser emitted warnings such as:
+Raw ECMA-335 MethodSpec decoding and direct state-machine inspection identified the exact gamepad pre-launch message:
 
 ```text
-invalid compressed int: leading byte ...
+Machenik.Messages.EnterUpdateModeMessage
 ```
 
-and returned zero IL contexts despite correctly reading metadata. The next step is therefore to resolve raw ECMA-335 signatures and method bodies using a parser-independent path.
+Inside `<<UpdateFirmwareAsync>b__0>d::MoveNext`, MixDrive:
+
+1. checks `DeviceType == 2`;
+2. obtains the firmware-update item's `Device`;
+3. constructs `EnterUpdateModeMessage`;
+4. assigns the device through `set_Device`;
+5. calls `Send<EnterUpdateModeMessage>`;
+6. immediately constructs `ProcessStartInfo`;
+7. starts the downloaded updater;
+8. waits for it to exit.
+
+The relevant MethodSpec is:
+
+```text
+0x2B00031E
+IMessengerExtensions::Send<Machenik.Messages.EnterUpdateModeMessage>
+```
+
+Matching registration MethodSpecs are:
+
+```text
+0x2B00001E  Register<EnterUpdateModeMessage>
+0x2B000022  Register<EnterUpdateModeMessage, !!0>
+```
+
+This also proves that `CheckFirmwareUpdateMessage` is a different workflow message, not the OTA transition message.
 
 ## Why the pre-launch messenger is important
 
@@ -187,10 +203,9 @@ The official v1.48 updater opens a storage/SCSI-style device through `DeviceUsb.
 Therefore the pre-launch gamepad message remains the strongest lead for the official OTA transition path.
 
 Next RE target:
-- identify the exact `Send<T>` generic type;
-- recover its payload/value;
-- find every corresponding `Register<T>`/receiver;
-- follow the receiver to the gamepad manager;
+- locate the receiver(s) for `EnterUpdateModeMessage`;
+- identify the handler method;
+- follow the handler to the gamepad manager/native transport;
 - determine the exact HID packet sent before updater launch;
 - recover expected disconnect/re-enumeration behavior.
 

@@ -1126,3 +1126,20 @@ records corroborate that part in unrelated gamepads.
 This is not evidence that G3V2 uses the same chip. It only changes physical
 dump priority: inspect the exact G3V2 internal photos for the main QFN marking
 and debug/test pads before expecting a clip-readable external flash.
+
+
+## 2026-11-20 — Exact request-table verifier returned four and only four calls
+
+The dedicated `dump-g3v2-updater-request-table.py` run matched the expected
+official updater SHA-256 and located the four known indirect calls through
+`0x005F9864`:
+
+- 0x402644 F1 DATA_IN 20 B;
+- 0x402872 F0 DATA_OUT <=512 B;
+- 0x402897 F2 DATA_IN 20 B;
+- 0x4028DE F2 DATA_IN 20 B.
+
+The inventory count was exactly 4 and reported no extra request-pointer call
+sites. This closes the host-side updater request table and confirms that no
+bulk/addressable DATA_IN firmware-read command is present in the official
+v1.48 updater.

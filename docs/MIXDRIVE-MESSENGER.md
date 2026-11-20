@@ -4,152 +4,95 @@
 
 The official G3 V2 updater itself only speaks to the controller after it has entered a Windows storage/SCSI update personality.
 
-The normal HID -> update-mode transition is therefore expected to occur in MixDrive immediately before the updater process is launched.
+The normal HID -> update-mode transition is performed by MixDrive before the updater process starts.
 
-This document tracks the managed-code path used to find that transition.
+## Confirmed sender path
 
-## Known update flow
+Raw ECMA-335 MethodSpec decoding and direct inspection of `<<UpdateFirmwareAsync>b__0>d::MoveNext` closed the pre-launch message type.
 
-Static analysis already established that `FirmwareUpdateViewModel.UpdateFirmwareAsync`:
-
-1. confirms the update;
-2. downloads the updater EXE;
-3. performs a gamepad-specific action for `DeviceType == 2`;
-4. launches the EXE;
-5. waits for it to exit.
-
-The gamepad-specific pre-launch action is the current primary target.
-
-## Global metadata scan
-
-A global scan across the extracted MixDrive application found:
+For a firmware-update item whose device has `DeviceType == 2`:
 
 ```text
-PE files found:       146
-managed assemblies:   59
+IL+0x0282  FirmwareUpdateModel::get_Device
+IL+0x028E  DeviceModel::get_DeviceType
+IL+0x029E  ObservableRecipient::get_Messenger
+IL+0x02A3  EnterUpdateModeMessage::.ctor
+IL+0x02AF  FirmwareUpdateModel::get_Device
+IL+0x02B4  EnterUpdateModeMessage::set_Device
+IL+0x02B9  IMessengerExtensions::Send<EnterUpdateModeMessage>
+IL+0x02BF  ProcessStartInfo::.ctor
+IL+0x02CB  ProcessStartInfo::set_FileName
+IL+0x02D2  ProcessStartInfo::set_UseShellExecute
+IL+0x02D8  Process::.ctor
+IL+0x02E2  Process::set_StartInfo
+IL+0x02E9  Process::Start
+IL+0x02F1  Process::WaitForExit
 ```
 
-Relevant assemblies include:
-- `Machenik.exe`
-- `Machenik.Shared.dll`
-- `Machenik.Core.dll`
-- `Machenik.HttpApi.dll`
-- `CommunityToolkit.Mvvm.dll`
-
-## Machenik.exe evidence
-
-### Firmware methods
-
-Confirmed MethodDefs include:
+The concrete message is therefore:
 
 ```text
-Machenik.ViewModels.MainViewModel::OnFirmwareUpdate
-Machenik.ViewModels.MainViewModel::CheckFirmwareUpdateAsync
-Machenik.ViewModels.Settings.SettingViewModel::CheckFirmwareUpdateAsync
-
-Machenik.ViewModels.Notices.FirmwareUpdateViewModel::.ctor
-Machenik.ViewModels.Notices.FirmwareUpdateViewModel::OnDialogOpened
-Machenik.ViewModels.Notices.FirmwareUpdateViewModel::UpdateFirmwareAsync
-
-<>c__DisplayClass5_0::<UpdateFirmwareAsync>b__0
-<>c__DisplayClass5_0::<UpdateFirmwareAsync>b__1
-<UpdateFirmwareAsync>d__5::MoveNext
-<<UpdateFirmwareAsync>b__0>d::MoveNext
+Machenik.Messages.EnterUpdateModeMessage
 ```
 
-### Message type present
+and its payload is the exact `DeviceModel` associated with the firmware-update item, assigned through:
 
 ```text
-Machenik.Messages.CheckFirmwareUpdateMessage
+EnterUpdateModeMessage::set_Device
 ```
 
-Current evidence only proves this type exists and participates somewhere in the application messaging model. It must not yet be equated with the bootloader-entry message.
+This happens immediately before the external updater is launched.
 
-### CommunityToolkit messaging references
+## Generic metadata evidence
 
-`Machenik.exe` references:
+The relevant MethodSpec is:
 
 ```text
-CommunityToolkit.Mvvm.Messaging.WeakReferenceMessenger::get_Default
-CommunityToolkit.Mvvm.Messaging.IMessengerExtensions::Register
-CommunityToolkit.Mvvm.Messaging.IMessengerExtensions::RegisterAll
-CommunityToolkit.Mvvm.Messaging.IMessengerExtensions::Send
+token 0x2B00031E
+CommunityToolkit.Mvvm.Messaging.IMessengerExtensions::Send<
+    Machenik.Messages.EnterUpdateModeMessage
+>
 ```
 
-The assembly contains many generic `MethodSpec` instances for both `Send` and `Register`.
-
-### Process-launch references
-
-The same assembly references:
+Matching registration MethodSpecs also exist:
 
 ```text
-System.Diagnostics.ProcessStartInfo::.ctor
-System.Diagnostics.ProcessStartInfo::set_FileName
-System.Diagnostics.ProcessStartInfo::set_Arguments
-System.Diagnostics.ProcessStartInfo::set_UseShellExecute
-System.Diagnostics.ProcessStartInfo::set_Verb
-System.Diagnostics.Process::Start
+0x2B00001E  Register<EnterUpdateModeMessage>
+0x2B000022  Register<EnterUpdateModeMessage, !!0>
 ```
 
-This matches the previously reconstructed updater-launch path.
+This gives a deterministic path for locating the recipient.
 
-## Important tooling correction
+## Correction of earlier hypothesis
 
-An earlier script reported zero relevant messenger/update hits in `Machenik.exe`.
+`Machenik.Messages.CheckFirmwareUpdateMessage` is a separate message type.
 
-That result was incorrect.
-
-The corrected metadata scan found all of the expected firmware-update methods and messenger references.
-
-Therefore:
-
-> The earlier zero-hit result is a tooling false negative and is superseded.
-
-A later attempt to parse every IL body with `dncil` emitted warnings such as:
+It has its own Send/Register MethodSpecs:
 
 ```text
-invalid compressed int: leading byte: 0xee
-invalid compressed int: leading byte: 0xf8
-invalid compressed int: leading byte: 0xec
-invalid compressed int: leading byte: 0xf1
-invalid compressed int: leading byte: 0xe4
+Send<CheckFirmwareUpdateMessage>      = 0x2B00007F
+Register<CheckFirmwareUpdateMessage>  = 0x2B00001F / 0x2B000023
 ```
 
-Metadata enumeration remained valid, but no useful IL contexts were emitted by that pass.
+It is **not** the gamepad pre-updater transition message.
 
-## Current question
+The pre-updater transition message is definitively `EnterUpdateModeMessage`.
 
-The exact pre-launch call still needs to be reduced to:
+## Tooling note
 
-```text
-Send<TMessage>(payload)
-```
+The original high-level `dncil` body pass produced compressed-integer errors and falsely returned no useful contexts.
 
-where we must recover:
-- `TMessage`
-- constructor or payload value
-- sender method/state-machine location
+Raw metadata and direct method-body token scanning were successful and are now the preferred path for this part of the investigation.
 
-Then we can resolve:
+## Current target
 
-```text
-Register<TMessage>(receiver)
-```
+The next step is entirely receiver-side:
 
-and follow the receiver to the HID transport.
+1. locate every call to MethodSpec `0x2B00001E` and `0x2B000022`;
+2. inspect `InterfaceImpl` / `IRecipient<EnterUpdateModeMessage>` metadata;
+3. identify the recipient class and its `Receive`/handler method;
+4. follow the handler's calls into the gamepad device manager;
+5. reconstruct the exact HID packet used to enter OTA/update mode;
+6. only after static reconstruction, consider passive/live enumeration of the resulting USB personality.
 
-## Next static strategy
-
-Do not depend on the failing `dncil` high-level decoder.
-
-Use the raw ECMA-335 metadata instead:
-
-1. parse each relevant `MethodSpec` signature blob;
-2. resolve the generic argument of every `IMessengerExtensions::Send` MethodSpec;
-3. do the same for `Register`;
-4. map matching message types;
-5. inspect only the small number of state-machine method bodies associated with `UpdateFirmwareAsync`;
-6. decode those IL bodies directly from RVA using a minimal opcode parser or an independent .NET disassembler;
-7. find the `Send<T>` immediately before `Process::Start`.
-
-This path should identify the message without touching the controller.
+No controller access is required for these steps.

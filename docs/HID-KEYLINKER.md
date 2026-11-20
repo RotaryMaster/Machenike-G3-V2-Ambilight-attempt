@@ -159,3 +159,8 @@ On host TX, `SendDeviceData` computes `LEN = min(native_length, 20)`, creates `L
 
 
 The 20-byte cap is statically tied to `Math.Min(source_length, 20)`. The two `GetPacketCount` overloads compute ceiling division by 20, confirming that longer native results are handled as 20-byte transport units rather than one oversized HID payload.
+
+
+### Cross-check against captured G3V2 traffic
+
+The statically proven envelope exactly matches the earlier live vectors. Example host packet `80 F9 04 00 07 CB B2 40 70 99 EB 1E` decomposes as report ID `80`, marker `F9`, sequence `04`, flags `00`, length `07`, followed by the seven-byte KeyLinker payload. The observed response beginning `81 F9 04 00 10 ...` likewise decomposes as input report ID `81`, marker `F9`, sequence `04`, flags `00`, length `0x10`, then 16 payload bytes. This confirms that 80/81 belong to the outer HID layer and are not part of the KeyLinker inner transform.

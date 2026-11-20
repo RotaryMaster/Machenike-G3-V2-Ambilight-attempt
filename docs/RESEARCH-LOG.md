@@ -706,3 +706,21 @@ All eleven baseline operations are read paths. No `WriteDeviceCustomDataAsync` o
 KeyLinkerlib implementations of these request builders and determine which
 ones share the same state/rand generator as `readDeviceCustomData`.
 
+## 2026-11-20 — Warm-up operations 3-11 share KeyLinker state/rand/encoder
+
+Native disassembly confirms that `readDeviceTurboData`, `readRockerData`,
+`readTriggerData`, `readDeviceMotorData`, `readDeviceLamplightData`, and
+`readDeviceCustomData` all directly call the same state helper
+(`0x1800014C0`), the same CRT `rand()` IAT slot (`0x18000B150`), and the
+same KeyLinker encoder (`0x180001080`).
+
+Thus the initializer baseline from operation 3 through operation 11 is
+definitively stateful. Before its final CustomData read, the official app has
+already executed at least eight prior requests that advance the same
+state/rand stream.
+
+The only unresolved baseline reads are operations 1 and 2, whose wrappers call
+generic helper `0x180001BE0` with selectors 3 and 4. That helper must be
+disassembled before deciding whether the exact offset is eight or ten earlier
+stateful requests.
+

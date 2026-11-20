@@ -391,3 +391,29 @@ Consequence for the OTA path: `data[11] |= 0x80` modifies a logical CustomData b
 The managed `WriteDeviceCustomDataAsync` state machine creates task-completion slot/type `29`, invokes native `writeDeviceCustomData(data, data.Length)`, then passes the returned encoded buffer into `GetResultAsync(..., timeout=10)`. The same manager contains the transport methods `SendDeviceData`, `SendNextPacketOrFail`, and `SendDeviceDataAsync`; these are now the exact next bodies to decode, together with `OnReport`, to close the HID envelope and ACK path. The corresponding read path uses task-completion slot/type `28`.
 
 A raw binary search for the two-byte sequences `80 F9` / `81 F9` is explicitly considered non-evidence because the pattern appears accidentally throughout unrelated assemblies. Future envelope reconstruction must come from IL/dataflow or a longer, context-validated signature.
+
+
+### HID envelope closed from managed IL
+
+The managed transport is now statically proven. `GamepadDeviceManager.SendDeviceData` constructs a byte array of `payload_length + 5` and writes:
+
+```text
+[0] = 0x80                 # HID output report ID
+[1] = 0xF9                 # protocol marker
+[2] = seq                  # managed sequence number
+[3] = 0x00                 # flags/reserved on host TX
+[4] = payload_length
+[5..] = native payload
+```
+
+It then calls `HidLibrary.HidDevice.Write(byte[])` directly. This closes the previously inferred `80 F9` envelope with direct managed IL evidence.
+
+The receive callback `OnReport` requires `HidReport.ReportId == 0x81` and `report.Data[0] == 0xF9`. In the generic receive path it uses `Data[1]` as the sequence, tests bit 0 of `Data[2]`, uses `Data[3]` as payload length, and extracts `Data[4:4+length]`. Therefore the generic incoming wire form is:
+
+```text
+81 F9 <seq> <flags> <len> <payload...>
+```
+
+If `flags & 1 != 0`, the callback resolves the matching entry in `AckMap` with success; otherwise the payload is passed into the normal receive/deframe path. This establishes the ACK path for writes, including CustomData task type 29.
+
+`GetNextSeq` increments an 8-bit counter under a lock and skips zero, so valid managed sequence values are 1..255 with wraparound back to 1.

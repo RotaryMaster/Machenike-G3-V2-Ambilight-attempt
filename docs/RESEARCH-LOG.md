@@ -1644,3 +1644,17 @@ Since A/B share the exact same encrypted firmware payload and only the E9 suffix
 0x101 differ (mirrored in the directory copy), treat them as the same firmware payload
 with different identity metadata. Byte 0x101 may depend on that personalization, but its
 algorithm/meaning remains unknown.
+
+
+## 2026-11-20 — generic updater constrains interpretation of the FOT E9 field
+
+Y+HOME proves the live Pro Controller personality uses the E9 prefix, linking the FOT
+0x112 field to the correct identity namespace.
+
+But the official updater FOT is generic and carries one fixed E9-form value. If flashing
+that value directly became the runtime BD_ADDR, every updated unit would collide. Therefore
+the field cannot yet be called the final live MAC.
+
+Most plausible possibilities are separate per-device NVM, bootloader/runtime patching or
+derivation, or provisioning/reference metadata. The A/B FOT delta still shows this is an
+identity/personalization-related header field, but its exact lifecycle is unresolved.

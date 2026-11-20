@@ -197,7 +197,7 @@ Static IL of `GamepadDeviceManager` now clarifies that the argument `10` passed 
 
 Native `KeyLinkerlib.dll` analysis now shows that `readDeviceCustomData` constructs a six-byte `BB 06 ...` read request and returns a pointer+length descriptor after KeyLinker transformation. `receiveDeviceCustomData` is a thin wrapper over helper `0x180001760`, which actually supplies the received buffer. `writeDeviceCustomData` prepends one byte containing `data.Length`, processes `[length][data...]`, fragments it into chunks of at most 15 bytes, adds a four-byte header plus CRC, and applies the same KeyLinker transform.
 
-**Highest-priority target:** reconstruct helper `0x180001760` and its backing receive state to determine the exact array presented to managed code and map `data[11] |= 0x80` to the on-wire CustomData field.
+**Resolved:** `0x180001760`, the 20-byte logical CustomData mapping, and the four-byte write-header builder have all been reconstructed. The remaining transport question is the effective state carried by `E670/E67C/E68C` at the OTA write.
 
 ## Next steps
 
@@ -252,4 +252,4 @@ Evidence:
 
 After every write fragment the state evolves as `E670=(E670-1) mod 8`, `E68C=(E68C+1) mod 8`, and `E67C` toggles.
 
-**Current highest-priority target:** recover the runtime initialization/synchronization of `E670/E67C/E68C` and the CRT PRNG seed/state. This is the last barrier to reproducing MixDrive's exact write bytes offline; it does not require sending any HID command.
+**Current highest-priority target:** recover the effective `E670/E67C/E68C` state used at the CustomData write and determine whether those sequence fields must be synchronized or are only self-contained transport metadata. `KeyLinkerlib.dll` does not import `srand`; its `rand()` byte is embedded in the frame and decoded from the frame itself, so PRNG synchronization is not required by the codec. Exact MixDrive byte-for-byte reproduction may still depend on the host process's CRT state.

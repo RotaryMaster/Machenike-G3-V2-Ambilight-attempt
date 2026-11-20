@@ -466,7 +466,7 @@ encoded selector 1 request: C2 37 F2 B7 A4 28
 
 After those requests, the native sequence state entering `writeDeviceCustomData` is `E67C=0, E68C=2`; the next default CRT rand low byte is `BE`.
 
-Therefore, conditional on `E670=7` at writer entry, the corrected two 0x3B frame headers are `3B F4 02 BE` and `3B CB 8B 84`. The older one-read candidates `3B F4 81 23` / `3B CB 0A BE` are superseded.
+At this point the exact `E670` writer-entry value still needed confirmation. The older one-read candidates `3B F4 81 23` / `3B CB 0A BE` are superseded.
 
 
 
@@ -516,11 +516,67 @@ CRC(BB 06 81 23 00)    = C0
 
 and is the same loop used by `writeDeviceCustomData` before passing the complete plaintext frame through KeyLinker encoder `0x180001080`.
 
-Because the official G3 V2 20-byte read uses two native read requests before the write, the already-corrected writer-entry state is `E67C=0, E68C=2` for the fresh/default observed sequence. Therefore, conditional on `E670=7`, the first two 0x3B headers are structurally confirmed as:
+Because the official G3 V2 20-byte read uses two native read requests before the write, the writer-entry state is `E67C=0, E68C=2` for the fresh/default observed sequence. A later PE-state audit established that `E670` is not file-initialized to 7; see the cold-state correction below.
+
+
+### Cold native state: E670 starts at zero
+
+A complete PE section/state audit corrects the earlier conditional `E670=7` assumption.
+
+The file-backed `.data` section contains only `0x200` bytes beginning at VA `0x18000E000`, while the protocol globals are at:
 
 ```text
-3B F4 02 BE
-3B CB 8B 84
+E670 = 0x18000E670
+E678 = 0x18000E678
+E67C = 0x18000E67C
+E684 = 0x18000E684
+E68C = 0x18000E68C
 ```
 
-The only remaining qualification on those exact four-byte values is the writer-entry `E670` value and the assumption that no additional CRT `rand()` consumer occurs in the already-traced path.
+These addresses have no initialized bytes in the file-backed image data. They are zero-initialized runtime storage/padding in the loaded image. The complete xref scan also found no immediate initialization that writes `7` into `E670`; all confirmed writes to `E670` are the normal post-frame decrement operation:
+
+```text
+if E670 == 0:
+    E670 = 8
+E670 -= 1
+```
+
+Therefore, for a cold KeyLinker DLL state with no earlier write-style frame generation:
+
+```text
+E670 = 0
+E67C = 0
+E68C = 0
+```
+
+The two native CustomData read requests advance only `E67C/E68C`, so immediately before the OTA write:
+
+```text
+E670 = 0
+E67C = 0
+E68C = 2
+next rand low byte = BE
+```
+
+The first 20-byte 0x3B plaintext frame therefore has the cold header:
+
+```text
+3B 14 02 BE
+```
+
+After that frame, the writer updates state to `E670=7, E67C=1, E68C=3`. The second 11-byte frame therefore begins:
+
+```text
+3B EB 8B 84
+```
+
+Thus the correct **cold/default** two-frame header pair is:
+
+```text
+3B 14 02 BE
+3B EB 8B 84
+```
+
+The previously recorded pair `3B F4 02 BE / 3B CB 8B 84` is not the cold sequence. It would require writer entry with `E670=7`, which can only occur after prior write-style traffic has advanced the process-global state.
+
+This distinction matters for byte-identical reproduction: `E670` is process-global runtime phase, not a fixed OTA constant. The header formulas remain exact, while the concrete byte pair in a live MixDrive session depends on prior native write traffic. The two CustomData read requests themselves do not change `E670`.

@@ -595,3 +595,9 @@ Static xrefs in `Machenik.exe` show that `<UpdateFirmwareAsync>b__0>d::MoveNext`
 
 The current live test setup is USB-only; the 2.4 GHz dongle is disconnected. Therefore the next static target is to resolve the exact enum meaning of `DeviceType == 2` before attributing the failed/empty CustomData read to USB versus receiver mode.
 
+## 2026-11-20 — DeviceType value 2 is Gamepad, not USB/2.4G
+
+Static metadata in `Machenik.Shared.dll` resolves `DeviceType` as `Unknown=0, Keyboard=1, Gamepad=2, Mouse=3`. Thus the `DeviceType == 2` check before `EnterUpdateModeMessage` merely gates the gamepad firmware path and provides no evidence that OTA requires wired USB or the 2.4 GHz receiver.
+
+The live test context is still USB-only with the dongle disconnected. Any transport-specific restriction must be represented elsewhere in the model/manager/update code.
+

@@ -1217,3 +1217,42 @@ artifact unless a historical-version parameter or endpoint exists.
 Created `tools/dump-mixdrive-firmware-update-flow.py` for a read-only static
 audit of firmware API strings, async update state machines, HTTP/download calls,
 temporary-file handling and updater launch boundaries.
+
+
+## 2026-11-20 — Managed firmware catalog/download flow closed
+
+Static CIL inspection of the exact MixDrive application resolved both update
+discovery and download behavior.
+
+For gamepads, \`UpdateGamepadFirmwareAsync\` invokes
+\`IFirmwareUpdateApiService.GetLatestVersionAsync\` with exactly three logical
+arguments: constant \`2\`, \`DeviceModel.DeviceName\`, and
+\`DeviceModel.DeviceMode\`.
+
+No local firmware version is supplied to the API call. Instead, the returned
+\`FirmwareInfoDto.Version\` is parsed as \`System.Version\` and compared locally
+to \`DeviceModel.FirmwareVersion\`. This means lowering or spoofing the
+controller's reported version is unnecessary for reproducing the server
+catalog request outside MixDrive.
+
+The firmware notice download worker then:
+- reads \`FirmwareUpdateModel.FirmwareUpdateUrl\`;
+- prefixes the MixDrive API base
+  \`https://mixdriver.thunderobot.com/api\` if the URL is relative;
+- performs a plain HTTP GET;
+- saves the response to \`Path.GetTempFileName() + ".exe"\`;
+- copies the HTTP content stream directly into that file;
+- for \`DeviceType == 2\`, sends the existing gamepad EnterUpdateMode message;
+- executes the downloaded file via \`Process.Start\` and waits for it.
+
+This proves there is no managed step that separately downloads a
+\`.bin\`, \`.fot\` or firmware ZIP for the gamepad. The downloaded server
+artifact is treated as an updater executable.
+
+Practical consequence: a catalog-only reimplementation is the preferred safe
+path. It can obtain and archive the official updater without modifying
+CustomData, entering bootloader mode, or launching the updater. It is not,
+however, a direct raw-firmware extraction path.
+
+Added \`tools/dump-firmware-api-contract.py\` to statically recover the exact
+route attributes and parameter names from \`Machenik.HttpApi*.dll\`.

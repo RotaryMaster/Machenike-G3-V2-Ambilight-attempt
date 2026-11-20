@@ -601,3 +601,38 @@ Static metadata in `Machenik.Shared.dll` resolves `DeviceType` as `Unknown=0, Ke
 
 The live test context is still USB-only with the dongle disconnected. Any transport-specific restriction must be represented elsewhere in the model/manager/update code.
 
+## 2026-11-20 — G3V2 physical HID and logical ZXPC_APP identities reconciled
+
+Focused `LoadGamepadAsync` IL closes the six-byte tuple returned by
+`ConnectDeviceAsync(3)`. `Item1/Item2` become firmware version 1.48;
+`(Item3 << 8) | Item4` and `(Item5 << 8) | Item6` are passed directly to
+`GamepadDeviceHelper.FindGamepadInfo`.
+
+For the live tuple `01 48 10 06 20 11`, this is:
+
+```text
+firmware: 1.48
+logical VID:PID: 1006:2011
+```
+
+The controller therefore has a physical HID identity `413D:2131` and a
+logical gamepad identity `1006:2011`. The latter is explicitly associated
+with the G3V2 mapping by MixDrive. The loader keeps the physical HidDevice but
+attaches the GamepadInfo resolved from the logical tuple.
+
+This also closes the transport-name detour: `DeviceType=2` is Gamepad, and
+`DeviceMode` is a model string rather than USB/2.4G state. No managed
+receiver requirement has been found before `EnterUpdateModeMessage`.
+
+## 2026-11-20 — Cold CustomData probe differs from MixDrive's warm manager state
+
+Cross-references show that normal MixDrive initialization invokes
+`GetDeviceCustomDataAsync` from multiple hardware loaders (light, motor,
+rocker, sensor, and generic CustomData paths) before a later firmware update.
+The OTA receiver reuses the cached `GamepadDeviceManager` when present.
+
+Therefore the current zero-length response from a standalone cold probe is
+not sufficient evidence of a transport mismatch. The next task is to recover
+the exact read-only initialization order and reproduce only the necessary
+warm-up sequence before reconsidering any OTA write.
+

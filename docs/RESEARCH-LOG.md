@@ -1771,3 +1771,12 @@ B7 payload. FN+Right changes an internal effect/mode state while leaving B7 unch
 
 Next target: capture USB/HID traffic during FN+Right to determine whether the mode transition
 is controller-local or accompanied by any host-visible command/report.
+
+
+## 2026-11-20 — manual corroboration and FN+Right usbmon probe prepared
+
+Public G3 V2 manuals independently identify FN+D-pad Right as the lighting mode switch and
+FN+D-pad Left as brightness control, matching the live hardware behavior.
+
+Added a read-only usbmon capture helper to observe one FN+Right transition and distinguish
+a controller-local mode change from any host-visible output command.

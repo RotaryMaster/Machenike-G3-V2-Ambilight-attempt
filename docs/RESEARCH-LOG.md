@@ -1780,3 +1780,19 @@ FN+D-pad Left as brightness control, matching the live hardware behavior.
 
 Added a read-only usbmon capture helper to observe one FN+Right transition and distinguish
 a controller-local mode change from any host-visible output command.
+
+
+## 2026-11-20 — recovered prior FN+Right usbmon result; duplicate test canceled
+
+Project history confirms that FN+Right had already been captured with usbmon.
+
+Earlier result:
+- 15,634 USB transfers;
+- 7,817 packets received;
+- 0 OUT transfers during the mode change.
+
+Therefore there was no host->controller USB command associated with FN+Right. Together
+with the current unchanged-B7 result across solid and breathing states, this strongly
+supports controller-local firmware handling of lighting mode selection.
+
+The newly proposed duplicate usbmon capture is no longer needed.

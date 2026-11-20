@@ -461,3 +461,16 @@ F2 is read after the first F0 block and again after the complete transfer.
 All three calls pass `cdbLength=10`. However, the updater visibly initializes only the first six bytes of each local CDB (`F0/F1/F2 00 00 00 00 00`). The remaining four bytes are not yet proven to be zero and appear to overlap stack padding/adjacent locals. Therefore only the opcode and the explicitly initialized leading bytes are treated as statically exact.
 
 Full reconstruction: [UPDATER-SCSI.md](UPDATER-SCSI.md).
+
+
+### Update-mode removable-drive identity closed
+
+The updater's discovery worker at `0x00402A70` scans `GetLogicalDrives()`, filters `GetDriveTypeW(...) == 2` (`DRIVE_REMOVABLE`), opens each candidate with `deviceUsb_OpenByDrv`, reads `deviceUsb_GetInfo`, closes the handle, and accepts only the exact ASCII signature:
+
+```text
+Gamepad Updater         1.00
+```
+
+The matching drive index (A=0..Z=25) is stored globally; no match is represented by `0xFF`. The scan repeats every 200 ms.
+
+The signature is exactly 28 characters and decomposes as 8 + 16 + 4 bytes, strongly matching standard SCSI INQUIRY Vendor/Product/Revision widths. Static confirmation inside `deviceUsb_GetInfo` is the next target.

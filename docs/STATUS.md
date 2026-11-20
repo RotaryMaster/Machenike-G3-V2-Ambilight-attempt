@@ -2841,3 +2841,35 @@ A new read-only diagnostic revision, `tools/g3v2-ble-probe-v2.py`, was added. It
 
 This is a targeted follow-up to the first failed connection, not a repeat of the already
 closed USB lighting experiments.
+
+
+### BLE v2 result: advertisement refresh works; BlueZ drops temporary device object after failed connect
+
+Second live run with `g3v2-ble-probe-v2.py --enumerate-only` confirmed:
+- one `G3V2 APP` candidate was repeatedly rediscovered;
+- RSSI was approximately -64 dBm;
+- all three BLE/GATT connection attempts timed out;
+- advertisement refresh succeeded between attempts;
+- after the final failure, `bluetoothctl info` reported the device object as not available.
+
+The second scan did not include service UUIDs in the final advertisement snapshot, but this
+does not contradict the previous run where the exact KeyLinker service was advertised:
+BLE advertisements and scan responses are not guaranteed to contain identical fields on
+every received packet.
+
+The official G3 V2 manual states that Keylinker should find and connect to `G3V2_APP` with
+the controller started in any mode and without ordinary Bluetooth pairing. Therefore no
+special pairing mode is currently required by the evidence.
+
+The next targeted Linux/BlueZ hypothesis is whether the unpaired temporary Device1 object
+or the controller's connectability depends on discovery remaining active. This is motivated
+by current Bleak/BlueZ behavior where a device object may disappear when discovery stops,
+and by recent BlueZ reports of LE peripherals that fail to connect unless discovery remains
+active.
+
+Added `tools/g3v2-ble-probe-v3.py`:
+- keeps active BLE discovery running through the entire connection attempt;
+- uses the freshest BLEDevice object observed by that still-active scan;
+- on failure queries `bluetoothctl info` before stopping discovery;
+- remains enumerate-only safe: no notify subscription, pairing, KeyLinker frame, 0x37,
+  0x3B, OTA or SCSI command is sent.

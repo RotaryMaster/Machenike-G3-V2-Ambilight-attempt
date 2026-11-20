@@ -1961,3 +1961,26 @@ A new `g3v2-ble-probe-v3.py` was added to keep BlueZ discovery active while conn
 then inspect the Device object before discovery is stopped. This isolates a known class of
 Linux/BlueZ failures where temporary unpaired LE objects disappear or connection behavior
 changes when discovery ends.
+
+
+## 2026-11-20 — BLE v3: connection still fails with discovery continuously active
+
+Live run `g3v2-ble-probe-v3.py --enumerate-only`:
+- 4 BLE devices seen, exactly one `G3V2 APP`;
+- approximately -74 dBm during scan, -78 dBm by the time BlueZ state was sampled;
+- three attempts with scan kept active throughout each connection attempt all timed out;
+- `bluetoothctl info` while discovery remained active showed `Paired: no`,
+  `Bonded: no`, `Trusted: no`, `Blocked: no`, `Connected: no`,
+  public address type and `AdvertisingFlags: 02`.
+- `DBG: cs_proxies is empty` appeared, but this text alone does not identify
+  the failed stage.
+- No KeyLinker frame was sent; this was still GATT-enumeration-only.
+
+This closes the discovery-lifetime-only hypothesis. It does *not* prove whether the LE
+connection failed or an attempted GATT service resolution timed out: there was no
+instrumentation at HCI level, and the BlueZ state was sampled after each connect had
+already failed/cleaned up.
+
+The next diagnostic is a **single**, bounded read-only `btmon` HCI trace spanning one
+v3 attempt, avoiding any more repeated three-attempt runs. Keep unredacted controller and
+other-device MAC addresses in local files only; publish/analyze sanitized HCI status lines.

@@ -620,3 +620,29 @@ The PE export table closes the seven previously identified E670-writing regions 
 | `writeDeviceCustomData` | `0x8EB0` | `0x905E` | `+0x1AE` |
 
 No E670 write was found in `writeDeviceMacroData` (RVA `0x83A0`) or `writeDeviceResetFactory` (RVA `0x4110`) in the focused xref audit. This means the E670 phase is advanced by the seven operations above, once per generated native frame. In particular, the multipart writers for KeyChange, Lamplight and CustomData use the common frame builder `0x180001C90`; the observed command bytes are `0x36`, `0x37` and `0x3B` respectively.
+
+
+### Cold-start native state and remaining write command IDs
+
+PE section metadata proves that the native protocol globals live in the zero-filled tail of `.data`: `.data` has RVA `0xE000`, VirtualSize `0x6A8`, and RawSize `0x200`. Therefore `E670`, `E674`, `E678`, `E67C`, `E680`, `E684`, `E688`, and `E68C` are initialized to zero by the PE loader on a cold DLL load.
+
+The remaining single-frame write command IDs are visible directly in their export bodies:
+
+| Export | Native command |
+|---|---:|
+| `writeRockerData` | `0x31` |
+| `writeTriggerData` | `0x32` |
+| `writeDeviceMotorData` | `0x33` |
+| `writeDeviceTurboData` | `0x34` |
+| `writeDeviceKeyChangeData` | `0x36` |
+| `writeDeviceLamplightData` | `0x37` |
+| `writeDeviceCustomData` | `0x3B` |
+
+The first four above use specialized builders around helpers `0x1800012D0`, `0x180001370`, and `0x180001400`, rather than the multipart frame builder `0x180001C90`. KeyChange, Lamplight, and CustomData use `0x180001C90` and fragment payloads at 15 bytes.
+
+For the cold OTA path already established in managed code, the preliminary `readDeviceCustomData(0)` leaves `E670` unchanged at 0 while advancing `E67C/E68C` from `0/0` to `1/1`. Therefore the following 20-byte CustomData write begins with native plaintext headers:
+
+- fragment 0 (15-byte chunk, frame length 20): `3B 14 81 <rand>`
+- fragment 1 (6-byte chunk, frame length 11): `3B EB 0A <rand>`
+
+If the CRT `rand()` stream is still at cold default state and no other native call consumes it between the read and write, the observed default sequence gives read rand `0x29`, then write rand bytes `0x23` and `0xBE`, yielding headers `3B 14 81 23` and `3B EB 0A BE`. This last rand assignment is conditional on no intervening `rand()` consumption; the state/header fields themselves are statically proven.

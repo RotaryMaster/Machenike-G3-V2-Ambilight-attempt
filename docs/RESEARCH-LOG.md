@@ -914,10 +914,15 @@ for each lamp:
     append packed_byte_1
     append brightness & 0xff
 
-packed_byte_0/1 come from a 16-character binary string composed of
-15 breathSpeed bits and 1 breathSwitch bit. Exact concatenation/bit order
-remains pending identification of CRT imports 0x18000B130, 0x18000B138 and
-0x18000B140.
+The CRT IAT was subsequently resolved:
+0x18000B130=strcpy_s, 0x18000B138=strncpy_s, 0x18000B140=strcat_s.
+The writer copies the one-character breathSwitch string first and appends the
+15-character breathSpeed string. It then parses chars 8..15 as the low byte
+and chars 0..7 as the high byte. Therefore:
+
+    packed = ((breathSwitch & 1) << 15) | (breathSpeed & 0x7fff)
+
+and the protocol transmits packed little-endian.
 ```
 
 The native receive function performs the inverse expansion from each six-byte
@@ -960,3 +965,23 @@ splits the resulting 16 characters into two bytes. The order of that
 concatenation depends on which CRT helpers occupy IAT slots
 `0x18000B130`/`0x18000B140`. Until those imports are resolved, only the
 record size and R/G/B/brightness positions are treated as confirmed.
+
+
+## 2026-11-20 — LampLight bit packing closed; no alternate gamepad RGB API exposed
+
+Static IAT resolution identified the LampLight string helpers as
+`strcpy_s`, `strncpy_s` and `strcat_s`. This removes the final ambiguity
+from the per-lamp six-byte record: `breathSwitch` is bit 15 and
+`breathSpeed` occupies bits 14..0, transmitted low byte then high byte.
+
+A full lighting API inventory found no second gamepad lighting writer in
+`KeyLinkerlib.dll`; only read/receive/write DeviceLamplight are exported.
+RGB/LED APIs discovered elsewhere belong to keyboard/mouse backends.
+
+Consequently `0x37` remains the only MixDrive-exposed G3V2 RGB write path.
+The next blocker is whether firmware treats 0x37 as volatile state or commits
+persistent memory. Managed call sites show writes in SaveLightAsync,
+ResetLightAsync, ApplyCurrentConfigAsync and ChangeGamepadConfigAsync, while
+ChangeLightAsync itself only updates the view model. That pattern is
+compatible with a settings write and should not be assumed safe for high-rate
+streaming until persistence is proven.

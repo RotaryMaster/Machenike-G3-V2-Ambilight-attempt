@@ -361,3 +361,101 @@ Therefore:
 
 - bootloader discovery/identity = storage property descriptor;
 - firmware/status protocol = SCSI pass-through direct.
+
+
+### deviceUsb_Request reconstructed exactly
+
+Static disassembly of `DeviceUsb.dll!deviceUsb_Request` at VA `0x10001340` closes the exported function signature used by the official updater:
+
+```c
+int deviceUsb_Request(
+    HANDLE handle,              // arg1
+    uint8_t data_in,            // arg2: SCSI_IOCTL_DATA_OUT=0, SCSI_IOCTL_DATA_IN=1
+    const void *cdb,            // arg3
+    uint32_t cdb_length,        // arg4
+    void *data_buffer,          // arg5
+    uint32_t data_length        // arg6
+);
+```
+
+The updater call sites match this signature exactly:
+
+- F0 firmware block: `deviceUsb_Request(handle, 0, cdb_f0, 10, block, block_len)`
+- F1 information: `deviceUsb_Request(handle, 1, cdb_f1, 10, info, 20)`
+- F2 status: `deviceUsb_Request(handle, 1, cdb_f2, 10, status, 20)`
+
+The function builds an x86 `SCSI_PASS_THROUGH_DIRECT` beginning at its local buffer offset and fills these fields:
+
+```text
++0x00 Length             = 0x002C
++0x02 ScsiStatus         = 0 (initially)
++0x03 PathId             = 0
++0x04 TargetId           = 1
++0x05 Lun                = 0
++0x06 CdbLength          = cdb_length
++0x07 SenseInfoLength    = 0x20
++0x08 DataIn             = data_in
++0x0C DataTransferLength = data_length
++0x10 TimeOutValue       = 5
++0x14 DataBuffer         = data_buffer
++0x18 SenseInfoOffset    = 0x30
++0x1C Cdb[16]            = memcpy(cdb, cdb_length)
+```
+
+It then calls:
+
+```text
+DeviceIoControl(
+    handle,
+    0x0004D014,      // IOCTL_SCSI_PASS_THROUGH_DIRECT
+    local_buffer,
+    0x50,
+    local_buffer,
+    0x50,
+    &bytes_returned,
+    NULL
+)
+```
+
+Thus the same 0x50-byte local area is used as both input and output. `SenseInfoOffset=0x30` places the sense-data area after the 0x2C-byte SPTD header plus four bytes of padding.
+
+Error/retry behavior is also explicit:
+
+- maximum 10 DeviceIoControl attempts;
+- on failure, `GetLastError()` is checked;
+- error `0x37` exits immediately;
+- otherwise the function sleeps 20 ms and retries while the counter remains nonzero;
+- return value is 1 on successful DeviceIoControl and 0 on terminal failure.
+
+### deviceUsb_GetInfo string assembly closed
+
+IAT resolution confirms:
+
+```text
+0x1000208C = strcat_s
+0x10002090 = strcpy_s
+```
+
+Therefore `deviceUsb_GetInfo` constructs its ANSI identity string exactly by:
+
+1. `strcpy_s(..., VendorId)`
+2. `strcat_s(..., ProductId)`
+3. `strcat_s(..., ProductRevision)`
+4. `MultiByteToWideChar(...)`
+
+This fully confirms the origin of `Gamepad Updater         1.00` from the storage descriptor fields.
+
+### deviceUsb_OpenByDrv open semantics
+
+`deviceUsb_OpenByDrv` formats a drive-device path from the first UTF-16 character supplied by the caller, then opens it with `CreateFileW` using:
+
+```text
+dwDesiredAccess       = 0xC0000000  (GENERIC_READ | GENERIC_WRITE)
+dwShareMode           = 0x00000003  (FILE_SHARE_READ | FILE_SHARE_WRITE)
+lpSecurityAttributes  = NULL
+dwCreationDisposition = 3           (OPEN_EXISTING)
+dwFlagsAndAttributes  = 0x80        (FILE_ATTRIBUTE_NORMAL)
+hTemplateFile         = NULL
+```
+
+The exact format string at VA `0x100020E8` remains to be decoded, but the function is conclusively a drive-letter-to-device-handle opener.

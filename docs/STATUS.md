@@ -382,7 +382,7 @@ The returned `DeviceDataStruct` is rejected if its pointer is null, length <= 0,
 
 Operation type 29 does not call `receiveDeviceCustomData`. Once its normal response reaches the dispatcher, it removes the pending maps and completes the result with boolean `true`.
 
-One small static gap remains in operation type 28: the previous extraction script stopped at the `ret` belonging only to the invalid-result branch and omitted the valid branch beginning at IL offset `0x153B`. That branch must be dumped before claiming the exact managed copy from native `DeviceDataStruct` into the final byte[] result.
+The formerly missing valid branch of operation type 28 has now been recovered. The next section records the closed managed copy/reassembly behavior and supersedes this earlier extraction limitation.
 
 ### CustomData managed layer closed; OTA read consumes two native request states
 
@@ -406,14 +406,7 @@ next rand low byte: BE
 
 The exact second read plaintext request is `BB 06 81 23 01 B9`; its KeyLinker-encoded form is `C2 37 F2 B7 A4 28`.
 
-This supersedes the earlier one-read conditional writer headers. If `E670=7` at OTA writer entry and no other native PRNG consumer intervenes, the corrected write headers are now:
-
-```text
-fragment 0: 3B F4 02 BE
-fragment 1: 3B CB 8B 84
-```
-
-These remain conditional only on the unresolved OTA-time value of E670 and the absence of an unrelated rand() consumer outside the now-closed CustomData read/managed path.
+This supersedes the earlier one-read writer candidates. An intermediate calculation with `E670=7` would produce `3B F4 02 BE / 3B CB 8B 84`, but that is **not** the cold default. The subsequent PE/xref audit below proves cold `E670=0`, giving `3B 14 02 BE / 3B EB 8B 84`. Warm-session values remain dependent on prior process-global write traffic and any unrelated `rand()` consumption.
 
 
 
@@ -508,7 +501,7 @@ The updater uses data_in=0 for F0 writes and data_in=1 for F1/F2 reads. The x86 
 
 The F0/F1/F2 command buffers are passed with `cdb_len=10` but only bytes 0..5 are explicitly initialized. Bytes 6..9 are stack residue. For F2 specifically, bytes 8..9 overlap the function security cookie at `[ebp-0x10]`. The official updater therefore sends non-semantic stack data in the declared CDB.
 
-Project policy: do not reproduce this bug. Use deterministic zero-filled 10-byte CDBs and validate the normalization with read-only F1/F2 before any F0 write.
+Project policy: do not reproduce this bug. The official application is evidence of what the device tolerates, not a normative protocol specification. Use deterministic zero-filled 10-byte CDBs and validate the normalization with read-only F1/F2 before any F0 write.
 
 
 ### Controlled update-mode transition probe prepared

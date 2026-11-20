@@ -1060,3 +1060,12 @@ G3V2-specific proof.
 Added `tools/dump-deviceusb-readback-surface.py` to independently recover
 the G3V2 DeviceUsb exports, DeviceIoControl/SCSI wrapper, F0/F1/F2 call
 contexts, transfer lengths and data directions without touching hardware.
+
+
+## 2026-11-20 — Normal-mode readback inventory added
+
+Added `tools/dump-keylinker-firmware-readback.py` to scan KeyLinkerlib and the
+first-party managed assemblies for firmware/flash/ROM/memory read primitives
+and suspicious large-transfer/address constants. It performs static parsing
+only and applies a strict rule: identity/version/status reads do not count as a
+firmware-dump path unless code proves scalable addressable reads.

@@ -832,8 +832,7 @@ The concrete initializer uses `GamepadHardwareLoader` from
     -> operation 28
 ```
 
-This is **11 high-level read operations**, including **four CustomData reads**,
-before initialization completes.
+This is a **baseline of 11 high-level read operations**, including **four CustomData reads**, before initialization completes on the normal success path. The real number of native requests can be higher if a loader retries or if a response requires managed continuation packets.
 
 The CustomData calls inside rocker, motor, and light loaders are reached
 directly after their primary reads in the compiled loader state machines; no

@@ -2388,3 +2388,50 @@ Protocol basis:
 
 This test is intended to decide whether high-frequency use of the documented 0x37 path
 is unsafe for NVM endurance.
+
+
+### Confirmed: standalone LampLight 0x37 write persists across real power-cycle
+
+The guarded isolated persistence test has now been completed successfully on the physical
+G3V2.
+
+Observed sequence:
+1. B7 baseline before mutation: \`00 FF FF 00 00 FF\`
+2. snapshot original: \`00 FF FF 00 00 FF\`
+3. standalone RGB marker written with exactly one native \`0x37\` frame;
+4. zero \`0x3B\` CustomData writes were emitted by the test;
+5. immediate B7 readback matched the marker;
+6. controller was physically powered off/on;
+7. read-only \`--check\` B7 returned the marker unchanged:
+   \`FF 00 00 00 00 FF\`;
+8. therefore the standalone \`0x37\` state survived a real power-cycle;
+9. \`--restore\` then sent one standalone \`0x37\` restoring
+   \`00 FF FF 00 00 FF\`;
+10. post-restore B7 matched the original exactly and the local snapshot was deleted.
+
+The write ACK during restore was also observed through the managed outer envelope:
+- \`81 F9 <seq> 01 02 ...\`
+- flags bit 0 set, consistent with the previously reconstructed ACK path.
+
+Conclusion:
+- **0x37 is independently persistent.**
+- 0x3B is not required to make a LampLight RGB change survive power loss.
+- The documented MixDrive/KeyLinker LampLight writer must NOT be used at Ambilight/realtime
+  update rates until the storage mechanism and endurance characteristics are known.
+
+This supersedes the earlier persistence uncertainty around 0x37.
+
+### Ambilight direction after persistence confirmation
+
+The project should now treat command 0x37 as a configuration/persistent-state writer, not
+as a safe realtime transport.
+
+Priority shifts to finding a volatile lighting path, in this order:
+1. search firmware/KeyLinker command families for an undocumented preview/live RGB command;
+2. inspect whether any command can update LED output without touching the persistent
+   LampLight object;
+3. if no software-visible volatile path exists, investigate whether the MCU lighting engine
+   exposes a RAM-only register/command that is absent from MixDrive;
+4. keep high-frequency 0x37 streaming disabled.
+
+The original lighting state was successfully restored at the end of the test.

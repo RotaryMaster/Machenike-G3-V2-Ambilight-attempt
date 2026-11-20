@@ -724,3 +724,13 @@ generic helper `0x180001BE0` with selectors 3 and 4. That helper must be
 disassembled before deciding whether the exact offset is eight or ten earlier
 stateful requests.
 
+
+
+## 2026-11-20 — KeyLinker state-byte cycle implication
+
+The observed cold single-frame state-byte sequence cycles every eight calls
+(`00,81,02,83,04,85,06,87`). If operations 1-2 do not consume the same
+state helper, the final initializer CustomData read can therefore return to
+state byte `0x00` while the CRT `rand()` stream is already eight calls
+ahead. A state-byte match alone is not sufficient evidence that the Linux
+probe matches MixDrive's request context.

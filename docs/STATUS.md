@@ -415,3 +415,17 @@ fragment 1: 3B CB 8B 84
 
 These remain conditional only on the unresolved OTA-time value of E670 and the absence of an unrelated rand() consumer outside the now-closed CustomData read/managed path.
 
+
+
+### Cold E670 state corrected
+
+Static PE/xref analysis shows the protocol globals at `0x18000E670+` are not file-initialized and start at zero in a cold DLL state. No initializer writes `7` to `E670`; confirmed writes only perform the normal post-frame decrement with zero wrapping to seven.
+
+After the two native CustomData reads used by the OTA path, a cold writer therefore enters with `E670=0, E67C=0, E68C=2`. With the default observed CRT `rand()` progression, the cold 0x3B frame headers are:
+
+```text
+3B 14 02 BE
+3B EB 8B 84
+```
+
+The older pair `3B F4 02 BE / 3B CB 8B 84` is only valid if prior write-style traffic already left `E670=7`. `E670` is runtime process-global phase, not an OTA constant.

@@ -155,4 +155,7 @@ Device -> host (generic):
 81 F9 SEQ FLAGS LEN PAYLOAD...
 ```
 
-On host TX, `SendDeviceData` creates `LEN+5` bytes, places the native/KeyLinker payload at offset 5, and calls `HidDevice.Write`. On RX, HidLibrary exposes `0x81` separately as `HidReport.ReportId`, so `HidReport.Data` begins at `F9`. The manager then reads sequence from Data[1], flags from Data[2], length from Data[3], and payload from Data[4]. If `FLAGS & 1` is set, it is handled as an ACK and the matching sequence entry in `AckMap` is completed successfully.
+On host TX, `SendDeviceData` computes `LEN = min(native_length, 20)`, creates `LEN+5` bytes, places those first native/KeyLinker bytes at offset 5, and calls `HidDevice.Write`. On RX, HidLibrary exposes `0x81` separately as `HidReport.ReportId`, so `HidReport.Data` begins at `F9`. The manager then reads sequence from Data[1], flags from Data[2], length from Data[3], and payload from Data[4]. If `FLAGS & 1` is set, it is handled as an ACK and the matching sequence entry in `AckMap` is completed successfully.
+
+
+The 20-byte cap is statically tied to `Math.Min(source_length, 20)`. The two `GetPacketCount` overloads compute ceiling division by 20, confirming that longer native results are handled as 20-byte transport units rather than one oversized HID payload.

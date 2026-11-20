@@ -338,9 +338,30 @@ E67C = !E67C
 
 For a 20-byte G3 V2 CustomData write, this makes the second frame header predictable from the first frame state.
 
-Remaining header details are now very small and isolated:
-- determine whether `0x18000B214` is ASCII `0` or `1` (and vice versa for `0x18000B218`), which fixes toggle polarity;
-- identify the import at IAT `0x18000B150` before naming the source of `header[3]`;
-- optionally confirm helper `0x180001400` as the three-string concatenation helper.
+Those final header details were subsequently closed:
+- `0x18000B214 = "1"` and `0x18000B218 = "0"`;
+- the conditional move selects `"1"` exactly when `E67C == 1`, so bit 7 is the boolean `E67C` itself;
+- IAT `0x18000B150` resolves to CRT `rand`, giving `header[3] = rand() & 0xFF`;
+- helper `0x180001400` is the three-string concatenation helper and preserves argument order.
 
 The raw bytes previously printed for addresses `E670/E67C/E684/E68C` must not be treated as live protocol-state values. These globals are mutable runtime state; their effective values are established/updated by the protocol code.
+
+
+### Four-byte write header fully reconstructed
+
+The last two unknowns in `0x180001C90` were resolved directly from the PE and import table.
+
+Exact formula:
+
+```python
+header0 = command
+header1 = ((E670 & 7) << 5) | (frame_len & 0x1F)
+header2 = ((E67C & 1) << 7) | ((fragment_index & 0x0F) << 3) | (E68C & 7)
+header3 = rand() & 0xFF
+```
+
+The constants used to materialize the high bit are ASCII `1` at VA `0x18000B214` and ASCII `0` at VA `0x18000B218`. The imported function at IAT `0x18000B150` is `api-ms-win-crt-utility-l1-1-0.dll!rand`.
+
+Helper `0x180001400` was disassembled and confirmed to allocate a destination and concatenate three NUL-terminated strings in argument order. This validates the field order in header byte 2.
+
+The remaining byte-identical reproduction problem has moved outside the builder: determine the protocol globals' runtime initial/synchronized state and the CRT PRNG seed/state. Until those are known, the formulas are exact but the sequence values at a specific moment cannot be predicted from a cold offline start.

@@ -1531,3 +1531,47 @@ Added:
   range;
 - `tools/find-zxd2267-firmware-corpus.py` to search selected local directories
   for another exact-HWID updater/image without modifying files.
+
+
+### Exact G3V2 MCU identified from FCC photos
+
+User-supplied copies of the exact `2BBT5-G3V2` internal FCC photographs were
+inspected at full resolution.
+
+The main controller IC marking is legible in Photo 9:
+
+- `ZC32RF1M`
+- `QFN40-24`
+- lot/trace code `EMU13322`
+
+The PCB silkscreen on the exact board also reads approximately
+`20241114 ZXD2267 G3 V2 V1.4 ...`, directly linking the physical PCB family
+to the `ZXD2267` identifier in the official updater filename and hardware
+family already recovered from firmware metadata.
+
+Both visible sides of the main PCB were inspected. No discrete 8-pin SPI/QSPI
+flash or obvious external EEPROM dedicated to firmware storage is visible.
+This materially strengthens the conclusion that the installed firmware is held
+in the ZC32RF1M's internal nonvolatile memory, though hidden/buried storage
+cannot be excluded solely from photographs.
+
+Photo 9 also exposes the 26 MHz crystal/oscillator network, PCB RF antenna,
+USB-C connector and numerous labeled button/test pads around the MCU. No pad is
+visibly labeled SWD, JTAG, ISP, TX or RX in the supplied close-up.
+
+A public schematic for another controller using the same ZC32RF1M QFN40 shows
+the part with:
+- pin 22: RESET;
+- pin 23: USB D-;
+- pin 24: USB D+;
+- pins 20/21: crystal OSCI/OSCO;
+- exposed pad 41: GND.
+
+This is useful family-level pinout evidence, but the exact G3V2 routing still
+needs to be traced before attaching a programmer.
+
+Physical-dump priority is now:
+1. map the G3V2 MCU pins/test pads from the photos and continuity when the board
+   is eventually accessible;
+2. research ZhiXu factory/programming tooling for ZC32RF1M;
+3. avoid any "unlock" command until its read-protection behavior is known.

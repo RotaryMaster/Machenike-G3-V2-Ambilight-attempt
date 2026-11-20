@@ -1706,3 +1706,22 @@ separate read-only \`--check\` run after a real controller power-cycle. A final
 \`--restore\` returns the original LampLight bytes.
 
 No streaming loop, OTA path or SCSI commands are present.
+
+
+## 2026-11-20 — standalone 0x37 persistence conclusively proven
+
+Live test result:
+
+- original B7 LampLight: \`00 FF FF 00 00 FF\`
+- one isolated 0x37 RGB marker was applied
+- no 0x3B write occurred
+- marker survived a physical controller power-cycle
+- read-only B7 after restart still returned the marker
+- one isolated 0x37 restore returned the exact original bytes
+- post-restore B7 confirmed the restoration
+
+Therefore 0x37 itself persists independently of 0x3B.
+
+This is the critical Ambilight safety result: do not stream 0x37 at high frequency unless
+the persistent-storage implementation is later proven to be wear-safe. The next reverse-
+engineering target is an undocumented volatile/realtime LED update path.

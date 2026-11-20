@@ -174,28 +174,39 @@ message.Device
   -> HidDevice.get_DevicePath()
   -> DeviceManagerCache lookup
   -> reuse or construct GamepadDeviceManager(HidDevice)
-  -> GetDeviceCustomDataAsync()
-  -> [mutate returned custom data: exact field/bytes not yet decoded]
-  -> WriteDeviceCustomDataAsync()
+  -> GetDeviceCustomDataAsync(10)
+  -> data[11] |= 0x80
+  -> WriteDeviceCustomDataAsync(data)
 ```
 
-This is the strongest evidence yet that MixDrive enters update mode by changing the controller's normal CustomData and writing it back through the normal HID/KeyLinker path.
+The full IL proves the exact mutation:
 
-**Highest-priority target:** decode the IL between the completion of `GetDeviceCustomDataAsync()` and the call to `WriteDeviceCustomDataAsync()`, identify the exact changed field/value, and map that change to the 10-byte CustomData packet already understood on Linux.
+```text
+IL+0x010D  ldc.i4.s 11
+IL+0x0110  ldc.i4.s 11
+IL+0x0112  ldelem.u1
+IL+0x0113  ldc.i4 128
+IL+0x0118  or
+IL+0x0119  conv.u1
+IL+0x011A  stelem.i1
+```
+
+This establishes that MixDrive enters update mode by setting bit `0x80` in byte index `11` of the managed CustomData buffer, then writing that buffer back.
+
+**Highest-priority target:** inspect `GamepadDeviceManager.GetDeviceCustomDataAsync` and `WriteDeviceCustomDataAsync` in `Machenik.Infrastructure.dll` to map managed buffer index `11` to the exact 10-byte CustomData/on-wire HID representation.
 
 ## Next steps
 
-1. Decode the full `<Receive>d__21::MoveNext` IL, especially IL roughly `0x0103..0x0122`.
-2. Resolve all field/property tokens touched after `GetDeviceCustomDataAsync()`.
-3. Identify the exact object/value passed to `WriteDeviceCustomDataAsync()`.
-4. Map that mutation onto the known 10-byte CustomData representation and KeyLinker write packet.
-5. Reconstruct the exact normal-HID OTA/bootloader packet without sending it.
-6. Determine the update-mode USB identity and interface class from code or passive observation.
-7. Implement a Linux read-only probe for the update personality.
-8. Issue only `F1` and `F2` in the first live SCSI test.
-9. Compare returned hardware ID/version with the embedded updater metadata.
-10. Document recovery/rollback possibilities before any `F0` write.
-11. Only after the above, implement a Linux updater with explicit write safeguards.
+1. Inspect `GamepadDeviceManager.GetDeviceCustomDataAsync` in `Machenik.Infrastructure.dll`.
+2. Inspect `GamepadDeviceManager.WriteDeviceCustomDataAsync`.
+3. Map managed buffer index `11` to the exact normal CustomData/on-wire byte.
+4. Reconstruct the exact normal-HID OTA/bootloader packet without sending it.
+5. Determine the update-mode USB identity and interface class from code or passive observation.
+6. Implement a Linux read-only probe for the update personality.
+7. Issue only `F1` and `F2` in the first live SCSI test.
+8. Compare returned hardware ID/version with the embedded updater metadata.
+9. Document recovery/rollback possibilities before any `F0` write.
+10. Only after the above, implement a Linux updater with explicit write safeguards.
 
 ## Conditions before a write test
 

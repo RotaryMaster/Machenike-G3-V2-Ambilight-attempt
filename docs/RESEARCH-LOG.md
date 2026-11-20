@@ -636,3 +636,32 @@ not sufficient evidence of a transport mismatch. The next task is to recover
 the exact read-only initialization order and reproduce only the necessary
 warm-up sequence before reconsidering any OTA write.
 
+## 2026-11-20 — Official warm-up order and CustomData xrefs recovered
+
+A focused CIL audit of `GamepadConfigInitializer.InitializeFromHardwareAsync`
+recovered the startup sequence:
+
+```text
+LoadKeyMapAsync
+LoadTurboAsync
+LoadRockerAsync
+LoadTriggerAsync
+LoadMotorAsync
+LoadLightAsync
+LoadCustomDataAsync
+```
+
+The same audit found three `GetDeviceCustomDataAsync` load/initialize call
+sites and no `WriteDeviceCustomDataAsync` call sites in those methods.
+
+The warm-up is still not classified as completely passive because the loaders
+perform other `GamepadDeviceManager.GetDevice*Async` operations first.
+Confirmed examples are key-map, turbo-support, rocker, trigger, and motor
+reads. These may advance KeyLinker sequence/random state even if they do not
+change user configuration.
+
+A new read-only helper,
+`tools/dump-gamepad-warmup-manager-map.py`, was added to map those manager
+methods to their native request builders and operation/result types before any
+live warm-up reproduction.
+

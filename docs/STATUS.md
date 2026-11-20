@@ -633,3 +633,9 @@ Consequences:
 - decoded logical length 10 -> native total 16 -> one outer packet -> managed `byte[10]` -> official `data[11]` access is invalid;
 - decoded logical length 20 -> native total 31 -> two outer packets/selectors -> managed `byte[20]`, which is the first size compatible with the official OTA mutation at index 11 and with the already reconstructed two-fragment writer.
 
+### Firmware-update sender gate: DeviceType == 2
+
+Static xrefs in `Machenik.exe` show that the firmware-update worker sends `EnterUpdateModeMessage` only if `FirmwareUpdateModel.Device.DeviceType == 2`. It then launches the external updater executable and waits for it to exit.
+
+The current live setup uses the controller over USB only; the 2.4 GHz dongle is disconnected. The semantic meaning of enum value `2` must therefore be resolved before concluding whether the official OTA path expects wired USB, receiver/2.4G, Bluetooth, or another device classification. `tools/dump-device-type.py` scans extracted managed assemblies for the enum definition and nearby `get_DeviceType` comparisons.
+

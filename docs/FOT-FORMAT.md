@@ -1,8 +1,42 @@
 # FOT firmware container and updater payload
 
-## Embedded metadata around the updater image
+## Extracted image
 
-Static analysis of the official G3 V2 v1.48 updater identified metadata immediately before the embedded FOT image.
+Static analysis of the official G3 V2 v1.48 updater identified and extracted the complete embedded FOT image.
+
+Updater location:
+
+```text
+file offset : 0x001712F0
+RVA         : 0x001732F0
+VA          : 0x005732F0
+```
+
+Complete FOT:
+
+```text
+size        : 0x5A400 = 369664 bytes
+SHA-256     : 0ad5d080c6451d9a26a28e32f77ce73789f163ce8cad12c035ff4314b10fb085
+entropy     : 7.996828
+blocks      : 722 x 512 bytes
+remainder   : 0
+```
+
+The internal size field is:
+
+```text
+0x5A3F8 = 369656
+```
+
+which is exactly:
+
+```text
+0x5A400 - 8
+```
+
+So the internal field describes bytes after the 8-byte `FOT\0 + size` prefix, while the updater metadata describes the complete transfer image.
+
+## Embedded identity
 
 Known values:
 
@@ -15,39 +49,106 @@ Version field:
 = 0x94
 = 148
 = firmware 1.48
-
-Embedded transfer size:
-00 A4 05 00
-= 0x0005A400
-= 369664 bytes
 ```
 
-The FOT image starts with:
+This identity is compared against the F1 response before transfer.
+
+## Header tags
+
+Several directory/header tags are stored with bit 7 set and decode by XOR `0x80`:
 
 ```text
-46 4F 54 00
-F  O  T \0
+raw C9 CE C6 CF -> INFO
+raw C4 C5 D6 00 -> DEV
+raw CB C5 D9 00 -> KEY
+raw C4 C1 D4 C1 -> DATA
+raw D8 C3 CF C4 -> XCOD
+raw D8 D2 C5 D3 -> XRES
 ```
 
-The first eight bytes are:
+Known offsets in the FOT:
 
 ```text
-46 4F 54 00 F8 A3 05 00
+INFO : 0x00054
+DEV  : 0x0008C
+KEY  : 0x000A0
+DATA : 0x000B0
+XCOD : 0x00200
+XRES : 0x58600
+DOWN : 0x594C0
 ```
 
-The internal size at `FOT+4` is:
+The KEY field declares length 8 and contains:
 
 ```text
-0x5A3F8 = 369656
+00 00 00 01 EA E3 2E 09
 ```
 
-That is exactly:
+Its exact semantic role is still unresolved.
+
+## Internal layout
+
+Recovered v1.48 layout:
 
 ```text
-0x5A400 - 8
+header           0x00000-0x00200  size=0x00200
+xcod             0x00200-0x58600  size=0x58400
+xres             0x58600-0x59200  size=0x00C00
+directory_copy   0x59200-0x59400  size=0x00200
+config           0x59400-0x59800  size=0x00400
+tail             0x59800-0x5A400  size=0x00C00
 ```
 
-So the internal FOT size describes the bytes after the 8-byte `FOT\0 + size` header, while the updater's transfer-size metadata describes the complete 369664-byte FOT file.
+Hashes:
+
+```text
+header
+6a8f80e9b9d5aa6336b565589700f0fb212aa850053b379e4a3edf364b8f8a52
+
+xcod
+3ddaec3bb4d3723d4d1c55392473e6830872674ce3c33f6ab401b857844821fe
+
+xres
+173740c39fce50700eea71a2616afbf445feabb0217ec4bc6c3ab57919377bb9
+
+directory_copy
+6a8f80e9b9d5aa6336b565589700f0fb212aa850053b379e4a3edf364b8f8a52
+
+config
+8c248c6b0c78fc227d5863bc5de7bd4027aeead8c840dba469c25e07f49362d0
+
+tail
+973c89eda5b13cb3f16366b829f5d79f3f5a0a87eb8e00679c540c256497543c
+```
+
+The 512-byte `directory_copy` is byte-for-byte identical to the initial header.
+
+## XCOD
+
+At `0x200`:
+
+```text
+tag             = XCOD
+field +0x04     = 0x600
+field +0x08     = 0x57E00
+sum             = 0x58400
+region size     = 0x58400
+```
+
+The XCOD region has near-maximal entropy, approximately 7.9995 bits/byte.
+
+This is consistent with compressed, encrypted, transformed, or otherwise high-entropy code data. Static evidence alone does not distinguish those possibilities.
+
+## XRES
+
+At `0x58600`:
+
+```text
+tag             = XRES
+region size     = 0xC00
+```
+
+It is also high entropy.
 
 ## Transfer behavior
 
@@ -55,7 +156,7 @@ The updater copies firmware data directly from the embedded FOT image into a tem
 
 No host-side XCOD/XRES decrypt/transform step appears in the observed write loop.
 
-Therefore the bootloader receives the FOT bytes as packaged by the updater.
+Therefore the bootloader receives the complete packaged FOT bytes exactly in their stored representation.
 
 For v1.48:
 
@@ -66,7 +167,7 @@ chunks      = 722
 remainder   = 0
 ```
 
-This exact divisibility is important: there is no short final transfer in this updater.
+There is no short final transfer.
 
 ## Hardware compatibility check
 

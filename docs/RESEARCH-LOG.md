@@ -524,3 +524,10 @@ The remaining GetInfo CRT ambiguity was also removed: IAT slots 0x10002090 and 0
 The updater initializes only six bytes of each local F0/F1/F2 CDB despite passing a length of 10 to `deviceUsb_Request`. F0/F1 bytes 6..9 are uninitialized stack contents. F2 is stronger evidence: its byte range overlaps the stack-cookie slot, so CDB bytes 8..9 are the low two bytes of the function cookie. This confirms an implementation bug in the original updater and argues against byte-for-byte emulation of its stack garbage.
 
 Canonical clean-room plan: zero all 10 CDB bytes and set only opcode byte 0; validate F1/F2 first; never infer that trailing garbage is protocol-significant without device evidence.
+
+
+## 2026-11-20 — Transition test narrowed to HID OTA bit only
+
+The next live experiment is intentionally bounded before SCSI: read the real 20-byte CustomData through BB selectors 0/1, validate CRCs, set only logical byte 11 bit 0x80, write it with command 0x3B, then observe re-enumeration. `tools/g3v2-enter-updater-linux.py` implements that sequence with explicit `--execute` gating and no F0/F1/F2 support.
+
+External family corroboration: the Manba One V2 research project reports the same mass-storage identity (`Gamepad` / `Updater` / `1.00`) and vendor SCSI command family and documents exit from its update mode by unplug/replug. This is supporting evidence for a temporary bootloader personality, not proof of G3 V2 recovery behavior.

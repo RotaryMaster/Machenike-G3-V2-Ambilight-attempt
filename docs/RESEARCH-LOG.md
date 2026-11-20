@@ -907,13 +907,17 @@ length = 6 * lampLightNumber
 
 stream[0] = length
 for each lamp:
-    packed = ((breathSpeed & 0x7fff) << 1) | (breathSwitch & 1)
     append R & 0xff
     append G & 0xff
     append B & 0xff
-    append packed & 0xff
-    append (packed >> 8) & 0xff
+    append packed_byte_0
+    append packed_byte_1
     append brightness & 0xff
+
+packed_byte_0/1 come from a 16-character binary string composed of
+15 breathSpeed bits and 1 breathSwitch bit. Exact concatenation/bit order
+remains pending identification of CRT imports 0x18000B130, 0x18000B138 and
+0x18000B140.
 ```
 
 The native receive function performs the inverse expansion from each six-byte
@@ -944,3 +948,15 @@ ApplyCurrentConfigAsync and ChangeGamepadConfigAsync. That establishes 0x37
 as the normal settings-write path, but does not establish RAM-vs-NVM
 persistence. Do not use it as a high-frequency Ambilight transport until that
 is separately proven.
+
+
+### Correction note — LampLight speed/switch bit order
+
+The first reconstruction correctly established the six-byte per-lamp record,
+but prematurely assigned the exact bit position of `breathSwitch`. Native
+code clearly converts `breathSpeed` to a 15-character binary string and
+`breathSwitch` to a one-character binary string, then concatenates them and
+splits the resulting 16 characters into two bytes. The order of that
+concatenation depends on which CRT helpers occupy IAT slots
+`0x18000B130`/`0x18000B140`. Until those imports are resolved, only the
+record size and R/G/B/brightness positions are treated as confirmed.

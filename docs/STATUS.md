@@ -197,20 +197,40 @@ Static IL of `GamepadDeviceManager` now clarifies that the argument `10` passed 
 
 Native `KeyLinkerlib.dll` analysis now shows that `readDeviceCustomData` constructs a six-byte `BB 06 ...` read request and returns a pointer+length descriptor after KeyLinker transformation. `receiveDeviceCustomData` is a thin wrapper over helper `0x180001760`, which actually supplies the received buffer. `writeDeviceCustomData` prepends one byte containing `data.Length`, processes `[length][data...]`, fragments it into chunks of at most 15 bytes, adds a four-byte header plus CRC, and applies the same KeyLinker transform.
 
-**Resolved:** `0x180001760`, the 20-byte logical CustomData mapping, and the four-byte write-header builder have all been reconstructed. The remaining transport question is the effective state carried by `E670/E67C/E68C` at the OTA write.
+**Resolved:** `0x180001760`, the 20-byte logical CustomData mapping, the four-byte write-header builder, and the managed-index-to-frame mapping are reconstructed.
+
+For a 20-byte object, the writer forms `[0x14][data0..data19]` and fragments that stream as 15 + 6 bytes. In the first decoded/plaintext frame:
+
+```text
+0..3   = four-byte 0x3B header
+4      = 0x14 total logical length
+5..18  = data[0]..data[13]
+19     = CRC
+```
+
+Therefore the OTA mutation is now mapped exactly:
+
+```text
+data[11] |= 0x80
+        ↓
+first plaintext write frame byte 0x10 (offset 16)
+```
+
+After that mutation, CRC is recomputed and the frame is KeyLinker-encoded.
+
+The remaining transport question is the effective state carried by `E670/E67C/E68C` and the `rand()` position at the exact OTA write, plus the final HID envelope and the device's disconnect/re-enumeration behavior.
 
 ## Next steps
 
-1. Inspect `GamepadDeviceManager.GetDeviceCustomDataAsync` in `Machenik.Infrastructure.dll`.
-2. Inspect `GamepadDeviceManager.WriteDeviceCustomDataAsync`.
-3. Map managed buffer index `11` to the exact normal CustomData/on-wire byte.
-4. Reconstruct the exact normal-HID OTA/bootloader packet without sending it.
-5. Determine the update-mode USB identity and interface class from code or passive observation.
-6. Implement a Linux read-only probe for the update personality.
-7. Issue only `F1` and `F2` in the first live SCSI test.
-8. Compare returned hardware ID/version with the embedded updater metadata.
-9. Document recovery/rollback possibilities before any `F0` write.
-10. Only after the above, implement a Linux updater with explicit write safeguards.
+1. Close the exact state continuity from the immediately preceding `BB` read through `receiveDeviceCustomData` into the first `writeDeviceCustomData` fragment.
+2. Close the final HID report/envelope that carries the two encoded `0x3B` frames.
+3. Reconstruct the exact normal-HID OTA/bootloader request byte-for-byte without sending it.
+4. Determine the update-mode USB identity and interface class from code or passive observation.
+5. Implement a Linux read-only probe for the update personality.
+6. Issue only `F1` and `F2` in the first live SCSI test.
+7. Compare returned hardware ID/version with the embedded updater metadata.
+8. Document recovery/rollback possibilities before any `F0` write.
+9. Only after the above, implement a Linux updater with explicit write safeguards.
 
 ## Conditions before a write test
 

@@ -92,21 +92,49 @@ This does not prove that the device firmware behaves identically on every
 transport. It does remove the earlier hypothesis that MixDrive's managed
 update path explicitly requires the receiver.
 
-### Warm-session CustomData state is now the main live blocker
+### Normal hardware initialization and warm-session CustomData
 
 The current zero-length CustomData response must not be treated as evidence
 that USB is the wrong transport. MixDrive normally reaches firmware update
 with a previously initialized `GamepadDeviceManager`.
 
-Static xrefs show that normal hardware/config initialization calls
-`GetDeviceCustomDataAsync` from multiple loaders, including light, motor,
-rocker, sensor, and generic custom-data initialization. The update receiver
-later reuses the cached manager when available.
+The managed initialization order is now statically closed. The normal
+`InitializeFromHardwareAsync` path awaits the hardware loaders in this order:
 
-The next static target is therefore the exact read-only initialization order
-leading from gamepad connection to those CustomData reads. The next live probe
-should reproduce only the necessary initialization/read sequence first.
-OTA writes remain blocked while a cold standalone read resolves to null/zero.
+```text
+LoadKeyMapAsync
+-> LoadTurboAsync
+-> LoadRockerAsync
+-> LoadTriggerAsync
+-> LoadMotorAsync
+-> LoadLightAsync
+-> LoadCustomDataAsync
+```
+
+The per-loader manager calls are also closed:
+
+```text
+KeyMap : GetDeviceBeforeKeyChangeListAsync
+Turbo  : GetDeviceSupportTurboAsync -> GetDeviceCurrentTurboAsync
+Rocker : GetDeviceRockerAsync -> GetDeviceCustomDataAsync
+Trigger: GetDeviceTriggerAsync
+Motor  : GetDeviceMotorAsync -> GetDeviceCustomDataAsync
+Light  : GetDeviceLamplightAsync -> GetDeviceCustomDataAsync
+```
+
+Important methodological note: `dump-gamepad-hardware-loader-sequence.py`
+prints its sections in a fixed target order, so that script alone does not
+establish the global order. The global order above comes from the independent
+`InitializeFromHardwareAsync` state-machine audit.
+
+`LoadRockerAsync` explicitly rejects CustomData unless the returned logical
+payload has exactly **20 bytes**. The next static target is no longer the
+loader order; it is the manager-to-native bridge for each read above so the
+Linux read-only warm-up can reproduce the exact KeyLinker commands and
+arguments before retrying the final CustomData read.
+
+OTA writes remain blocked while the cold/partial warm-up resolves CustomData
+to null/zero length.
 
 ### OTA feature
 
@@ -1005,3 +1033,53 @@ identify which G3V2 actions create/populate a 20-byte block, and whether the
 earlier successful 10-byte A/B read occurred after one of those actions.
 Live writes remain frozen until this is understood.
 
+
+
+### G3V2 CustomData field map from normal hardware loaders
+
+The normal hardware-loader CIL gives a direct semantic map for several bytes
+of the 20-byte logical CustomData object:
+
+```text
+data[0]      = LightBrightness (0..100; invalid values fall back to 2)
+data[1]      = LightModeIndex (G3V2 accepts 0..7; invalid values fall back to 0)
+data[2]      = RockerCursorType
+data[3] & 0F = left rocker adsorption strength (G3V2 branch)
+data[3] >> 4 = right rocker adsorption strength (G3V2 branch)
+data[4]      = MotorGripMode encoding
+data[7] bit3 = RockerExchange
+data[8]      = RockerReturnRate (G3V2 branch)
+data[10]     = RockerResolution (G3V2 branch)
+data[12]     = left rocker outer diameter
+data[13]     = right rocker outer diameter
+```
+
+The motor loader decodes `data[4]` as:
+
+```text
+raw 0 or 1 -> MotorGripMode 0
+raw 2      -> MotorGripMode 1
+raw 3      -> MotorGripMode 2
+other      -> leave unchanged
+```
+
+Most importantly for the Ambilight goal, `LoadLightAsync` obtains the actual
+R/G/B color, lamp brightness, breath speed and lamp count from
+`GetDeviceLamplightAsync` / `DeviceLampLightStruct` first. Its subsequent
+CustomData read only overlays the logical light mode and UI brightness (plus
+the shared configuration bytes consumed by other loaders).
+
+This strengthens the protocol split:
+
+```text
+LampLight path   = actual RGB/effect light structure
+CustomData / BB  = shared configuration, including light mode/brightness
+```
+
+Accordingly, the next Ambilight-specific reverse-engineering target is the
+LampLight **write/apply** path and whether it has a volatile/non-NVM variant
+suitable for high-rate color updates.
+
+A new static tool, `tools/dump-gamepad-manager-read-paths.py`, maps the
+normal manager getters to their underlying GamepadInterop/KeyLinkerlib calls.
+Its first use should precede another live warm-up attempt.

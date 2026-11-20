@@ -2754,3 +2754,56 @@ Lighting implications:
 - The remaining lighting target is outside this closed region: locate a genuinely separate
   undocumented LED/effect transport or firmware-internal handler, rather than revisiting
   B7/BB/FN+Right/0x37/test-mode framing.
+
+
+### 0x37 timing test and BLE/X20 Pro family clue
+
+A controlled USB timing test from the same G3 V2 unit added useful empirical data without
+changing any previously established safety conclusion.
+
+Observed:
+- B7 read baseline: about 4–5 ms median;
+- four isolated 0x37 writes: 3.84 / 9.94 / 7.95 / 9.97 ms to first ACK;
+- median 0x37 write-to-ACK: 8.95 ms;
+- immediate B7 readback after each write: 4.01 / 30.00 / 6.00 / 4.01 ms;
+- final B7 state matched the original exactly.
+
+Interpretation:
+- 0x37 writes often take roughly one additional USB polling interval compared with B7 reads;
+- one post-write B7 read took 30 ms;
+- this is compatible with extra controller-side work after a 0x37 write, but it does NOT
+  prove that flash/NVM programming occurs synchronously before ACK;
+- no flash-endurance estimate should be promoted to a confirmed number because the
+  ZC32RF1M endurance and the firmware's persistence implementation remain unknown.
+
+The timing test must not be repeated merely to gather more samples unless a new hypothesis
+requires it.
+
+External KeyLinker-family corroboration was also reviewed in AmjadAAYD/x20ctl current main.
+The X20 Pro implementation uses the same KeyLinker GATT service:
+- service d7f010e0-660d-46e9-96c3-19c4148bdab5
+- write d7f010e1-660d-46e9-96c3-19c4148bdab5
+- notify d7f010e2-660d-46e9-96c3-19c4148bdab5
+
+Its BLE transport sends the encoded KeyLinker frame directly to the write characteristic
+without the USB-only 80 F9 outer envelope and receives encoded replies by notification.
+This independently corroborates the transport model already inferred from the G3 V2 APK.
+
+Important model difference:
+- X20 Pro lighting is a 24-byte logical record read through B7 in two pieces and written
+  through 0x37 in two chunks;
+- the G3 V2 USB B7 path currently exposes a six-byte LampLight object;
+- therefore the X20 Pro ambient implementation cannot be copied byte-for-byte to G3 V2.
+
+The X20 Pro code nevertheless creates a genuinely new research lead: command 0x37 is a
+model-dependent multipart lighting-record writer in at least one related KeyLinker device,
+and current x20ctl main contains software-generated BLE lighting effects / screen ambient
+streaming using it. This is family corroboration only, not proof of a volatile or wear-safe
+G3 V2 path.
+
+Next safe live target:
+1. enumerate the G3V2 APP BLE GATT service without application writes;
+2. if present, replay only already-known read requests over BLE and confirm direct
+   KeyLinker-frame transport and B7 record shape/latency;
+3. do not send 0x37 over BLE until read-only behavior is confirmed and the G3 V2-specific
+   persistence risk is still explicitly accounted for.

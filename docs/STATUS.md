@@ -350,3 +350,37 @@ The final transport fragment is written once and does not wait in this intermedi
 
 This means the outer managed HID transport is now closed. The next OTA-specific target is the exact `GetDeviceCustomDataAsync` and `WriteDeviceCustomDataAsync` state-machine handoff into native `readDeviceCustomData` / `writeDeviceCustomData`, so the already-known `data[11] |= 0x80` mutation can be followed byte-for-byte through the final two native 0x3B fragments.
 
+### Managed CustomData dispatch closed
+
+The dedicated CustomData async state machines and dispatcher cases are now statically identified.
+
+Read path:
+```text
+CreateTaskCompletionSource(28)
+  -> readDeviceCustomData(0)
+  -> GetResultAsync(..., caller timeout)
+  -> result cast to byte[]
+```
+
+Write path:
+```text
+CreateTaskCompletionSource(29)
+  -> writeDeviceCustomData(data, data.Length)
+  -> GetResultAsync(..., 10 seconds)
+  -> result unboxed as bool
+```
+
+All three native imports (`readDeviceCustomData`, `receiveDeviceCustomData`, `writeDeviceCustomData`) are cdecl imports from `Libs\Gamepad\KeyLinkerlib.dll`.
+
+Dispatcher operation type 28 first reassembles all managed HID transport chunks through `CheckPacketIndex` / `DataMap`. Only when the last managed chunk has arrived does it call:
+
+```text
+receiveDeviceCustomData(reassembled_bytes, reassembled_count)
+```
+
+The returned `DeviceDataStruct` is rejected if its pointer is null, length <= 0, or length > 100; that error path completes the pending result with null.
+
+Operation type 29 does not call `receiveDeviceCustomData`. Once its normal response reaches the dispatcher, it removes the pending maps and completes the result with boolean `true`.
+
+One small static gap remains in operation type 28: the previous extraction script stopped at the `ret` belonging only to the invalid-result branch and omitted the valid branch beginning at IL offset `0x153B`. That branch must be dumped before claiming the exact managed copy from native `DeviceDataStruct` into the final byte[] result.
+

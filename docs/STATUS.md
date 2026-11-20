@@ -2352,3 +2352,39 @@ cloning their Bluetooth identities.
 
 The fixed E9-form value at FOT offset 0x112 should therefore be treated as
 identity/provisioning metadata or a default/reference value until its lifecycle is proven.
+
+
+### Isolated 0x37 LampLight persistence test prepared
+
+Added \`tools/g3v2-light-0x37-persistence-test.py\` to isolate the remaining Ambilight
+persistence question without involving CustomData writes.
+
+Test design:
+- \`--apply\`
+  - replays the already reconstructed official read-only warm-up;
+  - captures the current one-lamp B7 payload;
+  - saves a local restoration snapshot before mutation;
+  - preserves effect/breath bytes and physical brightness;
+  - changes RGB only to a distinct marker color;
+  - emits exactly one native \`0x37\` frame;
+  - emits zero \`0x3B\` writes;
+  - verifies the immediate state with B7.
+- real controller power-cycle;
+- \`--check\`
+  - read-only warm-up/B7 comparison against original and marker;
+- \`--restore\`
+  - restores the original snapshot with at most one \`0x37\` write and verifies by B7.
+
+The tool refuses to mutate unless the live B7 logical payload is exactly six bytes
+(one lamp). It contains no OTA or SCSI path and no realtime/write loop.
+
+Protocol basis:
+- cold E670 write phase is zero;
+- read-only warm-up does not advance E670;
+- write header uses the current E67C/E68C state after warm-up plus the next CRT-rand byte;
+- one-lamp stream is \`06 + six LampLight bytes\`;
+- one-frame plaintext size is 12 bytes;
+- post-write E67C/E68C state is advanced before B7 readback.
+
+This test is intended to decide whether high-frequency use of the documented 0x37 path
+is unsafe for NVM endurance.

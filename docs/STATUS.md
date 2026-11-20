@@ -193,7 +193,9 @@ IL+0x011A  stelem.i1
 
 This establishes that MixDrive enters update mode by setting bit `0x80` in byte index `11` of the managed CustomData buffer, then writing that buffer back.
 
-**Highest-priority target:** inspect `GamepadDeviceManager.GetDeviceCustomDataAsync` and `WriteDeviceCustomDataAsync` in `Machenik.Infrastructure.dll` to map managed buffer index `11` to the exact 10-byte CustomData/on-wire HID representation.
+Static IL of `GamepadDeviceManager` now clarifies that the argument `10` passed to `GetDeviceCustomDataAsync(10)` is a **timeout in seconds**, not a requested payload length. The read state machine calls `readDeviceCustomData(0)`, then waits through `GetResultAsync(..., timeoutSeconds)`. The write state machine calls `writeDeviceCustomData(data, data.Length)` and waits with a 10-second timeout.
+
+**Highest-priority target:** inspect the native `GamepadInterop` / `KeyLinkerlib.dll` implementations of `readDeviceCustomData`, `receiveDeviceCustomData`, and `writeDeviceCustomData` to map managed buffer index `11` to the exact BB/CustomData on-wire byte.
 
 ## Next steps
 

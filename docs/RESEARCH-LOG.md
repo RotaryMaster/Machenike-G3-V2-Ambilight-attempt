@@ -1069,3 +1069,16 @@ first-party managed assemblies for firmware/flash/ROM/memory read primitives
 and suspicious large-transfer/address constants. It performs static parsing
 only and applies a strict rule: identity/version/status reads do not count as a
 firmware-dump path unless code proves scalable addressable reads.
+
+
+## 2026-11-20 — Physical label confirms exact FCC filing
+
+A photograph of the user's actual controller label confirms:
+- product marking: Machenike G3 V2 Tri-mode Controller;
+- FCC ID: `2BBT5-G3V2`;
+- manufacturer: Qingdao Machenike Technology Co., Ltd.
+
+This makes the `2BBT5-G3V2` FCC filing an exact-hardware reference for this
+unit rather than a same-family inference. Any unique per-unit production or
+serial code visible in the photograph is deliberately excluded from project
+documentation.

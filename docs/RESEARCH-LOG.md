@@ -510,3 +510,10 @@ The 28-byte length splits exactly as SCSI INQUIRY's 8-byte Vendor + 16-byte Prod
 Disassembly of `deviceUsb_GetInfo` at `0x10001200` proved that the updater does not obtain its bootloader identity by directly issuing INQUIRY from that function. It calls `IOCTL_STORAGE_QUERY_PROPERTY (0x002D1400)`, requires `BusTypeUsb (7)`, and extracts the standard `STORAGE_DEVICE_DESCRIPTOR` Vendor/Product/Revision strings. This confirms the exact identity tuple `Gamepad ` / `Updater         ` / `1.00`.
 
 The firmware command path is distinct: `deviceUsb_Request` uses `IOCTL_SCSI_PASS_THROUGH_DIRECT (0x0004D014)` for the F0/F1/F2 CDBs.
+
+
+## 2026-11-20 — deviceUsb_Request / SPTD wrapper closed
+
+Static disassembly of `deviceUsb_Request` proved the official updater ABI `(handle, data_in, cdb, cdb_len, buffer, buffer_len)`. F0 passes data_in=0; F1 and F2 pass data_in=1. The function constructs a 0x2C-byte x86 `SCSI_PASS_THROUGH_DIRECT`, sets PathId=0, TargetId=1, Lun=0, SenseInfoLength=0x20, TimeOutValue=5, SenseInfoOffset=0x30, copies the caller CDB, and issues `IOCTL_SCSI_PASS_THROUGH_DIRECT (0x0004D014)` using a 0x50-byte local buffer for both input and output. Failed IOCTLs retry up to 10 attempts with 20 ms sleeps, except error 0x37 which terminates immediately.
+
+The remaining GetInfo CRT ambiguity was also removed: IAT slots 0x10002090 and 0x1000208C are `strcpy_s` and `strcat_s`.

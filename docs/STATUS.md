@@ -1864,3 +1864,36 @@ Added \`tools/scan-g3v2-local-fot-corpus.py\`, a read-only recursive scanner for
 complete FOT containers in local files/updaters. It highlights the exact G3V2
 hardware ID \`a1ca51da724cb6103658c05d7d4e2267\`, deduplicates by FOT SHA256 and
 reports whether more than one distinct same-HWID version exists locally.
+
+
+### Two distinct same-HWID / same-version G3V2 FOT images found locally
+
+Read-only local corpus scan covered 19,091 files in the project tree and Downloads.
+It found four complete FOT occurrences, all for the exact G3V2 HWID
+\`a1ca51da724cb6103658c05d7d4e2267\`, but only two distinct FOT SHA256 values:
+
+1. \`firmware-original/G3V2-1006-2011-v1.48.fot\`
+   - version 148
+   - SHA256 \`0b97b5e38fc706182110cdfa1682b1c252a1c0dac8314f5c836d3f037a67e836\`
+
+2. official updater FOT
+   - version 148
+   - SHA256 \`0ad5d080c6451d9a26a28e32f77ce73789f163ce8cad12c035ff4314b10fb085\`
+   - duplicate copies occur in the extracted FOT and downloaded official updater.
+
+This is a confirmed same-HWID, same-version, different-image pair. The provenance of
+\`firmware-original/G3V2-1006-2011-v1.48.fot\` is currently not documented well enough
+to call it a controller flash dump, so that interpretation is intentionally withheld.
+
+Added \`tools/compare-g3v2-same-hwid-fots.py\` to perform a section-aware differential
+analysis of the pair. It reports byte equality, XOR entropy/chi-square, nonzero XOR
+ranges, aligned-block repetition and header/directory invariants for header, XCOD,
+XRES, directory-copy, config and tail.
+
+Decision rule:
+- overwhelmingly identical XCOD/XRES with localized differences -> strong candidate for
+  same-keystream reuse and useful differential analysis;
+- random-looking XCOD/XRES XOR with ~1/256 equal bytes -> more consistent with changed
+  keystream/encryption context, radically different plaintext, or a transformed source;
+- identical XCOD/XRES -> distinct whole-FOT hash is only metadata/config/tail and the pair
+  is not useful as a ciphertext-difference test.

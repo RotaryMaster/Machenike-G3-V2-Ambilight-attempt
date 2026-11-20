@@ -589,3 +589,9 @@ Applying the recovered native formula:
 
 The Linux probe was updated to mirror this official packet-count behavior and to block `--execute` unless the managed-equivalent read produces exactly 20 bytes.
 
+## 2026-11-20 — Firmware-update sender is gated by DeviceType == 2
+
+Static xrefs in `Machenik.exe` show that `<UpdateFirmwareAsync>b__0>d::MoveNext` sends `EnterUpdateModeMessage` only when `firmwareUpdate.Device.DeviceType == 2`. Immediately after sending the message, it launches the extracted external updater process and waits for it to exit.
+
+The current live test setup is USB-only; the 2.4 GHz dongle is disconnected. Therefore the next static target is to resolve the exact enum meaning of `DeviceType == 2` before attributing the failed/empty CustomData read to USB versus receiver mode.
+

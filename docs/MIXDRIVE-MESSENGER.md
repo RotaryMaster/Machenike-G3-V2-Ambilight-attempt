@@ -384,3 +384,10 @@ data[11]  <=>  first plaintext 0x3B frame byte offset 16 (0x10)
 The second frame contains `data[14]..data[19]` after its four-byte header and before its CRC.
 
 Consequence for the OTA path: `data[11] |= 0x80` modifies a logical CustomData byte that lives in the first write fragment, not any HID/KeyLinker framing byte. CRC is then recalculated and the whole frame is KeyLinker-encoded.
+
+
+### Managed HID dispatch chain identified
+
+The managed `WriteDeviceCustomDataAsync` state machine creates task-completion slot/type `29`, invokes native `writeDeviceCustomData(data, data.Length)`, then passes the returned encoded buffer into `GetResultAsync(..., timeout=10)`. The same manager contains the transport methods `SendDeviceData`, `SendNextPacketOrFail`, and `SendDeviceDataAsync`; these are now the exact next bodies to decode, together with `OnReport`, to close the HID envelope and ACK path. The corresponding read path uses task-completion slot/type `28`.
+
+A raw binary search for the two-byte sequences `80 F9` / `81 F9` is explicitly considered non-evidence because the pattern appears accidentally throughout unrelated assemblies. Future envelope reconstruction must come from IL/dataflow or a longer, context-validated signature.

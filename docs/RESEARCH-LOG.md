@@ -1438,3 +1438,25 @@ history does not establish how it was obtained, so do not label it a device dump
 
 A section-aware comparator was added to determine whether the pair exhibits sparse,
 same-keystream-compatible differences or random-looking cross-ciphertext XOR.
+
+
+## 2026-11-20 — same-HWID pair differential result
+
+The two G3V2 v1.48 FOT files with different whole-file SHA256 values do **not** contain
+different encrypted firmware payloads.
+
+Measured result:
+- XCOD: 100% byte-identical
+- XRES: 100% byte-identical
+- config: 100% byte-identical
+- tail: 100% byte-identical
+- header: 508/512 bytes identical
+
+Only header offsets 0x101 and 0x115..0x117 differ. Because the FOT header is duplicated
+verbatim at directory-copy offset 0x59200, the same four byte changes occur again there.
+This accounts for all eight differing bytes in the complete 0x5A400-byte FOT.
+
+This closes the attempted same-keystream differential route for this pair: there is no
+ciphertext delta in XCOD/XRES to exploit. The remaining task is merely to classify the
+four container-metadata bytes and establish the provenance of the local
+\`firmware-original\` copy before assigning any semantic meaning to them.

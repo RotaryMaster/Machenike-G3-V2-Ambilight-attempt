@@ -407,3 +407,28 @@ write logical CustomData through command 0x3B
 Static import analysis found `rand`, `QueryPerformanceCounter`, and `GetSystemTimeAsFileTime`, but no `srand` import in `KeyLinkerlib.dll`. The time/QPC references are in the standard MSVC security-cookie initializer around `0x180009640` (including the characteristic `0x2B992DDFA232` cookie constant), not in the protocol header builder or a PRNG-seeding path.
 
 This distinction matters: matching MixDrive's exact `header[3]` sequence is a process-state reproduction problem, not a requirement imposed by the KeyLinker codec itself. The decoder derives byte 3 from the transmitted frame and never needs a synchronized `rand()` state.
+
+
+### Writer state ordering and default rand correlation
+
+A full static dump of `writeDeviceCustomData` at `0x180008EB0` confirms that the writer does **not** reset `E670/E67C/E68C` before the first fragment. It calls `0x180001C90` using the current global state, encodes/copies the frame, and only then advances the state:
+
+```text
+E67C = 1 if E67C == 0 else 0
+E68C = (E68C + 1) mod 8
+E670 = (E670 == 0 ? 7 : E670 - 1)
+```
+
+For a 20-byte logical CustomData object, the writer therefore consumes the pre-existing state for fragment 0 and the once-advanced state for fragment 1.
+
+A package-wide PE scan found no `srand` or `rand_s` import/string in the MixDrive binaries; only `KeyLinkerlib.dll` imports CRT `rand`. Microsoft documents that calling `rand` before any `srand` is equivalent to `srand(1)`. Microsoft's own sample output for the default well-known sequence begins `41, 18467, 6334, ...`, whose low bytes are `0x29, 0x23, 0xBE, ...`.
+
+This gives a strong correlation with the already verified plaintext read request:
+
+```text
+BB 06 00 29 00 27
+         ^^
+         first default rand() low byte
+```
+
+The correlation is not yet treated as proof of the exact OTA-time PRNG position, because MixDrive performs other protocol traffic before an update and CRT random state is application-scoped. It does, however, strongly support the reconstructed role of header byte 3.

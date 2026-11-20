@@ -459,3 +459,31 @@ hTemplateFile         = NULL
 ```
 
 The exact format string at VA `0x100020E8` remains to be decoded, but the function is conclusively a drive-letter-to-device-handle opener.
+
+
+### Confirmed updater bug: 10-byte CDBs are only partially initialized
+
+The updater reserves 10-byte local CDB regions and calls `deviceUsb_Request(..., cdb_len=10, ...)`, but initialization covers only the first six bytes of each command:
+
+```text
+F0 @ [ebp-0x30]:
+  bytes 0..3 = F0 00 00 00
+  bytes 4..5 = 00 00
+  bytes 6..9 = not explicitly initialized
+
+F1 @ [ebp-0x28]:
+  bytes 0..3 = F1 00 00 00
+  bytes 4..5 = 00 00
+  bytes 6..9 = not explicitly initialized
+
+F2 @ [ebp-0x18]:
+  bytes 0..3 = F2 00 00 00
+  bytes 4..5 = 00 00
+  bytes 6..9 = not explicitly initialized
+```
+
+This is not merely theoretical for F2: the 10-byte F2 range spans `[ebp-0x18 .. ebp-0x0F]`, while the function's security cookie is stored at `[ebp-0x10 .. ebp-0x0D]`. Therefore F2 bytes 8 and 9 alias the low two bytes of the stack cookie and are copied into the SCSI CDB by `deviceUsb_Request`.
+
+Conclusion: the official updater transmits stack residue in vendor CDB bytes that it nevertheless declares as a 10-byte CDB. This is a concrete updater implementation bug. The bootloader must either ignore those trailing bytes or tolerate arbitrary values for the official updater to be reliable.
+
+For a clean reimplementation, the canonical representation should be a fully zero-initialized 10-byte CDB with only byte 0 set to `F0`, `F1`, or `F2`. This canonicalization should first be validated with read-only F1/F2 before any F0 experiment.

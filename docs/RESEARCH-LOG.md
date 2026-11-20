@@ -466,3 +466,12 @@ The same full branch shows that non-final read packets cause a new native `readD
 
 This corrects the native state timeline. Observed/default sequence: selector0 uses SEQ/RAND `00/29`; selector1 uses `81/23`; writer then begins with E67C/E68C `0/2` and next rand `BE`. Conditional on E670=7, writer headers become `3B F4 02 BE` then `3B CB 8B 84`.
 
+
+
+### 2026-11-20 — Cold E670 initialization correction
+
+A full `.data`/xref audit corrected the previous conditional assumption that the CustomData writer might begin with `E670=7`. The file-backed `.data` bytes end long before the protocol globals at `0x18000E670+`, and no initializer writes 7 into `E670`. Cold state is therefore zero.
+
+Because the two native CustomData reads advance only `E67C/E68C`, the cold OTA writer begins with `E670=0, E67C=0, E68C=2`. The resulting default-observed headers are `3B 14 02 BE` and, after zero wraps to seven, `3B EB 8B 84`.
+
+This supersedes `3B F4 02 BE / 3B CB 8B 84` as the cold-sequence candidate. That older pair remains possible only after prior write-style traffic has advanced process-global `E670`.

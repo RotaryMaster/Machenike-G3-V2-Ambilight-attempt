@@ -2642,3 +2642,51 @@ LED path:
 
 This section exists specifically to prevent the project from looping back through already
 completed usbmon/B7/BB/FN+Right experiments.
+
+
+### Verification correction: several "next" offline tasks were already completed
+
+A review of recovered project artifacts and prior analysis confirms that some work recently
+listed as pending had already been performed:
+
+**Already completed**
+- \`FUN_180001080\` was fully analyzed statically in Ghidra:
+  - body \`0x180001080..0x1800011B3\`, 308 bytes;
+  - signature recovered as \`byte * __fastcall FUN_180001080(byte *, int)\`;
+  - pseudocode/assembly/def-use were captured;
+  - it was established as the common KeyLinker frame transform used by many read/write
+    builders, including CustomData and other command families.
+- Its call graph was also inspected; recovered callers include, among others,
+  \`FUN_180004820\`, \`exitDeviceTestMode\`, \`readDeviceAfterKeyChangeList\`,
+  \`writeDeviceCustomData\`, and other protocol builders.
+- KeyLinker Android APK 3.73 (\`versionCode 373\`, package
+  \`com.pulsenet.inputset\`) was extracted and statically inspected with JADX/REA.
+- The Android lighting path was already traced:
+  \`HostActivity.O9()\` -> \`b1.A1()\` / \`b1.z1()\` -> \`e.l0()\` -> opcode \`0x37\`
+  -> queue/write path -> GATT characteristic \`d7f010e1\`; notify uses
+  \`d7f010e2\`.
+- That APK analysis found no second exposed RGB-live writer; the normal RGB path converges
+  on persistent command \`0x37\`.
+
+**Only partially completed / still genuinely unresolved**
+- \`exitDeviceTestMode\` is present at \`0x180004920..0x1800049D3\` and was identified as a
+  caller of \`FUN_180001080\`.
+- A neighboring unnamed function \`FUN_180004820\` at
+  \`0x180004820..0x1800048F0\` was also recovered and calls the same transform; prior
+  discussion associated this region with enter-test-mode infrastructure, but the recovered
+  evidence does not justify renaming it conclusively to \`enterDeviceTestMode\`.
+- \`0x1B = CODE_TEST_SET_MODE\` and \`0x1C = CODE_TEST_NORMAL_MODE\` were identified as
+  protocol constants/names, but recovered evidence does **not** yet prove their exact
+  binding to the two functions above, their argument layout, or that either command maps to
+  FN+Right lighting modes.
+- No live 0x1B/0x1C test was performed.
+
+Therefore the project must not repeat:
+- generic analysis of \`FUN_180001080\`;
+- generic APK 3.73/JADX lighting-path analysis;
+- searches for an already-known alternate Android RGB writer.
+
+The remaining offline target is much narrower: resolve the exact semantics/framing of
+\`FUN_180004820\`, \`exitDeviceTestMode\`, and the 0x1B/0x1C command family, and determine
+whether the still-unassigned write path around \`0x180004EA9\` belongs to key-change/test
+mode rather than lighting.

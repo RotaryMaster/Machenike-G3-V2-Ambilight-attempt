@@ -774,3 +774,79 @@ Therefore the zero-state-machine result was a tooling scope bug, not protocol
 evidence. The scanner now cross-correlates `Machenik.exe`,
 `Machenik.Shared.dll`, and `Machenik.Infrastructure.dll`.
 
+### Warm-up manager map closed: 11 read operations in the initializer path
+
+The corrected multi-assembly audit separates the actual
+`GamepadConfigInitializer -> IGamepadHardwareLoader` path from unrelated
+ViewModel-specific `Load*` methods in `Machenik.exe`.
+
+The concrete initializer uses `GamepadHardwareLoader` from
+`Machenik.Shared.dll`. Its read sequence is:
+
+```text
+1.  LoadKeyMapAsync
+    -> GetDeviceBeforeKeyChangeListAsync
+    -> native readDeviceBeforeKeyChangeList
+    -> operation 9
+
+2.  LoadTurboAsync
+    -> GetDeviceSupportTurboAsync
+    -> native readDeviceSupportTurboList
+    -> operation 16
+    -> GetDeviceCurrentTurboAsync
+    -> native readDeviceTurboData
+    -> operation 17
+
+3.  LoadRockerAsync
+    -> GetDeviceRockerAsync
+    -> native readRockerData
+    -> operation 12
+    -> GetDeviceCustomDataAsync
+    -> native readDeviceCustomData
+    -> operation 28
+
+4.  LoadTriggerAsync
+    -> GetDeviceTriggerAsync
+    -> native readTriggerData
+    -> operation 14
+
+5.  LoadMotorAsync
+    -> GetDeviceMotorAsync
+    -> native readDeviceMotorData
+    -> operation 19
+    -> GetDeviceCustomDataAsync
+    -> native readDeviceCustomData
+    -> operation 28
+
+6.  LoadLightAsync
+    -> GetDeviceLamplightAsync
+    -> native readDeviceLamplightData
+    -> operation 21
+    -> GetDeviceCustomDataAsync
+    -> native readDeviceCustomData
+    -> operation 28
+
+7.  GamepadConfigInitializer.LoadCustomDataAsync
+    -> GetDeviceCustomDataAsync
+    -> native readDeviceCustomData
+    -> operation 28
+```
+
+This is **11 high-level read operations**, including **four CustomData reads**,
+before initialization completes.
+
+The CustomData calls inside rocker, motor, and light loaders are reached
+directly after their primary reads in the compiled loader state machines; no
+CustomData write is involved.
+
+The separate EXE path that calls `GetDeviceAfterKeyChangeListAsync`
+(operation 10) belongs to a ViewModel `LoadKeyMapAsync` and is not part of
+the concrete `GamepadHardwareLoader` sequence used by
+`GamepadConfigInitializer`.
+
+The next blocker is now purely native: determine whether each of these read
+builders advances the same KeyLinker state / CRT `rand()` stream used by
+`readDeviceCustomData`. If so, the cold Linux probe's first CustomData
+request is necessarily in a different state than MixDrive's fourth/final
+CustomData request.
+

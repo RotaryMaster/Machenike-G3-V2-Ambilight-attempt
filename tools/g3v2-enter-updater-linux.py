@@ -166,7 +166,20 @@ def rx(fd, seq, timeout=2.0, ack=None):
         print(f"RX seq={seq:02X} flags={flags:02X} len={n}: {hx(payload)}")
         return flags, payload
 
-def parse_custom_response(wire, selector):
+def receive_data_length_type0(wire):
+    """
+    Exact KeyLinkerlib!receiveDataLength branch used by normal OnReport:
+      type == 0
+      logical_len = decode(wire)[4]
+      total_native = logical_len + 6 + 5 * floor(logical_len / 15)
+    """
+    p = decode(wire)
+    if len(p) < 6:
+        raise RuntimeError(f"native response too short: {len(p)}")
+    logical_len = p[4]
+    return logical_len + 6 + 5 * (logical_len // 15)
+
+def parse_native_frame(wire, selector, first_frame=True):
     p = decode(wire)
     print(f"Plain selector {selector}:", hx(p))
     if len(p) < 6:
@@ -174,40 +187,88 @@ def parse_custom_response(wire, selector):
     if p[-1] != crc8(p[:-1]):
         raise RuntimeError(f"selector{selector} CRC mismatch")
     if p[0] != 0x19:
-        raise RuntimeError(f"selector{selector} unexpected response command 0x{p[0]:02X}")
+        raise RuntimeError(
+            f"selector{selector} unexpected response command 0x{p[0]:02X}"
+        )
     if p[1] != len(p):
         raise RuntimeError(
-            f"selector{selector} frame length mismatch: header={p[1]} actual={len(p)}"
+            f"selector{selector} frame length mismatch: "
+            f"header={p[1]} actual={len(p)}"
         )
-    logical_len = p[4]
-    if len(p) != logical_len + 6:
-        raise RuntimeError(
-            f"selector{selector} logical length mismatch: "
-            f"declared={logical_len} frame={len(p)}"
-        )
-    data = bytes(p[5:-1])
-    print(f"CustomData[{selector}] ({len(data)} bytes):", hx(data))
-    return data
+    if first_frame:
+        logical_len = p[4]
+        data = bytes(p[5:-1])
+        print(f"Logical length declared: {logical_len}")
+        print(f"First-frame logical bytes ({len(data)}):", hx(data))
+        return p, logical_len, data
+    data = bytes(p[4:-1])
+    print(f"Continuation logical bytes ({len(data)}):", hx(data))
+    return p, None, data
 
 def read_custom(fd):
+    """
+    Reproduce the managed type-28 read decision:
+      CheckPacketIndex -> receiveDataLength(type=0) -> ceil(total/20).
+    Selector 1 is sent only if the first native response says another
+    outer 20-byte packet is required.
+    """
     print("\n=== READ CustomData selector 0 ===")
     tx(fd, 3, READ0_WIRE)
     _, w0 = rx(fd, 3, timeout=3.0, ack=False)
-    d0 = parse_custom_response(w0, 0)
-    if len(d0) != 10:
-        raise RuntimeError(f"selector0 expected 10 logical bytes, got {len(d0)}")
 
-    print("\n=== READ CustomData selector 1 ===")
+    p0, logical_len, d0 = parse_native_frame(w0, 0, first_frame=True)
+    total_native = receive_data_length_type0(w0)
+    packet_count = (total_native + 19) // 20
+
+    print(f"receiveDataLength(type=0): {total_native} native bytes")
+    print(f"Managed packet_count     : {packet_count}")
+
+    if packet_count <= 0:
+        raise RuntimeError(f"invalid managed packet_count={packet_count}")
+
+    if packet_count == 1:
+        # receiveDeviceCustomData(single frame) returns decoded[5:-1].
+        data = d0
+        if len(data) <= 0:
+            print("\nOFFICIAL MANAGED RESULT: null")
+            print("Reason: receiveDeviceCustomData length <= 0.")
+            return None
+        print(f"\nOFFICIAL MANAGED RESULT: byte[{len(data)}]")
+        print("CustomData:", hx(data))
+        return data
+
+    if packet_count != 2:
+        raise RuntimeError(
+            f"unsupported CustomData packet_count={packet_count}; "
+            "probe intentionally supports only the proven 1- or 2-packet cases"
+        )
+
+    if len(w0) != 20:
+        raise RuntimeError(
+            f"receiveDataLength expects continuation but first outer payload "
+            f"is {len(w0)} bytes, expected 20"
+        )
+
+    print("\n=== READ CustomData selector 1 (managed continuation) ===")
     tx(fd, 4, READ1_WIRE)
     _, w1 = rx(fd, 4, timeout=3.0, ack=False)
-    d1 = parse_custom_response(w1, 1)
-    if len(d1) != 10:
-        raise RuntimeError(f"selector1 expected 10 logical bytes, got {len(d1)}")
+    _, _, d1 = parse_native_frame(w1, 1, first_frame=False)
+
+    if len(w0) + len(w1) != total_native:
+        raise RuntimeError(
+            f"combined native length mismatch: got {len(w0)+len(w1)}, "
+            f"expected {total_native}"
+        )
 
     data = d0 + d1
-    if len(data) != 20:
-        raise RuntimeError(f"combined CustomData expected 20 bytes, got {len(data)}")
-    print("\nCustomData combinado:", hx(data))
+    if len(data) != logical_len:
+        raise RuntimeError(
+            f"combined logical length mismatch: got {len(data)}, "
+            f"declared {logical_len}"
+        )
+
+    print(f"\nOFFICIAL MANAGED RESULT: byte[{len(data)}]")
+    print("CustomData:", hx(data))
     return data
 
 def build_ota_frames(data):
@@ -255,7 +316,11 @@ def snapshot(label):
 
 def main():
     ap = argparse.ArgumentParser(description="G3 V2 CustomData OTA transition probe")
-    ap.add_argument("--execute", action="store_true", help="actually set CustomData[11] |= 0x80")
+    ap.add_argument(
+        "--execute",
+        action="store_true",
+        help="set CustomData[11] |= 0x80 only if the official read yields exactly 20 bytes",
+    )
     args = ap.parse_args()
     if encode(READ0_PLAIN) != READ0_WIRE or encode(READ1_PLAIN) != READ1_WIRE:
         raise RuntimeError("codec self-test failed")
@@ -271,15 +336,47 @@ def main():
         ping_app(fd, 2)
         print("Pings ZXPC_APP: OK")
         data = read_custom(fd)
+
+        if data is None:
+            print("\nDRY-RUN CONCLUÍDO: o caminho oficial retornaria null.")
+            print("MainViewModel não executaria data[11] |= 0x80.")
+            print("Nenhuma escrita OTA será tentada.")
+            return
+
+        if len(data) <= 11:
+            print(
+                f"\nDRY-RUN CONCLUÍDO: caminho oficial retornaria byte[{len(data)}]."
+            )
+            print(
+                "MainViewModel acessaria data[11], que está fora do array; "
+                "isso caracteriza um bug do aplicativo oficial nesse estado."
+            )
+            print("Nenhuma escrita OTA será tentada.")
+            return
+
+        if len(data) != 20:
+            print(
+                f"\nCustomData tem {len(data)} bytes; a implementação de escrita "
+                "do probe permanece bloqueada fora do caso de 20 bytes."
+            )
+            print("Nenhuma escrita OTA será tentada.")
+            return
+
         new, p0, p1, w0, w1 = build_ota_frames(data)
         print("\nCustomData OTA   :", hx(new))
         print(f"byte[11]         : {data[11]:02X} -> {new[11]:02X}")
         print("Plain write #0   :", hx(p0)); print("Wire  write #0   :", hx(w0))
         print("Plain write #1   :", hx(p1)); print("Wire  write #1   :", hx(w1))
         if not args.execute:
-            print("\nDRY-RUN: nada foi escrito além das duas solicitações de leitura.")
+            print(
+                "\nDRY-RUN: nenhuma escrita OTA foi feita. "
+                "A leitura seguiu a lógica oficial de packet_count."
+            )
             return
-        print("\nEXECUTE autorizado: enviando somente a mutação OTA. Nenhum CDB SCSI será enviado.")
+        print(
+            "\nEXECUTE autorizado para o único caso atualmente suportado: "
+            "CustomData exato de 20 bytes. Nenhum CDB SCSI será enviado."
+        )
         write_ota(fd, w0, w1)
     finally:
         try: os.close(fd)

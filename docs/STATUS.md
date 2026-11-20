@@ -1575,3 +1575,30 @@ Physical-dump priority is now:
    is eventually accessible;
 2. research ZhiXu factory/programming tooling for ZC32RF1M;
 3. avoid any "unlock" command until its read-protection behavior is known.
+
+
+### Safe simulated firmware-download path
+
+A safer alternative to forcing a real OTA is now defined: reproduce only the
+MixDrive firmware catalog/download stage outside the application, capture the
+returned package, and never send `EnterUpdateModeMessage` or launch the
+downloaded updater.
+
+This matters because the managed update flow is already proven to set
+`CustomData[11] |= 0x80` before `Process.Start`; clicking a real update is
+therefore unnecessary and can transition the controller into bootloader mode.
+
+The current official API query for `brand=MACHENIKE`,
+`product_name=G3V2`, `product_type=2` returns the latest v1.48 updater.
+Spoofing a lower local firmware version can make the UI consider an update
+available, but it cannot force the server to expose an older package if the
+API itself returns only the current release.
+
+The highest-value target is a historical exact-hardware updater (especially a
+G3V2 1.25 generation, which is independently known to have existed). A second
+ZXD2267 package could materially help differential analysis of the transformed
+FOT.
+
+Added `tools/dump-mixdrive-firmware-update-flow.py` to statically recover the
+catalog/download/request/launch path and URLs without HTTP requests, process
+launches or device I/O.

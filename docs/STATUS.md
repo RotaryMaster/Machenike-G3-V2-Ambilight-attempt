@@ -1799,3 +1799,62 @@ Added \`tools/analyze-g3v2-fot-crypto-surface.py\` for a focused read-only
 verification of the corrected container model: region hashes/entropy,
 directory-copy equality, KEY bytes, XCOD/XRES section headers, repeated
 16-byte block counts and plaintext strings from metadata/config only.
+
+
+### Confirmed from G3V2 v1.48 region-aware crypto scan
+
+The focused analyzer was run on the exact official updater
+SHA256 f0cf653ae3d3de70266b38d011ba6491a3d454aed5cf0a6ac482cbbfaa50c255.
+
+Confirmed FOT SHA256:
+0ad5d080c6451d9a26a28e32f77ce73789f163ce8cad12c035ff4314b10fb085
+
+Confirmed metadata:
+- logical size 0x5A400
+- hardware ID a1ca51da724cb6103658c05d7d4e2267
+- version 148
+- data_start 0x200
+- data_len 0x59000
+- directory_copy 0x59200
+- config_start 0x59400
+- DATA end equals directory_copy exactly
+
+Confirmed XOR-0x80 tag offsets:
+- INFO 0x54 / 0x59254
+- DEV  0x8C / 0x5928C
+- KEY  0xA0 / 0x592A0
+- DATA 0xB0 / 0x592B0
+- XCOD 0x200
+- XRES 0x58600
+- DOWN 0x594C0
+
+The first 0x200 bytes and the directory copy at 0x59200 are byte-identical,
+with identical SHA256 6a8f80e9b9d5aa6336b565589700f0fb212aa850053b379e4a3edf364b8f8a52.
+
+KEY record:
+- length 8
+- bytes 00 00 00 01 EA E3 2E 09
+- matches the same-family ZXD/EPIC constant reported publicly.
+
+Encrypted-region statistics:
+- XCOD: 361472 bytes, entropy 7.999503, chi-square 248.90, zero repeated aligned 16-byte blocks
+- XCOD payload after 16-byte section header: entropy 7.999503, chi-square 249.25
+- XRES: 3072 bytes, entropy 7.941931, chi-square 250.50, zero repeated aligned 16-byte blocks
+- XRES payload after 16-byte section header: entropy 7.943922, chi-square 235.81
+
+This strongly supports a high-quality stream/CTR/OFB-like encrypted payload and rules out
+simple static-key ECB. It does not identify the cipher.
+
+Plaintext/config strings include BT-BOX and LE-Remoter. DOWN is located inside the
+plaintext configuration area at 0x594C0.
+
+Important distinction: the official v1.48 FOT is the firmware package corresponding to
+the controller's installed version, but it is not a plaintext dump of the controller's
+internal flash. XCOD/XRES remain encrypted in the package; obtaining the installed
+plaintext image still requires either a live flash/debug dump or recovery of the
+bootloader-side decryption mechanism.
+
+Same-family public work on ZXD2055/ZXD2271 independently reports the same FOT layout,
+same KEY constant, byte-for-byte host transfer and bootloader-side decryption. It also
+reports keystream reuse across same-hardware-ID firmware versions on an EasySMX X20 pair.
+This is external family evidence, not direct proof yet for G3V2/ZXD2267.

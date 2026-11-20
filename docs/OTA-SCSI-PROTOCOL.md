@@ -250,6 +250,22 @@ F2 IN, 20 bytes
 success UI / close target
 ```
 
+## Official-updater implementation bug vs protocol requirements
+
+Static stack analysis shows that the official updater passes `cdbLength=10` for F0/F1/F2 while explicitly initializing only bytes 0..5 of each local command buffer. Bytes 6..9 therefore contain stack residue; for F2, bytes 8..9 overlap the function security-cookie slot.
+
+This is a confirmed bug in the original application, not a protocol field that should be copied into a clean implementation. The project therefore treats the vendor software as behavioral evidence rather than as a normative specification.
+
+Clean-room rule:
+
+```text
+10-byte CDB = zero-filled
+byte 0      = F0, F1, or F2
+bytes 1..9  = 00 unless device evidence proves another field
+```
+
+Validate this normalization with read-only F1/F2 before any F0 write.
+
 ## What the updater does not contain
 
 The updater's own UI includes text instructing the user to put the controller in upgrade mode first.

@@ -550,3 +550,9 @@ With the same live order as the earlier successful A/B test (queue drain, two `Z
 
 Earlier live evidence remains: selector 0 once returned `19 10 00 6B 0A 00 01 00 00 00 00 40 04 00 02 28`, i.e. 10 logical bytes, and selector 1 returned the same 10-byte payload with its own state/CRC. This means current documentation that promotes a 20-byte logical object from static interpretation is not yet fully reconciled with the device. No more live write attempts should occur until either a true power-cycle restores the known-good read or the managed packet-continuation criterion is recovered from IL.
 
+## 2026-11-20 — Full power-cycle still yields empty selector-0 payload
+
+After a real controller power-off/disconnect/reconnect cycle, normal USB enumeration returned as `413D:2131`, the two `ZXPC_APP` identity pings succeeded, and selector 0 at outer sequence 3 returned `8D D2 63 51 F6 5F`, decoding to CRC-valid `19 06 00 0A 00 EE` with logical length zero.
+
+Therefore the empty response is not explained by a stale hidraw node or by merely retaining the previous protocol session across reconnect. Live writes remain frozen. A new read-only CIL helper, `tools/dump-gamepad-manager-il.py`, was added to recover the exact packet-count/continuation condition in `GamepadDeviceManager`.
+

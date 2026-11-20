@@ -48,6 +48,22 @@ Confirmed interpretation:
 
 An earlier simplistic interpretation of raw bytes as a decimal version was discarded.
 
+### Official G3 V2 API identity closed
+
+The MixDrive firmware endpoint was queried with both plausible brands.
+
+Confirmed G3 V2 catalog identity:
+
+```text
+brand=MACHENIKE
+product_name=G3V2
+product_type=2
+```
+
+The API returned firmware **1.48** and the official updater artifact. The corresponding `THUNDEROBOT` query returned HTTP 404.
+
+This independently corroborates the live 1.48 handshake.
+
 ### MixDrive updater architecture closed
 
 MixDrive:
@@ -65,6 +81,12 @@ The actual flash transport is therefore in the native updater, not in the manage
 
 Its request path was reconstructed as SCSI pass-through-direct with retries.
 
+Known SHA-256:
+
+```text
+fad660bc7e006c58f37db9d75b72bf30c089ef62fc4e72673cbfd424d247b5e5
+```
+
 ### F0/F1/F2 update loop reconstructed
 
 The v1.48 updater:
@@ -73,6 +95,39 @@ The v1.48 updater:
 - checks F2 after the first F0 and after the complete transfer.
 
 The FOT transfer is 722 blocks of exactly 512 bytes.
+
+### FOT container layout recovered
+
+The embedded FOT was extracted without executing updater code.
+
+Confirmed:
+- total size: `0x5A400` / 369664 bytes
+- internal size field: `0x5A3F8`
+- hardware ID: `A1 CA 51 DA 72 4C B6 10 36 58 C0 5D 7D 4E 22 67`
+- version raw: `0x94` -> 1.48
+- structured header + high-entropy XCOD/XRES regions
+- duplicate 512-byte directory/header copy near the end
+- complete transfer is exactly aligned to 512-byte blocks
+
+### Managed messenger metadata path narrowed
+
+A global metadata scan across 146 PE files / 59 managed assemblies corrected an earlier false negative.
+
+`Machenik.exe` definitively contains:
+- `FirmwareUpdateViewModel.UpdateFirmwareAsync`;
+- its generated async/lambda state machines;
+- `Machenik.Messages.CheckFirmwareUpdateMessage`;
+- `WeakReferenceMessenger::get_Default`;
+- `IMessengerExtensions::Register`;
+- `IMessengerExtensions::RegisterAll`;
+- `IMessengerExtensions::Send`;
+- `ProcessStartInfo` and `Process::Start` references.
+
+Therefore the messenger/update path exists exactly where expected.
+
+The current `dncil` body-parser pass emitted compressed-integer decoding errors and returned zero body contexts, so the concrete generic type of the pre-updater `Send<T>` remains unresolved.
+
+This supersedes the prior “zero hits” result: that result is now classified as a tooling failure, not as evidence that the messenger path was absent.
 
 ## Open questions
 
@@ -83,7 +138,8 @@ This is the highest-priority unresolved question.
 Likely source: the gamepad-specific messenger/event sent by MixDrive immediately before it starts the updater.
 
 Need to determine:
-- message type/value;
+- concrete generic `Send<T>` message type;
+- message payload/value;
 - receiver;
 - exact HID request;
 - expected disconnect/re-enumeration;

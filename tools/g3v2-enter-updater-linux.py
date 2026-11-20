@@ -362,22 +362,22 @@ def main():
             print("Nenhuma escrita OTA será tentada.")
             return
 
-        new, p0, p1, w0, w1 = build_ota_frames(data)
-        print("\nCustomData OTA   :", hx(new))
-        print(f"byte[11]         : {data[11]:02X} -> {new[11]:02X}")
-        print("Plain write #0   :", hx(p0)); print("Wire  write #0   :", hx(w0))
-        print("Plain write #1   :", hx(p1)); print("Wire  write #1   :", hx(w1))
-        if not args.execute:
-            print(
-                "\nDRY-RUN: nenhuma escrita OTA foi feita. "
-                "A leitura seguiu a lógica oficial de packet_count."
-            )
-            return
         print(
-            "\nEXECUTE autorizado para o único caso atualmente suportado: "
-            "CustomData exato de 20 bytes. Nenhum CDB SCSI será enviado."
+            "\nCustomData de 20 bytes obtido, mas a geração/escrita OTA deste "
+            "probe está temporariamente BLOQUEADA."
         )
-        write_ota(fd, w0, w1)
+        print(
+            "Motivo: o warm-up oficial recém-reconstruído prova que o estado "
+            "KeyLinker/rand do caminho real não é o antigo estado frio "
+            "hardcoded por build_ota_frames()."
+        )
+        print(
+            "Use tools/g3v2-warmup-readonly.py primeiro. Nenhum frame 0x3B "
+            "será gerado ou enviado por este probe."
+        )
+        if args.execute:
+            print("--execute foi ignorado por segurança.")
+        return
     finally:
         try: os.close(fd)
         except OSError: pass

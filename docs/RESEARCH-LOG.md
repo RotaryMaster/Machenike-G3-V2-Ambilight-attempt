@@ -665,3 +665,17 @@ A new read-only helper,
 methods to their native request builders and operation/result types before any
 live warm-up reproduction.
 
+## 2026-11-20 — Warm-up manager map fixed to cross assemblies
+
+The first focused manager-map run showed only
+`GetDeviceCustomDataAsync` / `GetDeviceAfterKeyChangeListAsync` and zero
+manager state machines because the helper scanned only `Machenik.exe`.
+
+That result is invalid as a protocol conclusion. The concrete
+`GamepadHardwareLoader` state machines are in `Machenik.Shared.dll`, while
+the corresponding `GamepadDeviceManager` async state machines are in
+`Machenik.Infrastructure.dll`.
+
+The helper was corrected to scan all three first-party assemblies and perform
+the cross-assembly correlation explicitly.
+

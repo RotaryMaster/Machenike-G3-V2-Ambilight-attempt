@@ -750,3 +750,27 @@ MixDrive's cached manager.
 The next static step is to map every warm-up `GetDevice*Async` call to its
 native request builder/operation type before sending any live warm-up traffic.
 
+### Warm-up audit scanner scope correction
+
+The first version of `dump-gamepad-warmup-manager-map.py` scanned only
+`Machenik.exe`. That produced an incomplete result: it saw only the loader
+state machines compiled into the EXE and reported zero manager async state
+machines.
+
+The large earlier metadata scan proves the split explicitly:
+
+```text
+Machenik.Shared.dll
+  GamepadHardwareLoader loader state machines
+  e.g. <LoadRockerAsync>d__13, <LoadMotorAsync>d__11, <LoadTurboAsync>d__8
+
+Machenik.Infrastructure.dll
+  GamepadDeviceManager async state machines
+  e.g. <GetDeviceRockerAsync>d__33, <GetDeviceTriggerAsync>d__35,
+       <GetDeviceSupportTurboAsync>d__37
+```
+
+Therefore the zero-state-machine result was a tooling scope bug, not protocol
+evidence. The scanner now cross-correlates `Machenik.exe`,
+`Machenik.Shared.dll`, and `Machenik.Infrastructure.dll`.
+

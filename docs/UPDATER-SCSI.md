@@ -302,3 +302,62 @@ Revision = "1.00"
 ```
 
 This is not yet promoted to confirmed protocol behavior until the implementation of `deviceUsb_GetInfo` inside `DeviceUsb.dll` is disassembled and shown to obtain those fields from SCSI INQUIRY or equivalent storage metadata.
+
+
+### DeviceUsb_GetInfo implementation confirmed
+
+Static disassembly of `DeviceUsb.dll!deviceUsb_GetInfo` (VA `0x10001200`) shows that update-device identity is obtained through Windows storage-property metadata, not by directly issuing an INQUIRY CDB from this function.
+
+The function calls:
+
+```text
+DeviceIoControl(
+    handle,
+    0x002D1400,
+    input_query,
+    12,
+    output_descriptor,
+    0x227,
+    &bytes_returned,
+    NULL
+)
+```
+
+`0x002D1400` is `IOCTL_STORAGE_QUERY_PROPERTY`.
+
+After the call succeeds, the function checks DWORD offset `0x1C` of the returned descriptor against `7`. In the standard `STORAGE_DEVICE_DESCRIPTOR` layout, offset `0x1C` is `BusType`, and value `7` is `BusTypeUsb`. Non-USB descriptors are rejected.
+
+The code then dereferences the standard descriptor string offsets:
+
+- descriptor + `0x0C`: `VendorIdOffset`
+- descriptor + `0x10`: `ProductIdOffset`
+- descriptor + `0x14`: `ProductRevisionOffset`
+
+and copies/appends those strings into a temporary ANSI buffer before converting the final string to UTF-16 with `MultiByteToWideChar`.
+
+This confirms that the updater signature
+
+```text
+Gamepad Updater         1.00
+```
+
+is derived from the USB storage device descriptor as:
+
+```text
+VendorId        = "Gamepad "
+ProductId       = "Updater         "
+ProductRevision = "1.00"
+```
+
+The remaining tiny symbol-level check is to resolve IAT slot `0x1000208C`; the call pattern indicates it is the append operation used for ProductId and ProductRevision.
+
+### Separation of metadata query and firmware CDB transport
+
+`deviceUsb_GetInfo` uses `IOCTL_STORAGE_QUERY_PROPERTY` (`0x002D1400`) for identity metadata.
+
+Separately, `deviceUsb_Request` uses Windows IOCTL `0x0004D014`, i.e. `IOCTL_SCSI_PASS_THROUGH_DIRECT`, for the updater's F0/F1/F2 CDB traffic.
+
+Therefore:
+
+- bootloader discovery/identity = storage property descriptor;
+- firmware/status protocol = SCSI pass-through direct.

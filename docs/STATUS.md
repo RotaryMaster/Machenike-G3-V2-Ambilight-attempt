@@ -222,3 +222,12 @@ A firmware write should not be attempted until all of these are known:
 - recovery path or at least a defensible re-entry path;
 - exact firmware payload selected for the attached hardware ID;
 - write loop and failure handling reproduced deterministically.
+
+
+### CustomData receive ABI resolved
+
+`receiveDeviceCustomData(datas, length)` uses the Windows x64 hidden-structure-return convention. Its helper `0x180001760` receives the raw buffer in `RDX` and length in `R8D`, decodes frames through `0x1800011C0`, and has an exact 20-byte single-frame threshold matching the write-side `4 + 15 + 1` framing. Static caller behavior strongly indicates that the helper strips transport framing and the logical length prefix, returning only reconstructed logical payload bytes.
+
+Therefore `MainViewModel`'s `data[11] |= 0x80` targets logical CustomData byte 11 (zero-based).
+
+**Next target:** disassemble `0x1800018E0..` through the end of `0x180001760` plus `0x1800011C0` to confirm exact stripping offsets, returned length calculation, and multi-frame concatenation.

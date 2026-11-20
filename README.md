@@ -50,3 +50,13 @@ Facts are marked as confirmed only when supported by at least one of:
 - deterministic reconstruction with known test vectors.
 
 External projects are used as cross-checks, not as substitutes for G3 V2 evidence.
+
+
+### Latest protocol milestone — 2026-11-20
+
+The normal G3V2 hardware-loader path is now mapped far enough to separate
+lighting state from shared configuration: RGB is read through the LampLight
+structure, while the 20-byte CustomData/0xBB object supplies light
+mode/brightness and several rocker/motor settings. The current read-only
+warm-up work is now focused on mapping each managed manager getter to its
+native KeyLinkerlib call before another live CustomData probe.

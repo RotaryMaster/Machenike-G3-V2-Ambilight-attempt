@@ -1693,3 +1693,16 @@ This is strong evidence that the runtime device-specific Bluetooth identity is s
 from persistent per-unit storage outside the generic FOT or is derived from another unique
 hardware value. This model naturally explains why the official generic updater does not
 clone Bluetooth addresses across units.
+
+
+## 2026-11-20 — isolated standalone 0x37 persistence test added
+
+Added a guarded three-phase live test for the critical Ambilight question.
+
+The test performs one RGB-only 0x37 write while preserving the current LampLight
+effect/breath/brightness bytes and deliberately never sends 0x3B. It snapshots the
+original six-byte B7 lamp payload before mutation, verifies the marker by B7, then uses a
+separate read-only \`--check\` run after a real controller power-cycle. A final
+\`--restore\` returns the original LampLight bytes.
+
+No streaming loop, OTA path or SCSI commands are present.

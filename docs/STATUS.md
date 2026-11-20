@@ -582,3 +582,17 @@ Therefore selector 1 is **not unconditional**. It is requested only when native 
 
 Critical remaining discriminator: reconstruct native `receiveDataLength`. Its return value determines whether the observed 6-byte and 16-byte `0x19` responses are considered complete or require a subsequent selector.
 
+### CustomData case 28 fully recovered
+
+The exact operation-28 branch in `HandleGenericDeviceData` is now recovered.
+
+It:
+1. calls `CheckPacketIndex`;
+2. compares `current_index` with `LengthMap[seq] - 1`;
+3. if final, removes `LengthMap` / `IndexMap` / `DataMap`, calls native `receiveDeviceCustomData` on the accumulated raw bytes, validates `data != NULL` and `0 < length <= 100`, copies the native result with `Marshal.Copy`, and resolves the pending task;
+4. if not final, increments `IndexMap`, migrates all pending state to a fresh outer HID sequence, calls `readDeviceCustomData(current_index + 1)`, and sends it via `SendNextPacketOrFail`.
+
+Important edge case: if `receiveDataLength` returns zero for the first response, managed code stores `LengthMap=0`. Since the current index is 0, the final-packet comparison becomes `0 == -1`, which is false, so the official managed path continues to selector 1 rather than finalizing immediately.
+
+Therefore the Linux probe's current behavior of aborting immediately on a decoded zero-length `0x19` response does not yet reproduce the official managed path. The exact native return value of `receiveDataLength` for the observed frames is the next required fact.
+

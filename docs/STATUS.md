@@ -1972,3 +1972,31 @@ Do not label that field as a checksum, timestamp or second MAC without further e
 Best non-destructive discriminator: compare the controller's observed Bluetooth/gamepad
 address against the two \`98:B6:E9:xx:xx:xx\` candidates. This can identify which
 personalized FOT is associated with the physical unit without touching firmware storage.
+
+
+### Live Bluetooth observation corrects prior FOT-address interpretation
+
+Active BlueZ discovery with the physical G3V2 produced:
+
+\`98:B6:ED:68:58:43  G3V2 APP\`
+
+Neither of the two FOT header fields at \`0x112..0x117\` matched the live address:
+- local FOT A: \`98:B6:E9:B0:25:BE\`
+- official FOT B: \`98:B6:E9:CE:4B:03\`
+
+Therefore the earlier idea that the FOT \`98:B6:E9:xx:xx:xx\` field is simply the
+controller's currently advertising BLE address is rejected.
+
+Family-level public KeyLinker/X20 reverse engineering gives a plausible explanation:
+- \`98:B6:E9\` is classified as a standard-gamepad prefix;
+- \`98:B6:ED\` is classified as a Switch-mode/device-family prefix;
+- the configuration peripheral can be distinct from the gameplay interface.
+
+For G3V2 specifically, \`G3V2 APP\` at an ED address may therefore be a separate
+configuration/app personality, while the E9 FOT field may refer to another radio identity,
+personality, factory-programming address or inactive mode. This is now a hypothesis, not
+a confirmed mapping.
+
+Added \`tools/inspect-g3v2-bluetooth-identities.py\` to scan FOT header/config regions for
+all \`98:B6:E*\` six-byte sequences and compare them against the observed live address,
+suffix and reversed forms without any device I/O.

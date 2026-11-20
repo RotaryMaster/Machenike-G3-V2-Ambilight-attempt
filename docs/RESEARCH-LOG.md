@@ -1598,3 +1598,17 @@ identity is still unknown.
 
 Next safe test: temporarily make the previously paired host unavailable, then repeat
 Y+HOME discovery with btmon; do not erase pairing data from the controller.
+
+
+## 2026-11-20 — Y+HOME final connection was via dongle, not Bluetooth
+
+User clarified that the controller ultimately connected to the same Bazzite machine and
+appeared as an Xbox 360 Controller.
+
+Because btmon/BlueZ showed no HCI connection, this means the final connection used the
+separate 2.4 GHz dongle/USB path. That path is outside hci0 and therefore invisible to
+btmon.
+
+Correction to prior interpretation: it did not necessarily reconnect to another host.
+For a clean Y+HOME Bluetooth discovery, remove the dongle from the equation during the
+capture.

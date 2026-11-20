@@ -2,7 +2,7 @@
 
 Private research repository for documenting and reproducing the Machenike G3 V2 controller protocol on Linux, with emphasis on lighting control, the MixDrive/KeyLinker HID protocol, OTA capability, and the official firmware update path.
 
-> Current status: the normal HID protocol and firmware identity are substantially understood, and the Windows updater's SCSI transport has been reconstructed statically. The remaining critical gap is the official transition from normal HID mode to the firmware-update USB personality.
+> Current status: the normal HID protocol and firmware identity are substantially understood, the official firmware API identity is confirmed, the Windows updater's SCSI transport and embedded FOT layout have been reconstructed statically, and the managed MixDrive messenger path has been narrowed. The remaining critical gap is the exact normal-HID command that transitions the controller into its firmware-update USB personality.
 
 ## Confirmed device identity
 
@@ -15,12 +15,17 @@ Private research repository for documenting and reproducing the Machenike G3 V2 
   - `0x2011`
 - OTA feature bit: **present**
 - Application marker returned by the device: `ZXPC_APP`
+- Official MixDrive catalog identity:
+  - brand: `MACHENIKE`
+  - product: `G3V2`
+  - product type: `2`
 
 ## Documentation
 
 - [Current status and roadmap](docs/STATUS.md)
 - [HID / KeyLinker protocol](docs/HID-KEYLINKER.md)
 - [MixDrive firmware architecture and API](docs/MIXDRIVE-FIRMWARE.md)
+- [MixDrive messenger / OTA transition investigation](docs/MIXDRIVE-MESSENGER.md)
 - [Windows updater, DeviceUsb and SCSI F0/F1/F2](docs/OTA-SCSI-PROTOCOL.md)
 - [FOT firmware container and updater payload](docs/FOT-FORMAT.md)
 - [Research log and evidence policy](docs/RESEARCH-LOG.md)

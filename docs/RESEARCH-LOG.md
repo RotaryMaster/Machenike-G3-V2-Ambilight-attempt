@@ -754,3 +754,25 @@ A new bounded live helper,
 and requires `--run-readonly` to send the read-request sequence. It contains
 no OTA write or SCSI support.
 
+## 2026-11-20 — Full read-only warm-up still returns zero-length CustomData
+
+A live USB-only reproduction of the concrete 11-read initializer baseline
+completed without any write. All ordinary configuration reads returned valid,
+non-empty data, while every CustomData read returned logical length zero.
+There were no continuation packets, so the final request was exactly baseline
+request #11 with state/rand `02/49`.
+
+This rules out missing warm-up/state progression as the sole explanation for
+the current null CustomData result.
+
+Static loader behavior provides an important reinterpretation:
+`LoadRockerAsync` explicitly requires a non-null 20-byte CustomData block
+before applying its extended fields, while null simply skips them. Light and
+motor loaders also tolerate null. CustomData therefore behaves as optional
+extended configuration state rather than a mandatory base configuration
+record.
+
+A new static helper, `tools/dump-customdata-semantics.py`, was added to map
+all managed CustomData read/write call sites, G3V2 branches, length checks, and
+builder/mutation logic before any further live write experiment.
+

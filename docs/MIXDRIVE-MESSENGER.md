@@ -159,15 +159,60 @@ external updater launch
 
 This is a major correction to the earlier expectation that the transition might be a separate special HID command. The current evidence instead strongly indicates that MixDrive uses the already-known normal **CustomData** channel to request OTA/update mode.
 
-The exact mutation is still unresolved because the current token-oriented dump does not show the non-call IL instructions between the two async operations.
+The exact mutation is now confirmed by the full IL dump.
+
+The handler calls:
+
+```text
+GetDeviceCustomDataAsync(10)
+```
+
+and stores the returned byte array in a local. If the result is non-null, it performs exactly:
+
+```text
+data[11] = (byte)(data[11] | 0x80);
+```
+
+before calling:
+
+```text
+WriteDeviceCustomDataAsync(data)
+```
+
+Relevant IL:
+
+```text
+IL+0x00AC  ldc.i4.s 10
+IL+0x00AE  GamepadDeviceManager::GetDeviceCustomDataAsync
+...
+IL+0x0103  GetResult
+IL+0x0108  stloc.2
+IL+0x0109  ldloc.2
+IL+0x010A  brfalse.s
+IL+0x010C  ldloc.2
+IL+0x010D  ldc.i4.s 11
+IL+0x010F  ldloc.2
+IL+0x0110  ldc.i4.s 11
+IL+0x0112  ldelem.u1
+IL+0x0113  ldc.i4 128
+IL+0x0118  or
+IL+0x0119  conv.u1
+IL+0x011A  stelem.i1
+IL+0x011C  <gamepadDeviceManager>5__2
+IL+0x0121  ldloc.2
+IL+0x0122  GamepadDeviceManager::WriteDeviceCustomDataAsync
+```
+
+So the official MixDrive transition is not a separate special HID command at this level. It is a read-modify-write operation on the normal CustomData byte array, setting bit `0x80` of array index `11`.
 
 ## Current exact target
 
-Decode `<Receive>d__21::MoveNext` instruction-by-instruction around the first await completion and the later `WriteDeviceCustomDataAsync` call, resolving:
+The remaining mapping problem is now one layer lower:
 
-- the returned type of `GetDeviceCustomDataAsync`;
-- any `stfld`, `stelem`, property setter, enum constant or literal applied to that object;
-- the exact argument passed to `WriteDeviceCustomDataAsync`;
-- whether one byte/bit is toggled or a whole CustomData object is rebuilt.
+1. inspect `GamepadDeviceManager.GetDeviceCustomDataAsync` in `Machenik.Infrastructure.dll`;
+2. inspect `GamepadDeviceManager.WriteDeviceCustomDataAsync`;
+3. determine how the returned byte array is laid out relative to the already-known 10-byte CustomData payload;
+4. map array index `11` to the exact on-wire CustomData byte and packet;
+5. reconstruct the precise normal-HID OTA request without sending it.
 
-Once that mutation is known it can be mapped to the 10-byte CustomData payload already validated against the G3 V2.
+The apparent mismatch between the argument/value `10`, the known 10-byte CustomData payload, and access to array index `11` means the returned managed byte array likely includes protocol bytes or a wider decoded structure. That mapping must be confirmed from the manager implementation rather than guessed.

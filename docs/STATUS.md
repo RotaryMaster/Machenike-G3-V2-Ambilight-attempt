@@ -1237,22 +1237,21 @@ for lamp n:
   byte 2+6n = G & 0xFF
   byte 3+6n = B & 0xFF
 
-  byte 4+6n = packed_byte_0
-  byte 5+6n = packed_byte_1
+  packed = ((breathSwitch & 1) << 15) | (breathSpeed & 0x7FFF)
 
-  # packed_byte_0/1 are produced from a 16-character binary string
-  # built from breathSpeed (15 bits) and breathSwitch (1 bit).
-  # Exact bit order is pending IAT resolution for the CRT string helpers
-  # at 0x18000B130 / 0x18000B138 / 0x18000B140.
+  byte 4+6n = packed & 0xFF
+  byte 5+6n = (packed >> 8) & 0xFF
   byte 6+6n = brightness & 0xFF
 ```
 
 The apparently complex ASCII `'0'/'1'` conversion in the optimized native
-code implements a 16-bit packing of one switch bit plus fifteen speed bits.
-The receive path performs the inverse operation and expands each six-byte
-record back to six `int32` fields. The exact position of the switch bit is
-not yet marked confirmed because the writer concatenation order depends on
-identifying three CRT IAT entries.
+code is now fully resolved. IAT mapping identifies
+`0x18000B130=strcpy_s`, `0x18000B138=strncpy_s` and
+`0x18000B140=strcat_s`. The writer first copies the one-character
+`breathSwitch` string, appends the 15-character `breathSpeed` string,
+then converts characters 8..15 to the low byte and 0..7 to the high byte.
+Therefore bit 15 is `breathSwitch` and bits 14..0 are `breathSpeed`.
+The receive path performs the exact inverse expansion.
 
 For one lamp the logical stream is therefore only seven bytes:
 
@@ -1282,3 +1281,28 @@ and `ChangeGamepadConfigAsync`. This proves it is the normal configuration
 write path, but does NOT yet prove whether each 0x37 transaction is volatile
 RAM-only or commits NVM/flash. High-rate Ambilight writes should therefore
 remain disabled until persistence behavior is resolved.
+
+
+### Gamepad lighting API surface
+
+A full static inventory of lighting-related exports and P/Invokes found only
+the following gamepad lighting API in `KeyLinkerlib.dll`:
+
+```text
+readDeviceLamplightData
+receiveDeviceLamplightData
+writeDeviceLamplightData
+```
+
+Other RGB/LED functions found by the inventory belong to keyboard or mouse
+DLLs and are unrelated to the G3V2 gamepad transport.
+
+Therefore the current MixDrive exposes no separate gamepad preview/realtime
+RGB writer besides `writeDeviceLamplightData` / command `0x37`.
+This does not prove that the firmware has no undocumented volatile lighting
+command; it only proves that MixDrive/KeyLinker does not expose or call one.
+
+Managed UI evidence also matters: `ChangeLightAsync` only changes the
+view-model color property, while actual hardware writes occur in save/apply/
+reset/config-change flows. This makes persistence behavior of command 0x37
+the next critical question before any high-frequency Ambilight use.

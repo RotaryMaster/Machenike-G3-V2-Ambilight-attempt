@@ -679,3 +679,31 @@ the corresponding `GamepadDeviceManager` async state machines are in
 The helper was corrected to scan all three first-party assemblies and perform
 the cross-assembly correlation explicitly.
 
+## 2026-11-20 — Concrete initializer warm-up is 11 reads, four CustomData
+
+The corrected EXE/Shared/Infrastructure correlation closes the actual
+`GamepadConfigInitializer` path. The concrete loader is
+`Machenik.Shared.Services.GamepadHardwareLoader`, not the similarly named
+ViewModel helper methods in `Machenik.exe`.
+
+Sequence:
+
+```text
+BeforeKeyChangeList (op 9)
+SupportTurbo        (op 16)
+CurrentTurbo        (op 17)
+Rocker              (op 12)
+CustomData          (op 28)
+Trigger             (op 14)
+Motor               (op 19)
+CustomData          (op 28)
+Lamplight           (op 21)
+CustomData          (op 28)
+CustomData          (op 28)
+```
+
+All eleven are read paths. No `WriteDeviceCustomDataAsync` occurs in the
+initializer/load path. The next static target is to inspect the native
+KeyLinkerlib implementations of these request builders and determine which
+ones share the same state/rand generator as `readDeviceCustomData`.
+

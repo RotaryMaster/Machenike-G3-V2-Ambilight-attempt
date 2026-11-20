@@ -2164,3 +2164,22 @@ unproven.
 
 Next safe mapping step: repeat the same real discovery for Y+HOME and A+HOME and record
 whether the live suffix remains \`68:58:43\` while the prefix changes by mode.
+
+
+### Y+HOME capture: no connection to the Bazzite host
+
+A read-only btmon review of the Y+HOME test showed:
+- only the persistent LE \`98:B6:ED:68:58:43 G3V2 APP\` advertisements;
+- no HCI \`Connection Complete\`, \`Device Connected\`, ACL connection, authentication,
+  remote-name or link-key event for a gameplay personality;
+- \`bluetoothctl devices Connected\` returned no connected device on the Bazzite host.
+
+Therefore the Y+HOME gameplay personality did **not** connect to this Bazzite machine
+during the test. If the controller's LEDs indicated a successful connection, the likely
+explanation is automatic reconnection to another previously paired host outside this HCI
+capture.
+
+The Y+HOME gameplay Bluetooth address/name remains unmapped. To capture it non-destructively,
+prevent the previously paired host from accepting the connection (e.g. temporarily disable
+Bluetooth on that host) and repeat the same real discovery/btmon capture while forcing
+Y+HOME into pairing mode. No controller pairing records need to be erased.

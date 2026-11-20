@@ -640,9 +640,18 @@ The remaining single-frame write command IDs are visible directly in their expor
 
 The first four above use specialized builders around helpers `0x1800012D0`, `0x180001370`, and `0x180001400`, rather than the multipart frame builder `0x180001C90`. KeyChange, Lamplight, and CustomData use `0x180001C90` and fragment payloads at 15 bytes.
 
-For the cold OTA path already established in managed code, the preliminary `readDeviceCustomData(0)` leaves `E670` unchanged at 0 while advancing `E67C/E68C` from `0/0` to `1/1`. Therefore the following 20-byte CustomData write begins with native plaintext headers:
+For the cold OTA path established in managed code, `GetDeviceCustomDataAsync` does **not** stop after `readDeviceCustomData(0)`. Because the 20-byte logical CustomData object is returned as 31 native encoded bytes, operation type 28 requests the second fragment with `readDeviceCustomData(1)` before completing the managed read.
 
-- fragment 0 (15-byte chunk, frame length 20): `3B 14 81 <rand>`
-- fragment 1 (6-byte chunk, frame length 11): `3B EB 0A <rand>`
+The cold/default read sequence is therefore:
 
-If the CRT `rand()` stream is still at cold default state and no other native call consumes it between the read and write, the observed default sequence gives read rand `0x29`, then write rand bytes `0x23` and `0xBE`, yielding headers `3B 14 81 23` and `3B EB 0A BE`. This last rand assignment is conditional on no intervening `rand()` consumption; the state/header fields themselves are statically proven.
+```text
+selector 0: BB 06 00 29 00 27
+selector 1: BB 06 81 23 01 B9
+```
+
+These two reads leave `E670=0, E67C=0, E68C=2`. With the default CRT sequence and no unrelated `rand()` consumer between the second read and the write, the next random bytes are `BE` and `84`, so the cold 20-byte CustomData write begins with:
+
+- fragment 0 (15-byte chunk, frame length 20): `3B 14 02 BE`
+- fragment 1 (6-byte chunk, frame length 11): `3B EB 8B 84`
+
+This replaces the obsolete one-read candidate `3B 14 81 23 / 3B EB 0A BE`. In a warm MixDrive process, `E670`, `E67C/E68C`, and the CRT `rand()` position may differ because they are process-global protocol state; the formulas remain authoritative, not any single captured byte pair.

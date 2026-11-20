@@ -1612,3 +1612,35 @@ btmon.
 Correction to prior interpretation: it did not necessarily reconnect to another host.
 For a clean Y+HOME Bluetooth discovery, remove the dongle from the equation during the
 capture.
+
+
+## 2026-11-20 — decisive Y+HOME identity result
+
+With the dongle removed, Y+HOME advertised over BR/EDR as:
+
+\`98:B6:E9:68:58:43 Pro Controller\`
+
+At the same time the persistent LE configuration peripheral remained:
+
+\`98:B6:ED:68:58:43 G3V2 APP\`
+
+Together with the prior X+HOME result:
+
+\`98:B6:EA:68:58:43 Xbox Wireless Controller\`
+
+the physical unit now has a confirmed three-personality identity map sharing one lower
+24-bit suffix.
+
+This directly links the E9 prefix to the G3V2's Pro Controller personality and makes the
+FOT header E9 field at 0x112 much more likely to be Bluetooth identity/personalization
+metadata rather than a generic family marker.
+
+Neither known FOT's E9 suffix matches the live unit:
+- A: B0:25:BE
+- B: CE:4B:03
+- live unit: 68:58:43
+
+Since A/B share the exact same encrypted firmware payload and only the E9 suffix plus byte
+0x101 differ (mirrored in the directory copy), treat them as the same firmware payload
+with different identity metadata. Byte 0x101 may depend on that personalization, but its
+algorithm/meaning remains unknown.

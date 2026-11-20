@@ -284,3 +284,10 @@ Thus `data[11] |= 0x80` acts on the native callback/result buffer itself. The re
 `writeDeviceCustomData(data, length)` first creates a length-prefixed stream `[length][data...]`. It processes `length + 1` bytes in chunks no larger than 15 bytes. Each chunk is combined with a four-byte protocol header, one CRC byte, then KeyLinker-transformed.
 
 The exact receive-buffer layout is now isolated to helper `0x180001760` and its backing state.
+
+
+### receiveDeviceCustomData hidden-return ABI identified
+
+The thin export at `0x180004DD0` is explained by Windows x64 structure-return ABI: `RCX` is the hidden return descriptor, while `RDX` and `R8D` carry the explicit `datas` and `length` arguments. The helper `0x180001760` copies the raw input, decodes it, uses a 20-byte maximum-frame boundary, and begins stripping five framing bytes. This aligns exactly with the write-side 4-byte header + up-to-15-byte chunk + CRC format.
+
+This establishes that the OTA bit mutation at managed index 11 is in logical CustomData, not in raw HID framing.

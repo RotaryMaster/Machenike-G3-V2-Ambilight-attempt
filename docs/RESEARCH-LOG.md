@@ -889,3 +889,58 @@ Added `tools/dump-lamplight-detail.py` to print the complete
 `DeviceLampLightStruct` fields/layout, print LampLight P/Invoke signatures
 and locate all managed call sites. This should close the logical payload
 format without device I/O.
+
+
+## 2026-11-20 — LampLight 0x37 payload reconstructed
+
+Full native LampLight audit closed the logical write format.
+
+`LampLightStruct` contains six sequential `int32` values:
+`R, G, B, breathSpeed, breathSwitch, brightness` (24 bytes total).
+`DeviceLampLightStruct` contains four such records followed by
+`lampLightNumber` at offset `0x60`.
+
+`writeDeviceLamplightData` serializes:
+
+```text
+length = 6 * lampLightNumber
+
+stream[0] = length
+for each lamp:
+    packed = ((breathSpeed & 0x7fff) << 1) | (breathSwitch & 1)
+    append R & 0xff
+    append G & 0xff
+    append B & 0xff
+    append packed & 0xff
+    append (packed >> 8) & 0xff
+    append brightness & 0xff
+```
+
+The native receive function performs the inverse expansion from each six-byte
+record into six 32-bit managed fields. This also explains the binary-string
+construction visible in the compiler output: it is implementing a 15-bit
+speed plus one-bit switch packing.
+
+Thus a one-lamp write has a seven-byte logical object:
+
+```text
+06 R G B packed_lo packed_hi brightness
+```
+
+This stream is then fragmented into <=15-byte chunks and wrapped as command
+`0x37` with the already-known KeyLinker header/checksum/encoding.
+
+`readDeviceLamplightData(index)` plaintext is:
+
+```text
+B7 06 state rand index crc
+```
+
+Managed operation types are now confirmed as 21 for LampLight read and 22 for
+LampLight write.
+
+Write call sites include SaveLightAsync, ResetLightAsync,
+ApplyCurrentConfigAsync and ChangeGamepadConfigAsync. That establishes 0x37
+as the normal settings-write path, but does not establish RAM-vs-NVM
+persistence. Do not use it as a high-frequency Ambilight transport until that
+is separately proven.

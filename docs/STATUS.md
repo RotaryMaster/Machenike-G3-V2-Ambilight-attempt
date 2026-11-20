@@ -2093,3 +2093,30 @@ Current X+HOME evidence is only:
 Next read-only diagnostic is HCI/MGMT monitoring with \`btmon\`, which can show the actual
 discovery events and transport-specific reports in real time while X+HOME is placed in
 rapid-flash pairing mode.
+
+
+### Root cause found: previous one-shot bluetoothctl scan stopped immediately
+
+The btmon capture proved that the prior non-interactive command
+\`bluetoothctl scan on\` did not remain alive for the requested shell timeout.
+
+Observed timeline:
+- Start Discovery success at btmon t=2.303496
+- Stop Discovery command at t=2.303523
+- Inquiry Cancel immediately followed
+
+So discovery was active for only ~27 microseconds at the MGMT command level before the
+client teardown requested Stop Discovery. The earlier shell wrapper
+\`timeout 22s bluetoothctl scan on\` is therefore invalid for this BlueZ behavior because
+the bluetoothctl process itself exits immediately.
+
+BlueZ documents \`--timeout/-t <seconds>\` specifically for non-interactive mode.
+Use:
+\`bluetoothctl --timeout 22 scan on\`
+or the transport-specific equivalents:
+\`bluetoothctl --timeout 22 scan bredr\`
+\`bluetoothctl --timeout 22 scan le\`
+
+This keeps the bluetoothctl client alive and lets discovery persist for the intended
+window. All previous conclusions based on "X+HOME gameplay identity absent from scan"
+must be treated as unproven until repeated with this corrected invocation.

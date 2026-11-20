@@ -374,3 +374,25 @@ A dedicated import/xref scan found `api-ms-win-crt-utility-l1-1-0.dll!rand`, but
 The nearby `GetSystemTimeAsFileTime` and `QueryPerformanceCounter` imports are not evidence of a protocol PRNG seed. Their xrefs resolve to the MSVC security-cookie initialization routine around `0x180009640`, recognizable by the `0x2B992DDFA232` cookie constant and its standard entropy mix.
 
 Most importantly, KeyLinker's decoder reconstructs the transmitted byte 3 from the frame itself. Therefore a synchronized PRNG is not required by the codec. Reproducing the exact MixDrive `rand()` sequence is only necessary for byte-identical output, not for constructing a mathematically valid encode/decode pair. Whether the controller applies any additional semantic validation to this byte remains a separate device-side question.
+
+
+### writeDeviceCustomData state ordering closed
+
+The complete `writeDeviceCustomData` body at `0x180008EB0` confirms the fragment loop and state ordering unambiguously.
+
+For each fragment:
+
+1. choose at most 15 logical stream bytes;
+2. call `0x180001C90(command=0x3B, fragment_index, frame_len)` using the **current** global sequence state;
+3. copy the four-byte header;
+4. append payload;
+5. calculate CRC;
+6. KeyLinker-encode the frame;
+7. append it to the output;
+8. only then update `E67C/E68C/E670`.
+
+Thus the first OTA CustomData fragment inherits whatever transport state exists after the immediately preceding CustomData read/receive path.
+
+A scan across every PE in the extracted MixDrive package found only one relevant CRT import: `KeyLinkerlib.dll -> rand`. No `srand` or `rand_s` was found, including a raw-string/GetProcAddress check.
+
+Microsoft's documented default `rand` sequence provides an independent consistency check: without `srand`, the sequence is equivalent to seed 1, and the published sequence starts `41, 18467, 6334...` = low bytes `29 23 BE...`. The known verified read plaintext `BB 06 00 29 00 27` therefore exactly matches the first default low byte. This is classified as strong corroboration rather than proof of the OTA-time call index.

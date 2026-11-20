@@ -711,3 +711,42 @@ Therefore the firmware-update gate `DeviceType == 2` means only “this device i
 
 The current live setup remains USB-only with the 2.4 GHz dongle disconnected, but transport-specific behavior must be encoded elsewhere (another property, model subtype, HID identity, connection state, or device metadata). The next static target is to inventory connection/transport-related members and their use in the gamepad firmware-update path.
 
+### Official warm-up order recovered
+
+Static CIL of `GamepadConfigInitializer.InitializeFromHardwareAsync` now gives
+the official startup order:
+
+```text
+LoadKeyMapAsync
+LoadTurboAsync
+LoadRockerAsync
+LoadTriggerAsync
+LoadMotorAsync
+LoadLightAsync
+LoadCustomDataAsync
+```
+
+The focused xref audit found three startup/load call sites of
+`GetDeviceCustomDataAsync` and **zero** `WriteDeviceCustomDataAsync` call
+sites inside load/initialize methods.
+
+This is important but does not yet prove that the entire warm-up is passive.
+The loaders call other `GamepadDeviceManager.GetDevice*Async` methods before
+the final CustomData read. Confirmed examples include:
+
+```text
+GetDeviceBeforeKeyChangeListAsync
+GetDeviceSupportTurboAsync
+GetDeviceRockerAsync
+GetDeviceTriggerAsync
+GetDeviceMotorAsync
+```
+
+Those operations are semantically reads, but they can still advance the
+KeyLinker request state (`E67C/E68C`) and CRT `rand()` position. A cold
+standalone CustomData request therefore does not yet reproduce the state of
+MixDrive's cached manager.
+
+The next static step is to map every warm-up `GetDevice*Async` call to its
+native request builder/operation type before sending any live warm-up traffic.
+

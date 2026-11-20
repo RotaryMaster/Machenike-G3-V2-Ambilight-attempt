@@ -480,3 +480,19 @@ This supersedes `3B F4 02 BE / 3B CB 8B 84` as the cold-sequence candidate. That
 ### 2026-11-20 — E670 proven as write-frame phase
 
 A complete write-xref audit showed that every confirmed `E670` update is the same wrap/decrement operation performed after native write-frame generation. `writeDeviceCustomData` (`0x3B`) is one such writer; two other multipart writers use commands `0x36` and `0x37`. This establishes `E670 = (-W) mod 8` from cold state and explains why a warm MixDrive session can enter OTA with a different first-header high field than a freshly loaded DLL.
+
+
+## 2026-11-20 — Official updater SCSI call graph closed
+
+The updater's indirect `deviceUsb_Request` calls were resolved from `0x005F9864`.
+
+Confirmed:
+- F1 is a 20-byte DataIn identity/version request.
+- F0 is a DataOut firmware block write, max 512 bytes per call.
+- F2 is a 20-byte DataIn status request.
+- F2 is checked after the first F0 block and again after the full image.
+- Success criterion is `F2_response[0] == 0`.
+- the v1.48 image is 722 x 512-byte F0 blocks.
+- each request passes CDB length 10 even though only six CDB bytes are explicitly initialized in the caller.
+
+No device I/O was performed.

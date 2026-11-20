@@ -34,6 +34,7 @@ from collections import Counter
 
 FOT_OFF = 0x1712F0
 FOT_LEN = 0x5A400
+ENC_TAGS = ("INFO", "DEV", "KEY", "DATA", "XCOD", "XRES", "DOWN")
 TARGETS = (0xB1, 0xB2, 0xB3, 0xB4, 0xB6, 0xB7, 0xBB, 0x37, 0x3B)
 
 
@@ -47,6 +48,10 @@ def entropy(buf: bytes) -> float:
 
 def hx(buf: bytes) -> str:
     return " ".join(f"{b:02X}" for b in buf)
+
+
+def xor80_tag(tag: str) -> bytes:
+    return bytes(ord(ch) ^ 0x80 for ch in tag)
 
 
 def carve(path: Path) -> tuple[bytes, str]:
@@ -163,10 +168,62 @@ def main():
     print(f"Entropy total: {entropy(data):.4f} bits/byte")
 
     print("\n=== KNOWN / PRINTABLE MARKERS ===")
-    for marker in (b"XCOD", b"XRES", b"ZXPC", b"G3V2", b"MACHENIKE"):
+    for marker in (b"FOT\x00", b"ZXPC", b"G3V2", b"MACHENIKE"):
         pos = [i for i in range(len(data)) if data.startswith(marker, i)]
-        print(f"{marker.decode(errors='replace'):<10}: " +
+        label = "FOT\\0" if marker == b"FOT\x00" else marker.decode(errors="replace")
+        print(f"{label:<10}: " +
               (", ".join(f"0x{x:X}" for x in pos[:20]) if pos else "(none)"))
+
+    print("\n=== XOR-0x80 FOT SECTION TAGS ===")
+    encoded_hits = {}
+    for tag in ENC_TAGS:
+        enc = xor80_tag(tag)
+        pos = [i for i in range(len(data)) if data.startswith(enc, i)]
+        encoded_hits[tag] = pos
+        print(f"{tag:<10}: " +
+              (", ".join(f"0x{x:X}" for x in pos[:20]) if pos else "(none)"))
+
+    if data.startswith(b"FOT\x00") and len(data) >= 0xC8:
+        total = struct.unpack_from("<I", data, 4)[0] + 8
+        data_start = struct.unpack_from("<I", data, 0xB8)[0]
+        data_len = struct.unpack_from("<I", data, 0xBC)[0]
+        directory = struct.unpack_from("<I", data, 0xC0)[0]
+        config = struct.unpack_from("<I", data, 0xC4)[0]
+        print("\n=== FOT CONTAINER STRUCTURE ===")
+        print(f"declared total : 0x{total:X}")
+        print(f"DATA start     : 0x{data_start:X}")
+        print(f"DATA length    : 0x{data_len:X}")
+        print(f"DATA end       : 0x{data_start + data_len - 1:X}")
+        print(f"directory copy : 0x{directory:X}")
+        print(f"config start   : 0x{config:X}")
+        if directory + 0x200 <= len(data):
+            same = data[:0x200] == data[directory:directory + 0x200]
+            print(f"directory == first 0x200 bytes: {same}")
+
+        section_starts = []
+        for tag in ("XCOD", "XRES"):
+            for off in encoded_hits.get(tag, []):
+                if data_start <= off < directory:
+                    section_starts.append((off, tag))
+        section_starts.sort()
+        for i, (off, tag) in enumerate(section_starts):
+            section_end = section_starts[i + 1][0] if i + 1 < len(section_starts) else directory
+            print(
+                f"{tag:<5} span      : 0x{off:X}-0x{section_end-1:X} "
+                f"size=0x{section_end-off:X} H={entropy(data[off:section_end]):.6f}"
+            )
+
+        if config < len(data):
+            config_end = min(len(data), config + 0x400)
+            print(
+                f"config candidate: 0x{config:X}-0x{config_end-1:X} "
+                f"size=0x{config_end-config:X} H={entropy(data[config:config_end]):.6f}"
+            )
+            if config_end < len(data):
+                print(
+                    f"tail candidate  : 0x{config_end:X}-0x{len(data)-1:X} "
+                    f"size=0x{len(data)-config_end:X} H={entropy(data[config_end:]):.6f}"
+                )
 
     runs = ascii_runs(data)
     print(f"\nPrintable ASCII runs >=5: {len(runs)}")
@@ -227,10 +284,10 @@ def main():
 
     print("\n=== INTERPRETATION GUARDRAILS ===")
     print("* A raw immediate/CMP hit is not proof of a protocol handler.")
-    print("* Dense target clusters are useful only if the region is executable plaintext.")
-    print("* If entropy is uniformly high and no vector/code structure appears, the FOT may be")
-    print("  encrypted/compressed/packaged and host-side static inspection cannot answer NVM")
-    print("  persistence without first decoding that firmware container.")
+    print("* Dense target clusters are useful only inside a verified plaintext-code region.")
+    print("* FOT metadata and XOR-0x80 section names can be plaintext even when XCOD/XRES")
+    print("  payloads are encrypted/high-entropy; whole-file entropy must not erase that distinction.")
+    print("* A second FOT header can be the internal directory copy, not a second firmware image.")
     print("* No code was executed and no device I/O was performed.")
 
 

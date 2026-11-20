@@ -572,3 +572,11 @@ Combined with `CheckPacketIndex`, this reveals an important edge case: if native
 
 The remaining discriminator is the native implementation of `receiveDataLength` (MethodDef token `0x06000017` wrapper).
 
+## 2026-11-20 — receiveDataLength native size formula recovered
+
+The managed wrapper token `0x06000017` resolves to `Libs\\Gamepad\\KeyLinkerlib.dll!receiveDataLength`, RVA `0x4A20`.
+
+For the native branch where the third argument is not 1, the function KeyLinker-decodes the input, reads decoded byte 4 as the logical payload length, and returns `logical_len + 6 + 5*floor(logical_len/15)`. Therefore the observed empty frame maps to total native length 6, the earlier 10-byte CustomData response maps to 16, and a hypothetical 20-byte logical object maps to 31.
+
+A separate `third_arg == 1` branch exists and encodes a wider/special length field. The next static step is to identify the exact value passed from `OnReport` into `HandleGenericDeviceData(..., arg4)` and then into `receiveDataLength` for CustomData.
+

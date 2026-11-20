@@ -432,3 +432,65 @@ BB 06 00 29 00 27
 ```
 
 The correlation is not yet treated as proof of the exact OTA-time PRNG position, because MixDrive performs other protocol traffic before an update and CRT random state is application-scoped. It does, however, strongly support the reconstructed role of header byte 3.
+
+
+### Confirmed 4-byte write header formula
+
+Static analysis of `0x180001C90` plus real plaintext captures now closes the four-byte write header exactly.
+
+For `writeDeviceCustomData` and the other writers using this builder:
+
+```text
+H0 = command
+H1 = ((E670 & 7) << 5) | (frame_len & 0x1F)
+H2 = ((E67C == 1) << 7) | ((fragment_index & 0x0F) << 3) | (E68C & 7)
+H3 = rand() & 0xFF
+```
+
+The helper internally converts bit fields to ASCII binary strings and parses those strings back as binary integers; this obfuscation reduces exactly to the expressions above.
+
+The previously captured plaintext lighting-write headers validate the formula bit-for-bit:
+
+```text
+37 EC 81 ...
+37 CC 02 ...
+37 AC 83 ...
+37 8C 04 ...
+```
+
+For those frames:
+
+- `H1 = EC, CC, AC, 8C` means `frame_len = 12` while `E670 = 7,6,5,4`;
+- `H2 = 81,02,83,04` means fragment index 0, `E67C = 1,0,1,0`, and `E68C = 1,2,3,4`.
+
+Therefore the builder formula is no longer merely inferred from decompilation; it is corroborated by real protocol captures.
+
+### Read helper sequence byte
+
+`readDeviceCustomData` builds:
+
+```text
+BB 06 SEQ RAND SELECTOR CRC
+```
+
+where:
+
+```text
+SEQ = ((E67C == 1) << 7) | ((E678 >> 2 & 0x0F) << 3) | (E68C & 7)
+```
+
+and then `0x1800014C0` advances:
+
+```text
+E67C = (E67C == 0) ? 1 : 0
+E68C = (E68C + 1) mod 8
+```
+
+Two consecutive verified CustomData reads were:
+
+```text
+BB 06 00 29 00 27
+BB 06 81 23 00 C0
+```
+
+This proves the observed starting sequence state was `E67C=0, E68C=0` and that the next read saw `E67C=1, E68C=1`. It also independently confirms the CRT default `rand()` progression `0x29 -> 0x23`.

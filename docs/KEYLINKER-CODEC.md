@@ -181,7 +181,7 @@ for fragment_index, off in enumerate(range(0, len(stream), 15)):
     wire = encode(plain)
 ```
 
-Static disassembly now closes most of the four-byte header builder. The only two small items still requiring direct confirmation are the polarity of the single-bit string stored at `0x18000B214/0x18000B218` and the identity of the no-argument function imported at IAT `0x18000B150`.
+Static disassembly now closes the four-byte header builder itself. The constants at `0x18000B214/0x18000B218` are ASCII `1`/`0`, respectively, and IAT `0x18000B150` resolves to CRT `rand`.
 
 
 ## Header builder `0x180001C90`
@@ -224,22 +224,30 @@ The routine converts `fragment_index` into four binary characters and `E68C` int
 Thus the field layout is confirmed as:
 
 ```text
-bit 7    = toggle bit selected by E67C
+bit 7    = E67C (0 or 1)
 bits 6:3 = fragment_index & 0x0F
 bits 2:0 = E68C & 0x07
 ```
 
-Equivalent formula, with only the polarity of `toggle_bit(E67C)` still to be read from the two one-character constants:
+The constants are exact: `0x18000B214 = "1"` and `0x18000B218 = "0"`. The code selects `"1"` only when `E67C == 1`; otherwise it selects `"0"`. Therefore:
 
 ```python
-header2 = (toggle_bit(E67C) << 7) | ((fragment_index & 0x0F) << 3) | (E68C & 0x07)
+header2 = ((E67C & 1) << 7) | ((fragment_index & 0x0F) << 3) | (E68C & 0x07)
 ```
 
 ### Header byte 3
 
-The function at IAT `0x18000B150` is called with no arguments and its return value is reduced to one byte before being stored as `header[3]`.
+IAT `0x18000B150` resolves to `api-ms-win-crt-utility-l1-1-0.dll!rand`. The return value is reduced to its low byte before being stored, so for this code path:
 
-The call pattern is consistent with a byte nonce/random source, but the exact imported symbol must be confirmed from the import table before naming it definitively.
+```python
+header3 = rand() & 0xFF
+```
+
+The MSVC CRT `rand()` result is non-negative, so the compiler's signed-normalization sequence does not change this low-byte interpretation. Reproducing the exact same byte sequence as MixDrive still requires identifying whether/where the DLL seeds the CRT PRNG (`srand`) and the runtime state before the call.
+
+### Concatenation helper `0x180001400`
+
+Static disassembly confirms this helper simply concatenates three NUL-terminated strings in argument order. In the header builder the inputs are the one-character `E67C` bit string, the four-character fragment-index string, and the three-character `E68C` string. This confirms the exact bit ordering used by `header[2]`.
 
 ### State evolution after every encoded fragment
 
@@ -277,7 +285,7 @@ For the 20-byte G3 V2 logical object, fragment 0 has `frame_len=20` and index 0:
 ```python
 h0_0 = 0x3B
 h0_1 = (A << 5) | 20
-h0_2 = (toggle_bit(B) << 7) | C
+h0_2 = ((B & 1) << 7) | C
 h0_3 = source_byte_0
 ```
 
@@ -294,7 +302,7 @@ Fragment 1 has `frame_len=11` and index 1:
 ```python
 h1_0 = 0x3B
 h1_1 = (A1 << 5) | 11
-h1_2 = (toggle_bit(B1) << 7) | 0x08 | C1
+h1_2 = ((B1 & 1) << 7) | 0x08 | C1
 h1_3 = source_byte_1
 ```
 
@@ -391,4 +399,4 @@ set bit 0x80 in logical byte 11
 write logical CustomData through command 0x3B
 ```
 
-Once `0x180001C90` is fully reconstructed, the exact HID/KeyLinker packet for this transition can be generated without executing MixDrive.
+`0x180001C90` itself is now fully reconstructed. The remaining work for byte-identical offline generation is to recover the initial/synchronized values of `E670`, `E67C`, and `E68C`, and determine the CRT `rand()` seeding/state. No hardware write is required for that analysis.

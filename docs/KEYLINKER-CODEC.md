@@ -243,7 +243,7 @@ IAT `0x18000B150` resolves to `api-ms-win-crt-utility-l1-1-0.dll!rand`. The retu
 header3 = rand() & 0xFF
 ```
 
-The MSVC CRT `rand()` result is non-negative, so the compiler's signed-normalization sequence does not change this low-byte interpretation. Reproducing the exact same byte sequence as MixDrive still requires identifying whether/where the DLL seeds the CRT PRNG (`srand`) and the runtime state before the call.
+The MSVC CRT `rand()` result is non-negative, so the compiler's signed-normalization sequence does not change this low-byte interpretation. `KeyLinkerlib.dll` imports `rand` but does not import `srand`. Microsoft documents that calling `rand` before any `srand` produces the same sequence as `srand(1)`, while the CRT state is application-scoped by default. Therefore the DLL alone does not establish whether another module in the host process may have advanced or reseeded the shared generator.
 
 ### Concatenation helper `0x180001400`
 
@@ -399,4 +399,11 @@ set bit 0x80 in logical byte 11
 write logical CustomData through command 0x3B
 ```
 
-`0x180001C90` itself is now fully reconstructed. The remaining work for byte-identical offline generation is to recover the initial/synchronized values of `E670`, `E67C`, and `E68C`, and determine the CRT `rand()` seeding/state. No hardware write is required for that analysis.
+`0x180001C90` itself is fully reconstructed. The remaining byte-identical reproduction work is to recover the effective `E670/E67C/E68C` state at the target call and, only if byte-for-byte MixDrive output is desired, the process-wide CRT `rand()` position. For protocol-equivalent KeyLinker encoding, the random byte is carried inside the frame and recovered by the decoder; the codec itself does not require the peer to share the PRNG state.
+
+
+### PRNG and security-cookie clarification
+
+Static import analysis found `rand`, `QueryPerformanceCounter`, and `GetSystemTimeAsFileTime`, but no `srand` import in `KeyLinkerlib.dll`. The time/QPC references are in the standard MSVC security-cookie initializer around `0x180009640` (including the characteristic `0x2B992DDFA232` cookie constant), not in the protocol header builder or a PRNG-seeding path.
+
+This distinction matters: matching MixDrive's exact `header[3]` sequence is a process-state reproduction problem, not a requirement imposed by the KeyLinker codec itself. The decoder derives byte 3 from the transmitted frame and never needs a synchronized `rand()` state.

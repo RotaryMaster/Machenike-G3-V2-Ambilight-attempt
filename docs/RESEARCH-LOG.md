@@ -531,3 +531,10 @@ Canonical clean-room plan: zero all 10 CDB bytes and set only opcode byte 0; val
 The next live experiment is intentionally bounded before SCSI: read the real 20-byte CustomData through BB selectors 0/1, validate CRCs, set only logical byte 11 bit 0x80, write it with command 0x3B, then observe re-enumeration. `tools/g3v2-enter-updater-linux.py` implements that sequence with explicit `--execute` gating and no F0/F1/F2 support.
 
 External family corroboration: the Manba One V2 research project reports the same mass-storage identity (`Gamepad` / `Updater` / `1.00`) and vendor SCSI command family and documents exit from its update mode by unplug/replug. This is supporting evidence for a temporary bootloader personality, not proof of G3 V2 recovery behavior.
+
+## 2026-11-20 — Documentation consistency pass: vendor bugs are not protocol requirements
+
+The repository was audited after the cold-state and updater-stack findings. An obsolete one-read CustomData paragraph was found in `MIXDRIVE-MESSENGER.md`; it has been replaced with the proven two-read selector 0/1 sequence and cold headers `3B 14 02 BE / 3B EB 8B 84`.
+
+The updater documentation was also normalized around a key engineering rule: the original vendor application contains at least one confirmed implementation bug. It declares 10-byte F0/F1/F2 CDBs while leaving trailing bytes uninitialized, including stack-cookie overlap in F2. Those bytes are therefore not treated as protocol semantics. Clean-room implementations should prefer deterministic zero-filled CDBs and validate read-only behavior first.
+

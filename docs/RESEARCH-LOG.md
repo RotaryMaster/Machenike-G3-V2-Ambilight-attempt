@@ -1177,3 +1177,26 @@ non-invasive cryptanalytic lead.
 
 Added `dump-g3v2-fot-container-surface.py` and
 `find-zxd2267-firmware-corpus.py`.
+
+
+## 2026-11-20 — FCC close-up confirms ZC32RF1M on exact G3V2
+
+The user supplied the exact internal-photo pages from FCC ID
+`2BBT5-G3V2`. Photo 9 clearly shows the main IC marking:
+
+`ZC32RF1M / QFN40-24 / EMU13322`.
+
+This converts the earlier ZhiXu-family inference into direct hardware evidence
+for the G3V2 itself.
+
+The board silkscreen also contains `ZXD2267 G3 V2` and a visible date/revision
+string beginning `20241114 ... V1.4`, tying the physical PCB to the same
+ZXD2267 family seen in the official updater.
+
+No discrete external firmware flash is visible on either photographed side of
+the main PCB. The most likely dump target is therefore internal MCU flash.
+
+A public schematic of another ZC32RF1M QFN40 design maps RESET to pin 22,
+USB D- to pin 23, USB D+ to pin 24, and the 26 MHz oscillator to pins 20/21.
+These are treated as same-part pinout evidence, not proof of exact G3V2 test
+pad routing.

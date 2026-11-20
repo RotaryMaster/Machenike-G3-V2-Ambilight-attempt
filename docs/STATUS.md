@@ -489,3 +489,16 @@ Revision = "1.00"
 ```
 
 The firmware request path remains separate: `deviceUsb_Request` uses `0x0004D014` = `IOCTL_SCSI_PASS_THROUGH_DIRECT` for F0/F1/F2.
+
+
+### DeviceUsb request ABI and SPTD layout closed
+
+`deviceUsb_Request` is now reconstructed as a six-argument wrapper over `IOCTL_SCSI_PASS_THROUGH_DIRECT (0x0004D014)`:
+
+```text
+(handle, data_in, cdb, cdb_len, data_buffer, data_len)
+```
+
+The updater uses data_in=0 for F0 writes and data_in=1 for F1/F2 reads. The x86 SPTD is length 0x2C, uses TargetId=1, Lun=0, SenseInfoLength=0x20, TimeOutValue=5, SenseInfoOffset=0x30, and a 0x50-byte in/out control buffer. The wrapper retries failed IOCTLs up to 10 attempts with 20 ms delays, except Win32 error 0x37 which aborts immediately.
+
+`deviceUsb_GetInfo` string construction is also closed: IAT 0x10002090 is `strcpy_s` and 0x1000208C is `strcat_s`, proving Vendor + Product + Revision concatenation.

@@ -248,3 +248,57 @@ No F0 command should be tested before all of the following are known:
 - failure behavior documented.
 
 The first live SCSI work, when justified, should remain read-only and limited to F1/F2.
+
+
+## Update-mode drive discovery and identity
+
+The updater contains a continuous update-device discovery loop at `0x00402A70`.
+
+The loop:
+
+1. calls `GetLogicalDrives()`;
+2. iterates all 26 drive-letter positions A..Z;
+3. constructs the root path for each present drive;
+4. calls `GetDriveTypeW(root)`;
+5. accepts only type `2` (`DRIVE_REMOVABLE`);
+6. calls `deviceUsb_OpenByDrv(L"<letter>:\\")`;
+7. if open succeeds, calls `deviceUsb_GetInfo(handle, infoBuffer)`;
+8. closes the handle with `deviceUsb_Close`;
+9. converts the low byte of each returned UTF-16 code unit into an ASCII buffer;
+10. compares that ASCII string with the literal:
+
+```text
+Gamepad Updater         1.00
+```
+
+If the string matches, the updater records the drive index (A=0 ... Z=25) in global `0x005F985C`. If no matching removable drive is found after scanning all 26 letters, the global is set to `0xFF`. The discovery loop sleeps 200 ms and repeats while the updater worker remains active.
+
+This closes the official bootloader/update-personality discovery criterion on Windows: it is not matched by USB VID/PID in the updater executable; it is matched as a removable drive whose `deviceUsb_GetInfo` string equals the 28-character signature above.
+
+### SCSI INQUIRY layout hypothesis
+
+The 28-character signature has a highly significant exact length:
+
+```text
+"Gamepad "          = 8 bytes
+"Updater         "  = 16 bytes
+"1.00"              = 4 bytes
+                     --------
+                     28 bytes
+```
+
+That is exactly the standard fixed-width SCSI INQUIRY identification layout:
+
+- Vendor Identification: 8 bytes
+- Product Identification: 16 bytes
+- Product Revision Level: 4 bytes
+
+Therefore a strong static hypothesis is:
+
+```text
+Vendor   = "Gamepad "
+Product  = "Updater         "
+Revision = "1.00"
+```
+
+This is not yet promoted to confirmed protocol behavior until the implementation of `deviceUsb_GetInfo` inside `DeviceUsb.dll` is disassembled and shown to obtain those fields from SCSI INQUIRY or equivalent storage metadata.

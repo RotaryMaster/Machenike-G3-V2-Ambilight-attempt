@@ -511,3 +511,12 @@ A Linux probe is now available at `tools/g3v2-enter-updater-linux.py`. It is fai
 The probe does not issue any SCSI command. Its active boundary is only the normal-HID -> update-personality transition and post-transition USB/block enumeration.
 
 Recovery evidence is not yet G3-V2-specific. A closely related Manba One V2 device using the same `Gamepad / Updater / 1.00` storage identity and F0/F1/F2 family is documented to leave update mode after unplug/replug. This is treated only as family corroboration until observed directly on the G3 V2.
+
+### First live transition attempt aborted safely; probe corrected
+
+The first Linux `--execute` transition attempt did **not** reach the OTA write. The controller answered the initial selector-0 request with a six-byte native response that decodes to `19 06 00 24 00 B2`, i.e. command `0x19` with zero logical payload. The probe aborted on its old hard-coded expectation before changing CustomData.
+
+The earlier successful live CustomData path used two `ZXPC_APP` identity pings first, then selector 0 at outer sequence 3, yielding a 16-byte native response with 10 logical CustomData bytes. The probe is now corrected to reproduce those pings, parse command `0x19` by its declared length, read selectors 0 and 1 at outer sequences 3 and 4, and combine two 10-byte logical segments into the 20-byte CustomData object.
+
+Next step: run the corrected probe **without `--execute` first**. No SCSI F0/F1/F2 is involved.
+

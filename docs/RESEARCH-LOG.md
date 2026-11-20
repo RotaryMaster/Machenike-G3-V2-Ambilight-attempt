@@ -436,3 +436,12 @@ data[11]  <=>  first plaintext 0x3B frame offset 0x10
 ```
 
 This closes the managed-index/native-frame ambiguity. The remaining byte-identical OTA reconstruction depends on runtime sequence state (`E670/E67C/E68C`), CRT `rand()` position, the final HID envelope, and post-write re-enumeration behavior.
+
+
+### Managed dispatch path narrowed to four methods
+
+Static IL confirms that `WriteDeviceCustomDataAsync` creates task-completion type `29`, invokes native `writeDeviceCustomData(data, data.Length)`, and forwards the returned encoded buffer to `GetResultAsync` with a 10-second timeout. The read state machine uses task type `28`.
+
+`GamepadDeviceManager` exposes the downstream transport methods `SendDeviceData`, `SendNextPacketOrFail`, and `SendDeviceDataAsync`, while `OnReport` is the receive-side entry point. Their bodies are the remaining managed slice needed to reconstruct packetization, HID output-report construction, retry/sequence handling, and the ACK that resolves task 29.
+
+The broad raw-byte scan for `80 F9` / `81 F9` produced hits across many unrelated assemblies and is therefore classified as false-positive-prone/non-evidentiary. Only context-validated IL/dataflow or longer signatures should be used for the final envelope reconstruction.

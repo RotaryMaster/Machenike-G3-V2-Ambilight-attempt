@@ -1937,3 +1937,38 @@ of SHA256 alone.
 Added \`tools/inspect-g3v2-fot-header-delta.py\` to classify the remaining four canonical
 header-byte differences, dump their exact values/context, test aligned LE fields,
 mirror invariants and common CRC32/Adler32 candidates.
+
+
+### FOT header delta reclassified: Bluetooth/gamepad address personalization
+
+The previously unexplained three-byte delta at header offsets \`0x115..0x117\` is part of a
+six-byte field at \`0x112..0x117\`:
+
+- local FOT A: \`98:B6:E9:B0:25:BE\`
+- official FOT B: \`98:B6:E9:CE:4B:03\`
+
+This strongly reclassifies the field from "possible checksum/timestamp" to a controller
+address/identity field:
+
+- \`98:B6:E9\` is used by the KeyLinker/X20 ecosystem as the standard-gamepad address
+  prefix (documented in the public \`AmjadAAYD/x20ctl\` protocol notes / AgreementConfig
+  reconstruction).
+- An independent public FOT from the same ZXD/EPIC family (Manba One V2, ZXD2055) contains
+  the same six-byte pattern at the exact same offset:
+  \`98:B6:E9:1A:78:60\`.
+- The common checksum probe already ruled out CRC32/Adler32 matches for the changed aligned
+  fields.
+
+Therefore the two G3V2 v1.48 images are best described as the same encrypted firmware
+payload with different personalization metadata, not as different firmware builds.
+
+The remaining byte delta at \`0x101\` is still unresolved. It sits inside the six-byte
+sequence \`0xFE..0x103\`:
+- A: \`5C C1 01 66 43 01\`
+- B: \`5C C1 01 DD 43 01\`
+
+Do not label that field as a checksum, timestamp or second MAC without further evidence.
+
+Best non-destructive discriminator: compare the controller's observed Bluetooth/gamepad
+address against the two \`98:B6:E9:xx:xx:xx\` candidates. This can identify which
+personalized FOT is associated with the physical unit without touching firmware storage.

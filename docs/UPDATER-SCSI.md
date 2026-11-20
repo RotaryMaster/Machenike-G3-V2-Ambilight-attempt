@@ -293,7 +293,7 @@ That is exactly the standard fixed-width SCSI INQUIRY identification layout:
 - Product Identification: 16 bytes
 - Product Revision Level: 4 bytes
 
-Therefore a strong static hypothesis is:
+The exact 8 + 16 + 4 split initially suggested the following SCSI-style identity:
 
 ```text
 Vendor   = "Gamepad "
@@ -301,7 +301,7 @@ Product  = "Updater         "
 Revision = "1.00"
 ```
 
-This is not yet promoted to confirmed protocol behavior until the implementation of `deviceUsb_GetInfo` inside `DeviceUsb.dll` is disassembled and shown to obtain those fields from SCSI INQUIRY or equivalent storage metadata.
+The subsequent `deviceUsb_GetInfo` disassembly below confirms these exact strings, but shows that this function obtains them through `IOCTL_STORAGE_QUERY_PROPERTY` / `STORAGE_DEVICE_DESCRIPTOR`, not by issuing an INQUIRY CDB itself.
 
 
 ### DeviceUsb_GetInfo implementation confirmed
@@ -349,7 +349,7 @@ ProductId       = "Updater         "
 ProductRevision = "1.00"
 ```
 
-The remaining tiny symbol-level check is to resolve IAT slot `0x1000208C`; the call pattern indicates it is the append operation used for ProductId and ProductRevision.
+IAT resolution later confirms `0x1000208C = strcat_s` and `0x10002090 = strcpy_s`, closing the Vendor + Product + Revision concatenation exactly.
 
 ### Separation of metadata query and firmware CDB transport
 
@@ -458,7 +458,7 @@ dwFlagsAndAttributes  = 0x80        (FILE_ATTRIBUTE_NORMAL)
 hTemplateFile         = NULL
 ```
 
-The exact format string at VA `0x100020E8` remains to be decoded, but the function is conclusively a drive-letter-to-device-handle opener.
+The format string at VA `0x100020E8` is exactly `\\\\.\\%c:`, so the function opens a Windows device path of the form `\\\\.\\X:` using the first UTF-16 drive-letter character supplied by the caller.
 
 
 ### Confirmed updater bug: 10-byte CDBs are only partially initialized
@@ -486,7 +486,7 @@ This is not merely theoretical for F2: the 10-byte F2 range spans `[ebp-0x18 .. 
 
 Conclusion: the official updater transmits stack residue in vendor CDB bytes that it nevertheless declares as a 10-byte CDB. This is a concrete updater implementation bug. The bootloader must either ignore those trailing bytes or tolerate arbitrary values for the official updater to be reliable.
 
-For a clean reimplementation, the canonical representation should be a fully zero-initialized 10-byte CDB with only byte 0 set to `F0`, `F1`, or `F2`. This canonicalization should first be validated with read-only F1/F2 before any F0 experiment.
+For a clean reimplementation, the canonical representation should be a fully zero-initialized 10-byte CDB with only byte 0 set to `F0`, `F1`, or `F2`. This canonicalization should first be validated with read-only F1/F2 before any F0 experiment. The official updater must not be treated as a normative byte-for-byte protocol specification when its own stack-management bugs are observable.
 
 
 ### Exit/recovery behavior: current evidence boundary

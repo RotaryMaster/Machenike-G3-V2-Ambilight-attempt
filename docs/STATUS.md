@@ -131,30 +131,44 @@ The Windows updater expects the device to already be available through the Windo
 
 MixDrive sends a gamepad-specific message immediately before launching the updater.
 
-The managed-code path has now been narrowed further:
+The managed-code pre-launch path is now confirmed:
 
-- `Machenik.exe` contains `Machenik.Messages.CheckFirmwareUpdateMessage`.
-- `FirmwareUpdateViewModel.UpdateFirmwareAsync` and its generated async/lambda state machines are present.
-- The same assembly references `WeakReferenceMessenger::get_Default`.
-- It also references `IMessengerExtensions::Register`, `RegisterAll`, and `Send`.
-- A global metadata scan found the relevant messaging/update symbols even though the current IL decoder failed to emit method-body contexts.
+- for `DeviceType == 2`, `<<UpdateFirmwareAsync>b__0>d::MoveNext` obtains the item's `Device`;
+- it constructs `Machenik.Messages.EnterUpdateModeMessage`;
+- it assigns that same device through `EnterUpdateModeMessage::set_Device`;
+- it sends the message through `IMessengerExtensions::Send<EnterUpdateModeMessage>`;
+- the very next phase constructs `ProcessStartInfo`, starts the downloaded updater, and waits for exit.
 
-This proves the previous zero-hit scan was a tooling false negative. It does **not** yet prove that `CheckFirmwareUpdateMessage` is the specific pre-updater message.
+Relevant IL offsets in the state machine:
 
-**Highest-priority target:** resolve the concrete generic type/value used by the `Send<T>` immediately before process launch, then trace its receiver to the exact HID bootloader/OTA command.
+```text
+IL+0x0282  FirmwareUpdateModel::get_Device
+IL+0x028E  DeviceModel::get_DeviceType
+IL+0x029E  ObservableRecipient::get_Messenger
+IL+0x02A3  EnterUpdateModeMessage::.ctor
+IL+0x02AF  FirmwareUpdateModel::get_Device
+IL+0x02B4  EnterUpdateModeMessage::set_Device
+IL+0x02B9  Send<EnterUpdateModeMessage>
+IL+0x02BF  ProcessStartInfo::.ctor
+IL+0x02E9  Process::Start
+IL+0x02F1  Process::WaitForExit
+```
+
+`CheckFirmwareUpdateMessage` is therefore **not** the pre-updater transition message.
+
+**Highest-priority target:** locate the receiver(s) registered for `EnterUpdateModeMessage` and follow that handler to the exact HID bootloader/OTA command.
 
 ## Next steps
 
-1. Resolve generic `MethodSpec` signatures for `Send<T>` / `Register<T>` in `Machenik.exe` without relying on the failing `dncil` body parser.
-2. Identify the exact pre-updater message type and payload.
-3. Find every receiver of that message.
-4. Follow the receiver into the gamepad manager and recover the exact normal-HID OTA/bootloader request.
-5. Determine the update-mode USB identity and interface class from code or passive observation.
-6. Implement a Linux read-only probe for the update personality.
-7. Issue only `F1` and `F2` in the first live SCSI test.
-8. Compare returned hardware ID/version with the embedded updater metadata.
-9. Document recovery/rollback possibilities before any `F0` write.
-10. Only after the above, implement a Linux updater with explicit write safeguards.
+1. Locate every `Register<EnterUpdateModeMessage>` / `IRecipient<EnterUpdateModeMessage>` receiver.
+2. Recover the receiver method and follow its calls into the gamepad manager/native KeyLinker layer.
+3. Reconstruct the exact normal-HID OTA/bootloader packet without sending it.
+4. Determine the update-mode USB identity and interface class from code or passive observation.
+5. Implement a Linux read-only probe for the update personality.
+6. Issue only `F1` and `F2` in the first live SCSI test.
+7. Compare returned hardware ID/version with the embedded updater metadata.
+8. Document recovery/rollback possibilities before any `F0` write.
+9. Only after the above, implement a Linux updater with explicit write safeguards.
 
 ## Conditions before a write test
 

@@ -564,3 +564,11 @@ Handlers compare the returned index with `LengthMap[seq] - 1`. Only a non-final 
 
 This invalidates the earlier unconditional-two-read interpretation. Whether selector 1 is issued depends entirely on native `receiveDataLength`. That function is now the next static target.
 
+## 2026-11-20 — Operation 28 branch fully recovered
+
+The normalized switch offsets place CustomData read at `IL+0x0B89` and CustomData write at `IL+0x0CDA`. The full read branch proves that a final packet is decoded through `receiveDeviceCustomData`, checked for `data != NULL` and `0 < length <= 100`, copied with `Marshal.Copy`, and returned. A non-final packet increments the index, migrates maps to a fresh outer sequence, calls `readDeviceCustomData(index+1)`, and sends it.
+
+Combined with `CheckPacketIndex`, this reveals an important edge case: if native `receiveDataLength` returns 0 on the first response, managed `LengthMap` becomes 0 and index 0 is not equal to `-1`, so the official code continues to selector 1. The current Linux probe therefore aborts earlier than the official managed path when it sees a zero-length decoded `0x19` frame.
+
+The remaining discriminator is the native implementation of `receiveDataLength` (MethodDef token `0x06000017` wrapper).
+

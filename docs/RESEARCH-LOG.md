@@ -1500,3 +1500,22 @@ That relationship still needs to be proven for G3V2.
 
 Added a read-only identity-surface scanner to search header/config for related family
 addresses and the observed live suffix.
+
+
+## 2026-11-20 — G3V2_APP is likely the separate KeyLinker/config BLE interface
+
+Live discovery found only \`98:B6:ED:68:58:43 G3V2 APP\`; that address and suffix are absent
+from both v1.48 FOTs.
+
+The G3V2 manual independently states that \`G3V2_APP\` is visible to KeyLinker when the
+controller is running in any mode and does not require normal Bluetooth pairing to the
+phone. This strongly resolves the apparent contradiction: the ED APP address is a
+configuration peripheral, while gameplay Bluetooth identities are separate.
+
+The manual lists gameplay modes/names:
+- X+HOME -> Xbox Wireless Controller
+- Y+HOME -> Pro Controller
+- A+HOME -> MACHENIKE G3 V2
+
+The FOT E9 field may therefore belong to one of those gameplay/factory identities rather
+than the APP peripheral. Scan those modes read-only before assigning the E9 field.

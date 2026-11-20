@@ -1487,7 +1487,7 @@ candidates. Querying BlueZ/known devices is read-only; no firmware write/update 
 
 ## 2026-11-20 — live G3V2 BLE address does not match FOT E9 personalization
 
-Active read-only discovery found \`98:B6:ED:68:58:43 G3V2 APP\`.
+Active read-only discovery found \`98:B6:ED:<redacted> G3V2 APP\`.
 
 This does not match either known FOT field at 0x112:
 - \`98:B6:E9:B0:25:BE\`
@@ -1504,7 +1504,7 @@ addresses and the observed live suffix.
 
 ## 2026-11-20 — G3V2_APP is likely the separate KeyLinker/config BLE interface
 
-Live discovery found only \`98:B6:ED:68:58:43 G3V2 APP\`; that address and suffix are absent
+Live discovery found only \`98:B6:ED:<redacted> G3V2 APP\`; that address and suffix are absent
 from both v1.48 FOTs.
 
 The G3V2 manual independently states that \`G3V2_APP\` is visible to KeyLinker when the
@@ -1528,7 +1528,7 @@ Confirmed by user observation:
 - dongle mode appears as Xbox 360 Controller
 
 X+HOME active discovery returned only:
-\`98:B6:ED:68:58:43 G3V2 APP\`
+\`98:B6:ED:<redacted> G3V2 APP\`
 
 No gameplay-side E9 address was exposed in that run. Keep the APP/config personality and
 gameplay identity separate; current evidence is insufficient to map the FOT E9 field to a
@@ -1574,10 +1574,10 @@ results are not evidence of absence.
 
 Corrected scan method (\`bluetoothctl --timeout 25 scan on\`) plus btmon produced:
 
-- LE \`98:B6:ED:68:58:43\` — \`G3V2 APP\`
-- BR/EDR \`98:B6:EA:68:58:43\` — \`Xbox Wireless Controller\`
+- LE \`98:B6:ED:<redacted>\` — \`G3V2 APP\`
+- BR/EDR \`98:B6:EA:<redacted>\` — \`Xbox Wireless Controller\`
 
-Both share the exact lower 24 bits \`68:58:43\`, proving the APP and gameplay personalities
+Both share the exact lower 24 bits \`<redacted>\`, proving the APP and gameplay personalities
 belong to the same physical unit while using different public address prefixes.
 
 This is decisive evidence that the FOT E9 fields are not the current live addresses of
@@ -1590,7 +1590,7 @@ their gameplay personalities preserve the same suffix under other family prefixe
 ## 2026-11-20 — Y+HOME did not connect to Bazzite
 
 Post-capture inspection found no connection event in btmon and no connected BlueZ device.
-Only \`98:B6:ED:68:58:43 G3V2 APP\` remained visible.
+Only \`98:B6:ED:<redacted> G3V2 APP\` remained visible.
 
 So the user's observation that Y+HOME "connected" was not a connection to this Bazzite
 adapter. Most likely it reattached to another already-paired host. The Y+HOME gameplay
@@ -1618,15 +1618,15 @@ capture.
 
 With the dongle removed, Y+HOME advertised over BR/EDR as:
 
-\`98:B6:E9:68:58:43 Pro Controller\`
+\`98:B6:E9:<redacted> Pro Controller\`
 
 At the same time the persistent LE configuration peripheral remained:
 
-\`98:B6:ED:68:58:43 G3V2 APP\`
+\`98:B6:ED:<redacted> G3V2 APP\`
 
 Together with the prior X+HOME result:
 
-\`98:B6:EA:68:58:43 Xbox Wireless Controller\`
+\`98:B6:EA:<redacted> Xbox Wireless Controller\`
 
 the physical unit now has a confirmed three-personality identity map sharing one lower
 24-bit suffix.
@@ -1638,7 +1638,7 @@ metadata rather than a generic family marker.
 Neither known FOT's E9 suffix matches the live unit:
 - A: B0:25:BE
 - B: CE:4B:03
-- live unit: 68:58:43
+- live unit: <redacted>
 
 Since A/B share the exact same encrypted firmware payload and only the E9 suffix plus byte
 0x101 differ (mirrored in the directory copy), treat them as the same firmware payload

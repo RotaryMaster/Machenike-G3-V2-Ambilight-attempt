@@ -365,3 +365,12 @@ The constants used to materialize the high bit are ASCII `1` at VA `0x18000B214`
 Helper `0x180001400` was disassembled and confirmed to allocate a destination and concatenate three NUL-terminated strings in argument order. This validates the field order in header byte 2.
 
 The remaining byte-identical reproduction problem has moved outside the builder: determine the protocol globals' runtime initial/synchronized state and the CRT PRNG seed/state. Until those are known, the formulas are exact but the sequence values at a specific moment cannot be predicted from a cold offline start.
+
+
+### PRNG scan and security-cookie distinction
+
+A dedicated import/xref scan found `api-ms-win-crt-utility-l1-1-0.dll!rand`, but no `srand` import in `KeyLinkerlib.dll`. Microsoft CRT documentation states that `rand()` before `srand()` follows the same sequence as `srand(1)`, while the generator state is application-scoped by default. This means another module in the same process could still theoretically alter the sequence.
+
+The nearby `GetSystemTimeAsFileTime` and `QueryPerformanceCounter` imports are not evidence of a protocol PRNG seed. Their xrefs resolve to the MSVC security-cookie initialization routine around `0x180009640`, recognizable by the `0x2B992DDFA232` cookie constant and its standard entropy mix.
+
+Most importantly, KeyLinker's decoder reconstructs the transmitted byte 3 from the frame itself. Therefore a synchronized PRNG is not required by the codec. Reproducing the exact MixDrive `rand()` sequence is only necessary for byte-identical output, not for constructing a mathematically valid encode/decode pair. Whether the controller applies any additional semantic validation to this byte remains a separate device-side question.

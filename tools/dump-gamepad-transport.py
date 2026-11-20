@@ -285,9 +285,17 @@ def main():
     args = ap.parse_args()
 
     root = Path(args.root)
+    # Keep this scanner on MixDrive's first-party assemblies only.
+    # Scanning dependency DLLs (especially AutoMapper) creates hundreds of
+    # thousands of false-positive "mode/interface" hits with no gamepad value.
+    allowed = {
+        "Machenik.exe",
+        "Machenik.Shared.dll",
+        "Machenik.Infrastructure.dll",
+    }
     files = sorted(
         p for p in root.rglob("*")
-        if p.suffix.lower() in (".dll", ".exe")
+        if p.name in allowed
     )
 
     print("=" * 112)

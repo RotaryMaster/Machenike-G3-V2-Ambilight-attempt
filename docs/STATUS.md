@@ -1897,3 +1897,43 @@ Decision rule:
   keystream/encryption context, radically different plaintext, or a transformed source;
 - identical XCOD/XRES -> distinct whole-FOT hash is only metadata/config/tail and the pair
   is not useful as a ciphertext-difference test.
+
+
+### Same-HWID v1.48 pair resolved: payload is byte-identical
+
+The section-aware differential comparison between:
+- \`firmware-original/G3V2-1006-2011-v1.48.fot\`
+  SHA256 \`0b97b5e38fc706182110cdfa1682b1c252a1c0dac8314f5c836d3f037a67e836\`
+- official updater FOT
+  SHA256 \`0ad5d080c6451d9a26a28e32f77ce73789f163ce8cad12c035ff4314b10fb085\`
+
+shows that the actual firmware/resource payload is identical:
+
+- XCOD: 361472 / 361472 bytes identical (100%)
+  SHA256 \`3ddaec3bb4d3723d4d1c55392473e6830872674ce3c33f6ab401b857844821fe\`
+- XRES: 3072 / 3072 bytes identical (100%)
+  SHA256 \`173740c39fce50700eea71a2616afbf445feabb0217ec4bc6c3ab57919377bb9\`
+- config: 100% identical
+- tail: 100% identical
+
+Only four bytes differ in the 0x200-byte FOT header:
+- header offsets \`0x101\`
+- header offsets \`0x115..0x117\`
+
+The directory copy at \`0x59200\` mirrors the header exactly in each file, so those
+same four changes appear again at \`0x59301\` and \`0x59315..0x59317\`.
+Therefore the whole-image SHA difference is caused by exactly eight bytes of duplicated
+container metadata, not by different G3V2 firmware code/resources.
+
+Whole FOT:
+- 369656 / 369664 bytes identical = 99.997836%
+- longest identical run: 365033 bytes
+
+Consequence: this pair is **not** useful for cross-ciphertext/same-keystream recovery,
+because the XCOD and XRES ciphertexts are byte-identical. It also means the local
+\`firmware-original\` file must not be described as a distinct firmware build on the basis
+of SHA256 alone.
+
+Added \`tools/inspect-g3v2-fot-header-delta.py\` to classify the remaining four canonical
+header-byte differences, dump their exact values/context, test aligned LE fields,
+mirror invariants and common CRC32/Adler32 candidates.

@@ -1725,3 +1725,12 @@ Therefore 0x37 itself persists independently of 0x3B.
 This is the critical Ambilight safety result: do not stream 0x37 at high frequency unless
 the persistent-storage implementation is later proven to be wear-safe. The next reverse-
 engineering target is an undocumented volatile/realtime LED update path.
+
+
+## 2026-11-20 — LampLight independence from zero-length CustomData observed
+
+All warm-up CustomData responses were empty during the successful persistence test, yet
+B7/0x37 lighting read, write, power-cycle verification and restoration all worked.
+
+This is direct evidence that basic LampLight control is operational independently of a
+valid CustomData payload in that session.

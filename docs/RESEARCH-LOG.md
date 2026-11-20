@@ -396,3 +396,26 @@ Thus the first OTA CustomData fragment inherits whatever transport state exists 
 A scan across every PE in the extracted MixDrive package found only one relevant CRT import: `KeyLinkerlib.dll -> rand`. No `srand` or `rand_s` was found, including a raw-string/GetProcAddress check.
 
 Microsoft's documented default `rand` sequence provides an independent consistency check: without `srand`, the sequence is equivalent to seed 1, and the published sequence starts `41, 18467, 6334...` = low bytes `29 23 BE...`. The known verified read plaintext `BB 06 00 29 00 27` therefore exactly matches the first default low byte. This is classified as strong corroboration rather than proof of the OTA-time call index.
+
+
+### Header builder formula confirmed by real captures
+
+The obfuscated native builder at `0x180001C90` has been reduced to:
+
+```text
+header[0] = command
+header[1] = ((E670 & 7) << 5) | (frame_len & 0x1F)
+header[2] = ((E67C == 1) << 7) | ((fragment_index & 0xF) << 3) | (E68C & 7)
+header[3] = rand() & 0xFF
+```
+
+Real decoded `0x37` frames `EC/CC/AC/8C` and `81/02/83/04` verify all three state fields and their update direction.
+
+The direct CustomData read path was also closed. `0x1800014C0` returns the read sequence byte and advances only `E67C/E68C`; it does not change `E670`. Verified consecutive reads:
+
+```text
+BB 06 00 29 00 27
+BB 06 81 23 00 C0
+```
+
+prove the state transition `(E67C,E68C) 0,0 -> 1,1`, while the low-byte CRT random stream advances `29 -> 23`.

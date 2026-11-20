@@ -847,3 +847,45 @@ Next target: run `tools/dump-keylinker-warmup-native.py` against the extracted
 KeyLinker DLL to recover the actual native command builders. Priority is
 LampLight read/write for Ambilight and the exact warm-up reads needed before
 CustomData.
+
+
+## 2026-11-20 — LampLight command IDs and dedicated 0x37 writer
+
+Native audit of `KeyLinkerlib.dll` confirmed the specialized read-command
+family:
+
+```text
+B1 06 = Rocker
+B2 06 = Trigger
+B3 06 = Motor
+B4 06 = current Turbo
+B6 06 = AfterKeyChange list
+B7 06 = LampLight
+BB 06 = CustomData
+```
+
+Each specialized read uses `KeyLinkerState`, consumes one CRT `rand()`
+value, finishes a six-byte plaintext request and applies
+`KeyLinkerEncode`.
+
+The major Ambilight result is the write side:
+`writeDeviceLamplightData` passes command `0x37` to the already-reversed
+`HeaderBuilder`, fragments the logical object in chunks of at most 15 bytes,
+appends the transport checksum/CRC and runs each frame through
+`KeyLinkerEncode`.
+
+This gives a clean native command pairing:
+
+```text
+LampLight   B7 read / 37 write
+CustomData  BB read / 3B write
+```
+
+The LampLight writer is therefore the primary target for dynamic RGB control.
+
+Added `tools/dump-lamplight-detail.py` to print the complete
+`readDeviceLamplightData`, `receiveDeviceLamplightData` and
+`writeDeviceLamplightData` bodies, enumerate managed
+`DeviceLampLightStruct` fields/layout, print LampLight P/Invoke signatures
+and locate all managed call sites. This should close the logical payload
+format without device I/O.

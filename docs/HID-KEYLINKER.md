@@ -137,11 +137,13 @@ Static IL shows:
 Confirmed:
 - read selector `BB`
 - BB selector `00`
-- expected payload size: 10 bytes
+- logical CustomData block size: **20 bytes**
 - real readback works
+- a breathing-blue configuration was successfully exercised
+
+The previous 10-byte figure belonged to a decoded feature-response payload and must not be reused as the CustomData size.
 
 More lighting-field semantics should be documented here as they are decoded.
-
 
 ### Outer HID transport envelope (managed layer)
 
@@ -155,11 +157,13 @@ Device -> host (generic):
 81 F9 SEQ FLAGS LEN PAYLOAD...
 ```
 
-On host TX, `SendDeviceData` computes `LEN = min(native_length, 20)`, creates `LEN+5` bytes, places those first native/KeyLinker bytes at offset 5, and calls `HidDevice.Write`. On RX, HidLibrary exposes `0x81` separately as `HidReport.ReportId`, so `HidReport.Data` begins at `F9`. The manager then reads sequence from Data[1], flags from Data[2], length from Data[3], and payload from Data[4]. If `FLAGS & 1` is set, it is handled as an ACK and the matching sequence entry in `AckMap` is completed successfully.
-
+On host TX, `SendDeviceData` computes `LEN = min(native_length, 20)`, allocates `LEN+5` bytes, places those first native/KeyLinker bytes at offset 5, and calls `HidDevice.Write`. On RX, HidLibrary exposes `0x81` separately as `HidReport.ReportId`, so `HidReport.Data` begins at `F9`. The manager then reads sequence from Data[1], flags from Data[2], length from Data[3], and payload from Data[4]. If `FLAGS & 1` is set, it is handled as an ACK and the matching sequence entry in `AckMap` is completed successfully.
 
 The 20-byte cap is statically tied to `Math.Min(source_length, 20)`. The two `GetPacketCount` overloads compute ceiling division by 20, confirming that longer native results are handled as 20-byte transport units rather than one oversized HID payload.
 
+`GetNextSeq` increments an 8-bit sequence counter under a lock and skips zero, so managed sequence values cycle through 1..255.
+
+`CreateTaskCompletionSource` stores the operation/result type in `SeqMap[seq]`, stores the completion source in `ResultMap[seq]`, and maintains separate packet/index/length/data/ACK maps. For CustomData, managed operation/result types are 28 for read and 29 for write; these are not sequence IDs.
 
 ### Cross-check against captured G3V2 traffic
 

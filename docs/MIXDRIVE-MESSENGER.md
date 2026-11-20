@@ -257,3 +257,74 @@ GetResultAsync(..., 10)
 So the write timeout is also 10 seconds, while the complete managed byte-array length is passed unchanged to the native interop layer.
 
 This removes the apparent contradiction between the earlier 10-byte CustomData interpretation and `data[11]`. The next target is to determine the exact byte-array layout returned by native `receiveDeviceCustomData` and how managed index 11 maps to the BB/CustomData packet.
+
+
+## Native KeyLinker CustomData layer: first reconstruction
+
+The P/Invoke mappings are confirmed as cdecl exports from:
+
+```text
+Libs\Gamepad\KeyLinkerlib.dll
+```
+
+Relevant exports:
+
+```text
+receiveDeviceCustomData  RVA 0x00004DD0 / VA 0x180004DD0
+readDeviceCustomData     RVA 0x00008DB0 / VA 0x180008DB0
+writeDeviceCustomData    RVA 0x00008EB0 / VA 0x180008EB0
+```
+
+### readDeviceCustomData
+
+The native read function receives the managed `index` as its real argument and constructs a six-byte BB command beginning with:
+
+```text
+BB 06 ...
+```
+
+It then passes all six bytes through the already-identified KeyLinker transform helper at `0x180001080` and returns a 16-byte native result descriptor containing a pointer plus length `6`.
+
+This matches the known six-byte plaintext BB read request family.
+
+### receiveDeviceCustomData
+
+The exported function itself is only a thin wrapper. It calls:
+
+```text
+0x180001760
+```
+
+and copies exactly 16 bytes from the helper result to the exported return object. Therefore the actual received CustomData buffer/descriptor is assembled by `0x180001760`, not by the export body at `0x180004DD0`.
+
+### writeDeviceCustomData
+
+The write path reveals an internal length prefix:
+
+```text
+[length][data...]
+```
+
+At function entry the native code writes the low byte of `length` to the first local byte and copies the managed input bytes immediately after it. It then processes `length + 1` bytes.
+
+That length-prefixed stream is split into chunks of at most 15 bytes. For each chunk, the DLL:
+- obtains a four-byte protocol header from helper `0x180001C90`;
+- appends the chunk;
+- calculates and appends one CRC byte;
+- passes the complete block through KeyLinker helper `0x180001080`.
+
+So the native write transport is now structurally:
+
+```text
+managed CustomData bytes
+        ↓
+[length][data...]
+        ↓
+chunks <= 15 bytes
+        ↓
+4-byte packet header + chunk + CRC
+        ↓
+KeyLinker transform
+```
+
+The still-unresolved step is the exact buffer returned by `0x180001760`, which determines how managed index `11` maps to CustomData.

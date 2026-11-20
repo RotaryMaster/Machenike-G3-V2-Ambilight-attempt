@@ -2450,3 +2450,44 @@ the official warm-up returned logical length zero, while:
 Therefore the LampLight read/write path can operate independently of a valid 20-byte
 CustomData result in the same session. CustomData is not a prerequisite for basic B7/0x37
 lighting control on this unit.
+
+
+### Correction: B7/0x37 snapshot does not capture the complete visual lighting mode
+
+User visual observation during the isolated persistence test adds a critical correction:
+
+- before the test the controller was visually in a blue breathing mode;
+- the standalone marker \`FF 00 00 00 00 FF\` displayed as **solid red**;
+- restoring the saved B7 payload \`00 FF FF 00 00 FF\` displayed as a
+  **solid cyan / light-blue / blue-green** color, not the original breathing effect.
+
+Therefore the prior statement that the original lighting state was fully restored is too
+strong. What was restored and verified was the exact **B7 LampLight payload**, not the
+complete visual lighting configuration.
+
+Direct consequences:
+- RGB byte order is empirically confirmed as literal R,G,B:
+  - \`FF 00 00\` -> red;
+  - \`00 FF FF\` -> cyan-like output.
+- with the current active mode after the test, packed effect bytes \`00 00\` display solid.
+- the breathing behavior that existed before the test is not represented solely by the
+  six-byte B7 LampLight payload.
+
+This aligns with the already proven managed split:
+- B7/0x37 carries RGB, lamp brightness and the LampLight breath fields;
+- CustomData \`data[1]\` carries \`LightModeIndex\`.
+
+Because all CustomData reads during the Linux persistence test returned zero length, the
+pre-test LightModeIndex was not captured and could not be restored by the isolated 0x37
+snapshot.
+
+Revised persistence conclusion:
+- the **0x37/B7 LampLight payload itself** survives a real power-cycle;
+- this does not prove that the complete lighting mode/effect state is encoded or restored
+  by 0x37 alone;
+- high-frequency 0x37 streaming should still remain disabled because its payload is
+  demonstrably persistent across power loss.
+
+The original breathing mode should be restored through the normal MixDrive save path (or
+after its CustomData mode value is safely recovered), rather than by guessing a 20-byte
+CustomData write.

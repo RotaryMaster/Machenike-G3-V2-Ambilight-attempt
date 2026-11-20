@@ -1978,7 +1978,7 @@ personalized FOT is associated with the physical unit without touching firmware 
 
 Active BlueZ discovery with the physical G3V2 produced:
 
-\`98:B6:ED:68:58:43  G3V2 APP\`
+\`98:B6:ED:<redacted>  G3V2 APP\`
 
 Neither of the two FOT header fields at \`0x112..0x117\` matched the live address:
 - local FOT A: \`98:B6:E9:B0:25:BE\`
@@ -2005,7 +2005,7 @@ suffix and reversed forms without any device I/O.
 ### G3V2_APP identified as a separate configuration BLE personality
 
 The physical G3V2 advertised live as:
-- \`98:B6:ED:68:58:43 G3V2 APP\`
+- \`98:B6:ED:<redacted> G3V2 APP\`
 
 The observed live MAC/suffix does not occur anywhere in either known FOT, including
 header/config, reversed forms, or under E9/EC/ED prefixes.
@@ -2044,7 +2044,7 @@ This overrides the earlier external-manual interpretation that had been treated 
 confidently.
 
 Read-only Bluetooth discovery while the controller was started with X + HOME found only:
-- \`98:B6:ED:68:58:43 G3V2 APP\`
+- \`98:B6:ED:<redacted> G3V2 APP\`
 
 No second \`98:B6:E*\` gameplay identity was visible in that scan, and neither known FOT
 E9 address appeared.
@@ -2060,7 +2060,7 @@ Interpretation:
 ### X+HOME automatic scan did not expose gameplay Bluetooth identity
 
 User test in X+HOME mode:
-- active BlueZ scan showed only \`98:B6:ED:68:58:43 G3V2 APP\`
+- active BlueZ scan showed only \`98:B6:ED:<redacted> G3V2 APP\`
 - no \`Xbox Wireless Controller\`
 - no additional \`98:B6:E*\` device
 
@@ -2078,7 +2078,7 @@ device from the auto scan as evidence that the FOT E9 identity is not used by th
 
 A subsequent X+HOME test ran separate \`bluetoothctl scan bredr\` and
 \`bluetoothctl scan le\` passes but \`bluetoothctl devices\` showed only the already-known
-\`98:B6:ED:68:58:43 G3V2 APP\` after both passes.
+\`98:B6:ED:<redacted> G3V2 APP\` after both passes.
 
 Important correction: \`scan bredr\` / \`scan le\` correctly select the discovery
 transport, but a later \`bluetoothctl devices\` listing is not a per-scan evidence log.
@@ -2129,19 +2129,19 @@ controller's two live Bluetooth personalities.
 
 Configuration/app personality:
 - transport: LE
-- public address: \`98:B6:ED:68:58:43\`
+- public address: \`98:B6:ED:<redacted>\`
 - complete name: \`G3V2 APP\`
 - legacy advertising PDU: ADV_IND
 - address type: Public
 
 Gameplay personality in X+HOME:
 - transport: BR/EDR
-- public address: \`98:B6:EA:68:58:43\`
+- public address: \`98:B6:EA:<redacted>\`
 - complete name: \`Xbox Wireless Controller\`
 - class: \`0x000508\` (Peripheral)
 - observed through Extended Inquiry Result / MGMT Device Found
 
-The shared suffix \`68:58:43\` strongly ties both personalities to the same physical unit.
+The shared suffix \`<redacted>\` strongly ties both personalities to the same physical unit.
 Only the third prefix byte differs:
 - APP/config: ED
 - X+HOME gameplay: EA
@@ -2153,7 +2153,7 @@ The two known v1.48 FOTs contain:
 - \`98:B6:E9:B0:25:BE\`
 - \`98:B6:E9:CE:4B:03\`
 
-Neither suffix matches the live unit (\`68:58:43\`), so those FOT values are not the
+Neither suffix matches the live unit (\`<redacted>\`), so those FOT values are not the
 current live Bluetooth addresses of this controller.
 
 Family-level corroboration is notable: public X20 tooling comments that AgreementConfig
@@ -2163,13 +2163,13 @@ rather than the exact runtime address used by every personality. Exact semantics
 unproven.
 
 Next safe mapping step: repeat the same real discovery for Y+HOME and A+HOME and record
-whether the live suffix remains \`68:58:43\` while the prefix changes by mode.
+whether the live suffix remains \`<redacted>\` while the prefix changes by mode.
 
 
 ### Y+HOME capture: no connection to the Bazzite host
 
 A read-only btmon review of the Y+HOME test showed:
-- only the persistent LE \`98:B6:ED:68:58:43 G3V2 APP\` advertisements;
+- only the persistent LE \`98:B6:ED:<redacted> G3V2 APP\` advertisements;
 - no HCI \`Connection Complete\`, \`Device Connected\`, ACL connection, authentication,
   remote-name or link-key event for a gameplay personality;
 - \`bluetoothctl devices Connected\` returned no connected device on the Bazzite host.
@@ -2215,10 +2215,10 @@ With the 2.4 GHz dongle removed, a real 25-second discovery + btmon capture in Y
 resolved the gameplay personality:
 
 - LE config/app:
-  - \`98:B6:ED:68:58:43\`
+  - \`98:B6:ED:<redacted>\`
   - \`G3V2 APP\`
 - BR/EDR gameplay:
-  - \`98:B6:E9:68:58:43\`
+  - \`98:B6:E9:<redacted>\`
   - \`Pro Controller\`
   - class \`0x002508\`
   - Limited Discoverable Mode
@@ -2226,7 +2226,7 @@ resolved the gameplay personality:
 This is direct G3V2 evidence that the E9 prefix is used by the Pro Controller personality.
 It supersedes any same-family semantic mapping that assigned E9/ED differently.
 
-The suffix remains exactly \`68:58:43\`, matching the X+HOME EA personality and the
+The suffix remains exactly \`<redacted>\`, matching the X+HOME EA personality and the
 persistent ED APP personality. Current live mapping for this physical unit:
 
 - ED: \`G3V2 APP\` (LE configuration)
@@ -2240,7 +2240,7 @@ Both known v1.48 FOTs carry E9-form addresses there:
 - official-updater FOT B: \`98:B6:E9:CE:4B:03\`
 
 Since the physical controller's live Pro Controller address is instead
-\`98:B6:E9:68:58:43\`, neither FOT header is personalized with this unit's current E9
+\`98:B6:E9:<redacted>\`, neither FOT header is personalized with this unit's current E9
 identity.
 
 Because A and B have byte-identical XCOD/XRES/config/tail but differ only at:

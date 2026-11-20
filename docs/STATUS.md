@@ -2690,3 +2690,67 @@ The remaining offline target is much narrower: resolve the exact semantics/frami
 \`FUN_180004820\`, \`exitDeviceTestMode\`, and the 0x1B/0x1C command family, and determine
 whether the still-unassigned write path around \`0x180004EA9\` belongs to key-change/test
 mode rather than lighting.
+
+
+### Test-mode framing closed; 0x180004EA9 assigned to key-change writer
+
+Focused static audit of `KeyLinkerlib.dll` with
+`tools/dump-keylinker-test-mode.py` closed the previously unresolved test-mode area.
+
+Confirmed exports:
+- `enterDeviceTestlevelMode` @ `0x180004900`
+- `exitDeviceTestMode` @ `0x180004920`
+- `keyTestBeforeEffect` @ `0x1800049E0`
+- `keyTestAfterEffect` @ `0x180004A00`
+
+The unnamed builder `FUN_180004820` is conclusively the shared builder used by
+`enterDeviceTestlevelMode`, `keyTestBeforeEffect`, and `keyTestAfterEffect`.
+
+Its plain pre-transform frame is exactly 9 bytes:
+- byte 0 = `0x1B` = CODE_TEST_SET_MODE
+- byte 1 = `0x09`
+- byte 2 = KeyLinker state byte
+- byte 3 = random byte
+- byte 4 = `0x03`
+- byte 5 = `0xDF`
+- byte 6 = `0xAB`
+- byte 7 = mode/effect argument supplied in EDX/SIL
+- byte 8 = checksum/derived byte
+- then `KeyLinkerEncode(..., 9)`
+
+Callers prove two concrete mode arguments:
+- `keyTestBeforeEffect` calls the builder with EDX=0
+- `keyTestAfterEffect` calls the builder with EDX=1
+
+`enterDeviceTestlevelMode` forwards the caller-provided EDX value unchanged to the same
+builder.
+
+`exitDeviceTestMode` independently constructs an 8-byte plain frame:
+- byte 0 = `0x1C` = CODE_TEST_NORMAL_MODE
+- byte 1 = `0x08`
+- byte 2 = KeyLinker state byte
+- byte 3 = random byte
+- byte 4 = `0x02`
+- byte 5 = `0xDF`
+- byte 6 = `0xAC`
+- byte 7 = checksum/derived byte
+- then `KeyLinkerEncode(..., 8)`
+
+Therefore the exact binding of 0x1B/0x1C to the test-mode functions and their frame lengths
+is no longer unresolved.
+
+The previously unassigned site `0x180004EA9` is also closed: it lies inside the exported
+`writeDeviceKeyChangeData` routine beginning at `0x180004E00`, where it calls
+`HeaderBuilder` with command `0x36`. It is part of the fragmented key-change write path,
+not a lighting/test-mode writer.
+
+Lighting implications:
+- 0x1B/0x1C are now statically understood as test-mode control frames, not evidence of an
+  undiscovered RGB writer.
+- No evidence in this audit links their mode byte to the 13 firmware-local FN+Right lighting
+  effects.
+- Do not run 0x1B/0x1C live merely to search for lighting behavior; there is still no static
+  evidence that they are a volatile RGB path.
+- The remaining lighting target is outside this closed region: locate a genuinely separate
+  undocumented LED/effect transport or firmware-internal handler, rather than revisiting
+  B7/BB/FN+Right/0x37/test-mode framing.

@@ -1734,3 +1734,22 @@ B7/0x37 lighting read, write, power-cycle verification and restoration all worke
 
 This is direct evidence that basic LampLight control is operational independently of a
 valid CustomData payload in that session.
+
+
+## 2026-11-20 — visual observation corrects meaning of the 0x37 restore
+
+The isolated test restored the exact B7 bytes but did not restore the original visual
+effect.
+
+Observed:
+- pre-test: blue breathing;
+- marker \`FF 00 00 00 00 FF\`: solid red;
+- restored B7 \`00 FF FF 00 00 FF\`: solid cyan/light-blue.
+
+So B7/0x37 persistence is proven for the LampLight payload, but B7 is not a complete
+snapshot of the visual lighting mode. The missing breathing state is consistent with the
+separate CustomData LightModeIndex already identified at data[1].
+
+Since CustomData was zero-length throughout the Linux test, that mode value was never
+captured and therefore could not be restored. Do not claim the original visual state was
+fully restored.

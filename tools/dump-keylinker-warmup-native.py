@@ -10,6 +10,8 @@ Targets only the native exports used by the official gamepad initializer:
 - readTriggerData
 - readDeviceMotorData
 - readDeviceLamplightData
+- receiveDeviceLamplightData
+- writeDeviceLamplightData
 - readDeviceCustomData
 - optional readDeviceAfterKeyChangeList
 
@@ -47,6 +49,8 @@ TARGETS = [
     "readTriggerData",
     "readDeviceMotorData",
     "readDeviceLamplightData",
+    "receiveDeviceLamplightData",
+    "writeDeviceLamplightData",
     "readDeviceCustomData",
     "readDeviceAfterKeyChangeList",
 ]
@@ -162,8 +166,8 @@ def main():
     ap.add_argument(
         "--cap",
         type=lambda x: int(x, 0),
-        default=0x500,
-        help="maximum bytes to disassemble per export (default 0x500)",
+        default=0x800,
+        help="maximum bytes to disassemble per export (default 0x800)",
     )
     args = ap.parse_args()
 

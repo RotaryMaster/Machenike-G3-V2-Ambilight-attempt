@@ -440,3 +440,31 @@ For type 29 (write), no native receive decoder is called. The dispatcher removes
 
 The exact valid type-28 branch after IL offset `0x153B` still needs one focused dump because the previous extraction helper stopped on a branch-local `ret` before printing the fall-through target.
 
+### Operation 28 valid branch and multi-read consequence
+
+The operation-28 valid branch is fully decoded. A valid native `DeviceDataStruct` is converted to the managed result exactly as:
+
+```text
+byte[] result = new byte[native.length];
+Marshal.Copy(native.data, result, 0, native.length);
+ResultMap.Remove(seq);
+SeqMap.Remove(seq);
+task.SetResult(result);
+```
+
+The same branch also proves how multi-packet CustomData reads continue. If the current packet is not the last expected packet, managed code updates `IndexMap`, migrates to a fresh managed sequence with `MigrateSeq`, calls `readDeviceCustomData(currentIndex + 1)`, and immediately sends the returned native request with `SendNextPacketOrFail`.
+
+For the G3 V2 20-byte CustomData object, the native encoded result is 31 bytes, so the outer 20-byte managed HID transport requires two native read requests. This means the official OTA read-to-write path consumes two native sequence/rand steps, not one.
+
+Fresh/default observed progression:
+
+```text
+read selector 0: BB 06 00 29 00 27
+read selector 1: BB 06 81 23 01 B9
+encoded selector 1 request: C2 37 F2 B7 A4 28
+```
+
+After those requests, the native sequence state entering `writeDeviceCustomData` is `E67C=0, E68C=2`; the next default CRT rand low byte is `BE`.
+
+Therefore, conditional on `E670=7` at writer entry, the corrected two 0x3B frame headers are `3B F4 02 BE` and `3B CB 8B 84`. The older one-read candidates `3B F4 81 23` / `3B CB 0A BE` are superseded.
+

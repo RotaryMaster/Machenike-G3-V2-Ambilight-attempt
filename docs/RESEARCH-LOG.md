@@ -109,25 +109,26 @@ Confirmed:
 - duplicate 512-byte directory/header copy near the end
 - complete transfer is exactly aligned to 512-byte blocks
 
-### Managed messenger metadata path narrowed
+### Pre-updater messenger closed
 
-A global metadata scan across 146 PE files / 59 managed assemblies corrected an earlier false negative.
+Raw ECMA-335 MethodSpec decoding identified the exact transition message:
 
-`Machenik.exe` definitively contains:
-- `FirmwareUpdateViewModel.UpdateFirmwareAsync`;
-- its generated async/lambda state machines;
-- `Machenik.Messages.CheckFirmwareUpdateMessage`;
-- `WeakReferenceMessenger::get_Default`;
-- `IMessengerExtensions::Register`;
-- `IMessengerExtensions::RegisterAll`;
-- `IMessengerExtensions::Send`;
-- `ProcessStartInfo` and `Process::Start` references.
+```text
+Machenik.Messages.EnterUpdateModeMessage
+```
 
-Therefore the messenger/update path exists exactly where expected.
+Inside `<<UpdateFirmwareAsync>b__0>d::MoveNext`, MixDrive checks for gamepad `DeviceType == 2`, constructs this message, copies the firmware-update item's `Device` into it, sends it, and then immediately launches the external updater.
 
-The current `dncil` body-parser pass emitted compressed-integer decoding errors and returned zero body contexts, so the concrete generic type of the pre-updater `Send<T>` remains unresolved.
+Key tokens:
 
-This supersedes the prior “zero hits” result: that result is now classified as a tooling failure, not as evidence that the messenger path was absent.
+```text
+Send<EnterUpdateModeMessage>      = 0x2B00031E
+Register<EnterUpdateModeMessage>  = 0x2B00001E / 0x2B000022
+```
+
+This disproves the earlier working possibility that `CheckFirmwareUpdateMessage` might be the transition message; it belongs to a separate workflow.
+
+The earlier zero-hit scan remains classified as a tooling false negative. Raw metadata/body token scanning is now the preferred method for this managed assembly.
 
 ## Open questions
 
@@ -137,10 +138,12 @@ This is the highest-priority unresolved question.
 
 Likely source: the gamepad-specific messenger/event sent by MixDrive immediately before it starts the updater.
 
+Confirmed:
+- message type: `EnterUpdateModeMessage`;
+- payload: the update item's `DeviceModel`.
+
 Need to determine:
-- concrete generic `Send<T>` message type;
-- message payload/value;
-- receiver;
+- receiver class/method;
 - exact HID request;
 - expected disconnect/re-enumeration;
 - timeout/retry behavior.

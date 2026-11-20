@@ -1858,3 +1858,9 @@ Same-family public work on ZXD2055/ZXD2271 independently reports the same FOT la
 same KEY constant, byte-for-byte host transfer and bootloader-side decryption. It also
 reports keystream reuse across same-hardware-ID firmware versions on an EasySMX X20 pair.
 This is external family evidence, not direct proof yet for G3V2/ZXD2267.
+
+
+Added \`tools/scan-g3v2-local-fot-corpus.py\`, a read-only recursive scanner for
+complete FOT containers in local files/updaters. It highlights the exact G3V2
+hardware ID \`a1ca51da724cb6103658c05d7d4e2267\`, deduplicates by FOT SHA256 and
+reports whether more than one distinct same-HWID version exists locally.

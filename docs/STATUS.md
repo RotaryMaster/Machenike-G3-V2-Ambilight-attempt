@@ -1752,3 +1752,44 @@ Current next step: scan the whole updater/container surface and the low-entropy
 edge regions to determine whether plaintext FOT metadata sits outside the
 0x1712F0 F0-transferred slice, and whether the updater sends transformed bytes
 directly or performs a host-side decode first.
+
+
+### Correction — FOT container is structured; only payload sections are high entropy
+
+The full-container scan corrects the earlier interpretation of the 0x1712F0
+slice. That slice is not an opaque all-ciphertext blob: it begins with a valid
+plaintext FOT container header.
+
+Confirmed relative layout inside the 0x5A400-byte G3V2 image:
+
+- 0x000000: FOT header/directory, 0x200 bytes;
+- 0x000054: XOR-0x80 encoded INFO tag;
+- 0x00008C: XOR-0x80 encoded DEV tag;
+- 0x0000A0: XOR-0x80 encoded KEY tag;
+- 0x0000B0: XOR-0x80 encoded DATA tag;
+- 0x000200: XOR-0x80 encoded XCOD section start;
+- 0x058600: XOR-0x80 encoded XRES section start;
+- 0x059200: internal directory copy;
+- 0x059400: configuration region start;
+- 0x0598xx candidate boundary to the final high-entropy tail, to be verified by the corrected scanner.
+
+The DATA record declares data_start=0x200, data_len=0x59000,
+directory_copy=0x59200 and config_start=0x59400. Therefore the DATA span ends
+exactly where the internal directory copy begins.
+
+The apparent second FOT magic at file offset 0x1CA4F0 is exactly
+container-relative 0x59200, matching the directory_copy field; it is not a
+second firmware image.
+
+The G3V2 KEY record contains the same eight-byte value documented in another
+ZXD/EPIC FOT family image: 00 00 00 01 EA E3 2E 09. This strengthens the view
+that it is a shared key-id/nonce/check field rather than the secret decryption
+key itself, but does not prove its exact semantics.
+
+The original dump-g3v2-fot-layout.py had two blind spots: it did not scan for
+FOT\\0 and it searched XCOD/XRES as plaintext ASCII even though the FOT section
+names are stored XOR 0x80. The tool has been corrected.
+
+The high whole-image entropy is now explained by the encrypted XCOD/XRES/tail
+occupying almost all of the image; it must not be used to classify the
+plaintext metadata/header as random data.

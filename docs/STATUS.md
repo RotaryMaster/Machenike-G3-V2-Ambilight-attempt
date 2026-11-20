@@ -1395,3 +1395,19 @@ read-only static audit.
 Added `tools/dump-keylinker-firmware-readback.py` to statically inventory
 normal-mode KeyLinker/managed firmware, ROM and memory readback candidates
 before attempting any bootloader or physical-access experiment.
+
+
+### Physical unit identity confirmation
+
+A user-supplied photograph of the actual controller label independently
+confirms the attached unit is labeled **Machenike G3 V2 Tri-mode Controller**
+with **FCC ID `2BBT5-G3V2`** and manufacturer **Qingdao Machenike Technology
+Co., Ltd.**
+
+This closes the remaining identity gap between the user's physical unit and
+the exact FCC filing used for teardown/reference work. The filing and internal
+photos for `2BBT5-G3V2` can therefore be treated as directly relevant to
+this hardware revision.
+
+The per-unit serial/production code visible on the label is intentionally not
+recorded in the repository.

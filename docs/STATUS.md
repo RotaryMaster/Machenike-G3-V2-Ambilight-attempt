@@ -596,3 +596,23 @@ Important edge case: if `receiveDataLength` returns zero for the first response,
 
 Therefore the Linux probe's current behavior of aborting immediately on a decoded zero-length `0x19` response does not yet reproduce the official managed path. The exact native return value of `receiveDataLength` for the observed frames is the next required fact.
 
+### Native receiveDataLength formula recovered
+
+`Machenik.Infrastructure.Standard.GamepadInterop.receiveDataLength` is a P/Invoke to `KeyLinkerlib.dll!receiveDataLength` at RVA `0x4A20`.
+
+The native function first KeyLinker-decodes the received native frame and reads decoded byte offset 4. For the ordinary branch where the third native argument is not 1, the returned total native response size is:
+
+```text
+logical_len = decoded[4]
+total_native_len = logical_len + 6 + 5 * floor(logical_len / 15)
+```
+
+This matches all known framing cases exactly:
+- logical length 0 -> 6 native bytes;
+- logical length 10 -> 16 native bytes;
+- logical length 20 -> 31 native bytes.
+
+This formula is the inverse size model of the native CustomData framing: one 4-byte header, one logical-length byte in the first frame, one CRC per frame, and an additional 5 bytes for every extra 15-byte logical chunk.
+
+The function has a distinct branch when its third native argument equals 1. Before applying the ordinary formula to the CustomData path, the managed caller argument feeding that third parameter must be identified exactly. The focused IL dumper now includes `OnReport` and method parameter metadata for that purpose.
+

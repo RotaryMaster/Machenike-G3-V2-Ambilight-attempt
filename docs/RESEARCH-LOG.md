@@ -1554,3 +1554,17 @@ BlueZ-known device objects rather than serving as a per-transport event transcri
 Use \`btmon\` next to capture real MGMT/HCI discovery events and determine whether the
 gameplay personality emits BR/EDR Inquiry results, LE advertising reports, or nothing
 while X+HOME is actively pairable.
+
+
+## 2026-11-20 — btmon exposed an invalid scan wrapper
+
+The raw btmon log showed Start Discovery followed essentially immediately by Stop
+Discovery/Inquiry Cancel. The previous wrapper used external \`timeout 22s bluetoothctl
+scan on\`, but bluetoothctl exited on its own, so discovery lasted only milliseconds/
+microseconds instead of 22 seconds.
+
+Correction: use bluetoothctl's native non-interactive timeout option:
+\`bluetoothctl --timeout 22 scan on\`.
+
+Re-run X+HOME identity discovery with btmon after this correction. Earlier negative scan
+results are not evidence of absence.

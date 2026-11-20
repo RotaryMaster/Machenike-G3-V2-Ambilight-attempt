@@ -388,7 +388,7 @@ Consequence for the OTA path: `data[11] |= 0x80` modifies a logical CustomData b
 
 ### Managed HID dispatch chain identified
 
-The managed `WriteDeviceCustomDataAsync` state machine creates task-completion slot/type `29`, invokes native `writeDeviceCustomData(data, data.Length)`, then passes the returned encoded buffer into `GetResultAsync(..., timeout=10)`. The same manager contains the transport methods `SendDeviceData`, `SendNextPacketOrFail`, and `SendDeviceDataAsync`; these are now the exact next bodies to decode, together with `OnReport`, to close the HID envelope and ACK path. The corresponding read path uses task-completion slot/type `28`.
+The managed `WriteDeviceCustomDataAsync` state machine creates operation/result type `29`, invokes native `writeDeviceCustomData(data, data.Length)`, then passes the returned encoded buffer into `GetResultAsync(..., timeout=10)`. The same manager contains the transport methods `SendDeviceData`, `SendNextPacketOrFail`, and `SendDeviceDataAsync`; these are now the exact next bodies to decode, together with `OnReport`, to close the HID envelope and ACK path. The corresponding read path uses operation/result type `28`.
 
 A raw binary search for the two-byte sequences `80 F9` / `81 F9` is explicitly considered non-evidence because the pattern appears accidentally throughout unrelated assemblies. Future envelope reconstruction must come from IL/dataflow or a longer, context-validated signature.
 
@@ -420,3 +420,6 @@ If `flags & 1 != 0`, the callback resolves the matching entry in `AckMap` with s
 
 
 The 20-byte cap is statically tied to `Math.Min(source_length, 20)`. The two `GetPacketCount` overloads compute ceiling division by 20, confirming that longer native results are handled as 20-byte transport units rather than one oversized HID payload.
+
+
+Correction: values 28/29 are not task IDs. `CreateTaskCompletionSource` stores the supplied value in `SeqMap[seq]`; they are internal operation/result type values associated with a sequence. The actual object-return completion source is stored in `ResultMap`, while write acknowledgements are tracked separately in `AckMap`.

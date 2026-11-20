@@ -1670,3 +1670,43 @@ the firmware catalog stage and optionally downloads the returned updater.
 It never opens HID/USB, sends EnterUpdateMode, modifies CustomData or launches
 the downloaded executable. Default mode is catalog-only; \`--download\` must be
 passed explicitly.
+
+
+### Live catalog verification and updater identity
+
+The recovered catalog request was executed from Bazzite and returned HTTP 200
+JSON for MACHENIKE/G3V2/product_type=2.
+
+Confirmed response fields:
+- product.id = 8
+- product.created_at = 2026-05-07T14:41:08Z
+- firmware.id = 11
+- firmware.version = 1.48
+- firmware.changelog = "性能优化"
+- firmware.download_url =
+  /download/firmware/69fd65594961c_ZXD2267_JRH_G3V2_MACHENIKE_v1.48_20250815.exe
+- firmware.file_size = 2245632
+- firmware.published_at = 2026-05-08T04:23:53Z
+- firmware.download_cnt = 0
+
+The file downloaded through the official API has SHA256:
+f0cf653ae3d3de70266b38d011ba6491a3d454aed5cf0a6ac482cbbfaa50c255
+
+This exactly matches the updater already used for the static v1.48 analysis, so
+there is no difference between the previously obtained updater and the file
+currently served by the official MixDrive API.
+
+Interesting storage-name observation: the first 8 hex digits of the 13-hex
+prefix 69fd65594961c decode to Unix timestamp 2026-05-08 04:23:53 UTC, exactly
+matching published_at. The full 13-hex shape is consistent with a PHP
+uniqid()-style timestamp+microsecond prefix. This is a strong implementation
+clue, not yet proof of the server-side source code.
+
+The product record is dated May 2026 while the original updater filename
+contains build date 20250815. Therefore the active catalog appears to have
+been populated/migrated after the updater was built; older firmware may not
+be exposed by the latest-version route even if historical files still exist.
+
+Added tools/probe-firmware-history-api.py, a deliberately small GET-only probe
+for likely history/id route shapes using product id 8 and firmware id 11.
+It performs no device access and is not a brute-force scanner.

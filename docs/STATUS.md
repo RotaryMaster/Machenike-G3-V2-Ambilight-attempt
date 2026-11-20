@@ -1602,3 +1602,39 @@ FOT.
 Added `tools/dump-mixdrive-firmware-update-flow.py` to statically recover the
 catalog/download/request/launch path and URLs without HTTP requests, process
 launches or device I/O.
+
+
+### Firmware catalog/download behavior closed at managed layer
+
+The MixDrive managed flow now proves that a controller-side firmware-version
+spoof is **not required** to ask the server for the current package.
+
+For gamepads, \`UpdateGamepadFirmwareAsync\` calls:
+
+\`IFirmwareUpdateApiService.GetLatestVersionAsync(2, device.DeviceName, device.DeviceMode)\`
+
+The current local firmware version is **not** passed to that server call. The
+returned \`FirmwareInfoDto.Version\` is parsed locally and compared against
+\`DeviceModel.FirmwareVersion\`; only if the server version is newer is a
+\`FirmwareUpdateModel\` added to the UI.
+
+The package download path is also explicit:
+
+1. take \`FirmwareInfoDto.DownloadUrl\`;
+2. if it is relative, prefix \`https://mixdriver.thunderobot.com/api\`;
+3. issue a plain HTTP GET;
+4. create \`Path.GetTempFileName() + ".exe"\`;
+5. stream the response directly into that file;
+6. for a gamepad, send the existing EnterUpdateMode message;
+7. launch the downloaded EXE with \`Process.Start\` and wait for exit.
+
+Therefore MixDrive does **not** expose a managed intermediate BIN/FOT/ZIP
+download for controller firmware. The server artifact is treated directly as
+an executable updater. A safe simulation can still retrieve and archive that
+official EXE without touching the controller, but it will not by itself yield
+a separate raw firmware image.
+
+The remaining missing piece is the exact HTTP route and parameter names behind
+\`IFirmwareUpdateApiService.GetLatestVersionAsync\`. Added
+\`tools/dump-firmware-api-contract.py\` to recover those from the
+\`Machenik.HttpApi*.dll\` metadata without network or device access.

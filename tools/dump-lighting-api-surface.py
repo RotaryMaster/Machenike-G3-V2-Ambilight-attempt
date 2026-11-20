@@ -25,7 +25,8 @@ from dncil.cil.body import CilMethodBody
 from dncil.cil.body.reader import CilMethodBodyReaderBase
 from dncil.clr.token import Token, StringToken, InvalidToken
 
-KEYWORDS = ("lamp", "light", "rgb", "led", "color", "colour")
+# "lamp" alone would false-positive on names such as MathHelper::Clamp.
+KEYWORDS = ("lamplight", "light", "rgb", "led", "color", "colour")
 TABLES = {table.value: table.name for table in MetadataTables}
 
 

@@ -1113,3 +1113,16 @@ configuration/status readers only.
 
 Created `tools/dump-g3v2-updater-request-table.py` for a concise,
 hash-guarded static proof of the exact request table.
+
+
+## 2026-11-20 — ZhiXu family points toward internal MCU flash
+
+External research found a useful family-level hardware clue. ZhiXu's own
+controller-PCBA material describes a custom MCU with integrated Flash and no
+external EEPROM. Independent ZXD2222 controller teardowns identify a
+`ZC32RF1M` QFN40 ZhiXu controller next to a 26 MHz crystal, and multiple FCC
+records corroborate that part in unrelated gamepads.
+
+This is not evidence that G3V2 uses the same chip. It only changes physical
+dump priority: inspect the exact G3V2 internal photos for the main QFN marking
+and debug/test pads before expecting a clip-readable external flash.

@@ -592,9 +592,11 @@ It:
 3. if final, removes `LengthMap` / `IndexMap` / `DataMap`, calls native `receiveDeviceCustomData` on the accumulated raw bytes, validates `data != NULL` and `0 < length <= 100`, copies the native result with `Marshal.Copy`, and resolves the pending task;
 4. if not final, increments `IndexMap`, migrates all pending state to a fresh outer HID sequence, calls `readDeviceCustomData(current_index + 1)`, and sends it via `SendNextPacketOrFail`.
 
-Important edge case: if `receiveDataLength` returns zero for the first response, managed code stores `LengthMap=0`. Since the current index is 0, the final-packet comparison becomes `0 == -1`, which is false, so the official managed path continues to selector 1 rather than finalizing immediately.
+The remaining native length ambiguity is now closed by `receiveDataLength` and `OnReport`. Normal generic HID responses call `HandleGenericDeviceData(..., type=0)`, so the ordinary native length formula applies.
 
-Therefore the Linux probe's current behavior of aborting immediately on a decoded zero-length `0x19` response does not yet reproduce the official managed path. The exact native return value of `receiveDataLength` for the observed frames is the next required fact.
+For the current CRC-valid frame `19 06 ... 00 ...`, `receiveDataLength(type=0)` returns 6 native bytes. Managed code therefore stores `LengthMap=1`, treats selector 0 as the final packet, calls `receiveDeviceCustomData`, receives a logical length of 0, and resolves `GetDeviceCustomDataAsync` with `null`. `MainViewModel` then skips the OTA mutation entirely.
+
+For the earlier captured 16-byte response declaring 10 logical bytes, `receiveDataLength(type=0)` returns 16, so it is also a one-packet result. `receiveDeviceCustomData` returns a 10-byte array. The subsequent official `data[11]` access is therefore out of range for that captured device state, constituting a second vendor-application bug path.
 
 ### Native receiveDataLength formula recovered
 
@@ -615,4 +617,19 @@ This matches all known framing cases exactly:
 This formula is the inverse size model of the native CustomData framing: one 4-byte header, one logical-length byte in the first frame, one CRC per frame, and an additional 5 bytes for every extra 15-byte logical chunk.
 
 The function has a distinct branch when its third native argument equals 1. Before applying the ordinary formula to the CustomData path, the managed caller argument feeding that third parameter must be identified exactly. The focused IL dumper now includes `OnReport` and method parameter metadata for that purpose.
+
+### OnReport proves CustomData uses receiveDataLength type 0
+
+The normal HID report path parses `seq` from report data byte 1, flags from byte 2, payload length from byte 3, extracts the payload from byte 4 onward, and calls:
+
+```text
+HandleGenericDeviceData(seq, segment, dataLength, 0)
+```
+
+This exactly matches the observed Linux raw reports after HidLibrary's report-ID separation. Therefore CustomData responses use the ordinary `receiveDataLength(..., type=0)` branch.
+
+Consequences:
+- decoded logical length 0 -> native total 6 -> one outer packet -> native CustomData length 0 -> managed result `null` -> no OTA write;
+- decoded logical length 10 -> native total 16 -> one outer packet -> managed `byte[10]` -> official `data[11]` access is invalid;
+- decoded logical length 20 -> native total 31 -> two outer packets/selectors -> managed `byte[20]`, which is the first size compatible with the official OTA mutation at index 11 and with the already reconstructed two-fragment writer.
 

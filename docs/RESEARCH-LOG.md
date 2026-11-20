@@ -1460,3 +1460,26 @@ This closes the attempted same-keystream differential route for this pair: there
 ciphertext delta in XCOD/XRES to exploit. The remaining task is merely to classify the
 four container-metadata bytes and establish the provenance of the local
 \`firmware-original\` copy before assigning any semantic meaning to them.
+
+
+## 2026-11-20 — FOT delta: likely per-device address metadata
+
+Follow-up forensic inspection showed the only non-mirrored canonical differences are
+\`0x101\` and \`0x115..0x117\`. The latter three bytes complete the six-byte field
+\`0x112..0x117\`:
+
+- A: \`98:B6:E9:B0:25:BE\`
+- B: \`98:B6:E9:CE:4B:03\`
+
+This is not behaving like a payload checksum. Public KeyLinker/X20 reverse engineering
+documents \`98:B6:E9\` as the standard-gamepad address prefix, and a public ZXD2055/EPIC
+FOT independently has \`98:B6:E9:1A:78:60\` at the same offset.
+
+Current interpretation:
+- XCOD/XRES/config/tail are identical.
+- the whole-image SHA difference is container personalization.
+- \`0x112..0x117\` is very likely a Bluetooth/gamepad device address field.
+- \`0x101\` remains unknown and must not be overinterpreted.
+
+Next safe test: observe the live controller address and compare it with the two FOT
+candidates. Querying BlueZ/known devices is read-only; no firmware write/update is needed.

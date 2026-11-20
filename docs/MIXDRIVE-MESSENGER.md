@@ -216,3 +216,44 @@ The remaining mapping problem is now one layer lower:
 5. reconstruct the precise normal-HID OTA request without sending it.
 
 The apparent mismatch between the argument/value `10`, the known 10-byte CustomData payload, and access to array index `11` means the returned managed byte array likely includes protocol bytes or a wider decoded structure. That mapping must be confirmed from the manager implementation rather than guessed.
+
+
+## Managed CustomData wrapper semantics clarified
+
+Static IL of `Machenik.Infrastructure.Manager.GamepadDeviceManager` resolves the earlier ambiguity around the value `10`.
+
+`GetDeviceCustomDataAsync(int timeoutSeconds)` stores its argument in a field explicitly named `timeoutSeconds`.
+
+Its state machine performs:
+
+```text
+CreateTaskCompletionSource(28)
+readDeviceCustomData(0)
+GetResultAsync(..., timeoutSeconds)
+```
+
+Therefore the call seen in `MainViewModel.Receive`:
+
+```text
+GetDeviceCustomDataAsync(10)
+```
+
+means **10-second timeout**, not “request 10 bytes”.
+
+The read-side native call receives selector/value `0`:
+
+```text
+readDeviceCustomData(0)
+```
+
+The write-side state machine performs:
+
+```text
+CreateTaskCompletionSource(29)
+writeDeviceCustomData(data, data.Length)
+GetResultAsync(..., 10)
+```
+
+So the write timeout is also 10 seconds, while the complete managed byte-array length is passed unchanged to the native interop layer.
+
+This removes the apparent contradiction between the earlier 10-byte CustomData interpretation and `data[11]`. The next target is to determine the exact byte-array layout returned by native `receiveDeviceCustomData` and how managed index 11 maps to the BB/CustomData packet.

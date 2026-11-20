@@ -1200,3 +1200,20 @@ A public schematic of another ZC32RF1M QFN40 design maps RESET to pin 22,
 USB D- to pin 23, USB D+ to pin 24, and the 26 MHz oscillator to pins 20/21.
 These are treated as same-part pinout evidence, not proof of exact G3V2 test
 pad routing.
+
+
+## 2026-11-20 — Safe update simulation proposed
+
+Instead of forcing the controller through OTA, the preferred simulation is to
+replay only the MixDrive firmware catalog/download request and capture the
+artifact. The real managed flow must be avoided because it sends
+`EnterUpdateModeMessage` and mutates `CustomData[11]` before starting the
+downloaded updater.
+
+The current server query yields v1.48. Lowering only the locally reported
+firmware version may trigger the UI but will still return the server's latest
+artifact unless a historical-version parameter or endpoint exists.
+
+Created `tools/dump-mixdrive-firmware-update-flow.py` for a read-only static
+audit of firmware API strings, async update state machines, HTTP/download calls,
+temporary-file handling and updater launch boundaries.

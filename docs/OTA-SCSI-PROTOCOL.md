@@ -8,10 +8,16 @@ No F0 firmware write was intentionally executed during this analysis.
 
 ## Official updater
 
-Known SHA-256:
+Known updater SHA-256:
 
 ```text
 f0cf653ae3d3de70266b38d011ba6491a3d454aed5cf0a6ac482cbbfaa50c255
+```
+
+Extracted `DeviceUsb.dll` SHA-256:
+
+```text
+fad660bc7e006c58f37db9d75b72bf30c089ef62fc4e72673cbfd424d247b5e5
 ```
 
 The updater dynamically resolves these `DeviceUsb.dll` exports:
@@ -51,6 +57,28 @@ IOCTL_STORAGE_GET_DEVICE_NUMBER = 0x2D1080
 ```
 
 The return value encodes the selected storage-device type/index used later by `deviceUsb_Open`.
+
+### Device open
+
+`deviceUsb_Open` accepts the encoded driver ID and maps it to either:
+
+```text
+\\.\PHYSICALDRIVE%i
+```
+
+or:
+
+```text
+\\.\CDROM%i
+```
+
+then opens the target with read/write access through `CreateFileW`.
+
+`deviceUsb_OpenByDrv` can also open a drive-letter path:
+
+```text
+\\.\%c:
+```
 
 ### GetInfo
 
@@ -96,6 +124,8 @@ retry delay                     = 20 ms
 ```
 
 `0x4D014` is the Windows SCSI pass-through-direct IOCTL used by the DLL.
+
+The function retries failed `DeviceIoControl` calls up to ten times with a 20 ms sleep, except when `GetLastError()` returns `0x37`.
 
 ## CDB opcodes
 
@@ -219,6 +249,14 @@ F2 IN, 20 bytes
         v
 success UI / close target
 ```
+
+## What the updater does not contain
+
+The updater's own UI includes text instructing the user to put the controller in upgrade mode first.
+
+Its native USB transport only knows the storage/SCSI personality.
+
+This is consistent with the managed MixDrive application performing the normal-HID -> update-mode transition immediately before launching the updater.
 
 ## Linux port implications
 

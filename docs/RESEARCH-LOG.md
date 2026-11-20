@@ -130,21 +130,44 @@ This disproves the earlier working possibility that `CheckFirmwareUpdateMessage`
 
 The earlier zero-hit scan remains classified as a tooling false negative. Raw metadata/body token scanning is now the preferred method for this managed assembly.
 
+### EnterUpdateMode receiver identified
+
+The receiver chain was resolved from InterfaceImpl metadata and direct state-machine token references.
+
+`Machenik.ViewModels.MainViewModel` implements:
+
+```text
+IRecipient<EnterUpdateModeMessage>
+```
+
+The async state machine `<Receive>d__21::MoveNext` reads `message.Device`, resolves or creates a `GamepadDeviceManager`, calls `GetDeviceCustomDataAsync`, then calls `WriteDeviceCustomDataAsync`.
+
+This changes the working model significantly: the official transition is now expected to be a specific **CustomData mutation** in the normal HID protocol.
+
+The next static step is to decode the exact IL/data manipulation between those two calls.
+
+
 ## Open questions
 
 ### 1. HID -> update mode transition
 
-This is the highest-priority unresolved question.
-
-Likely source: the gamepad-specific messenger/event sent by MixDrive immediately before it starts the updater.
+This remains the highest-priority unresolved question, but the receiver chain is now largely closed.
 
 Confirmed:
 - message type: `EnterUpdateModeMessage`;
-- payload: the update item's `DeviceModel`.
+- payload: the update item's `DeviceModel`;
+- receiver class: `Machenik.ViewModels.MainViewModel`;
+- interface: `IRecipient<EnterUpdateModeMessage>`;
+- receive state machine: `<Receive>d__21::MoveNext` / token `0x060008F3`;
+- the handler obtains/reuses a `GamepadDeviceManager` for the message's HID device;
+- it calls `GetDeviceCustomDataAsync()`;
+- later it calls `WriteDeviceCustomDataAsync()`.
+
+This strongly indicates that the official HID -> update-mode transition is encoded as a mutation of the normal CustomData object rather than as an unrelated transport.
 
 Need to determine:
-- receiver class/method;
-- exact HID request;
+- exact field/value changed between the read and write;
+- exact 10-byte CustomData representation of that change;
 - expected disconnect/re-enumeration;
 - timeout/retry behavior.
 

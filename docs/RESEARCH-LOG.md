@@ -568,9 +568,7 @@ This invalidates the earlier unconditional-two-read interpretation. Whether sele
 
 The normalized switch offsets place CustomData read at `IL+0x0B89` and CustomData write at `IL+0x0CDA`. The full read branch proves that a final packet is decoded through `receiveDeviceCustomData`, checked for `data != NULL` and `0 < length <= 100`, copied with `Marshal.Copy`, and returned. A non-final packet increments the index, migrates maps to a fresh outer sequence, calls `readDeviceCustomData(index+1)`, and sends it.
 
-Combined with `CheckPacketIndex`, this reveals an important edge case: if native `receiveDataLength` returns 0 on the first response, managed `LengthMap` becomes 0 and index 0 is not equal to `-1`, so the official code continues to selector 1. The current Linux probe therefore aborts earlier than the official managed path when it sees a zero-length decoded `0x19` frame.
-
-The remaining discriminator is the native implementation of `receiveDataLength` (MethodDef token `0x06000017` wrapper).
+Combined with the later `receiveDataLength` and `OnReport` findings, the earlier zero-return edge-case hypothesis is superseded. The normal HID path passes `type=0`; a decoded logical length of 0 maps to a native total length of 6, hence one outer packet. The handler finalizes selector 0, `receiveDeviceCustomData` returns logical length 0, and the managed task resolves to `null`.
 
 ## 2026-11-20 — receiveDataLength native size formula recovered
 
@@ -579,4 +577,15 @@ The managed wrapper token `0x06000017` resolves to `Libs\\Gamepad\\KeyLinkerlib.
 For the native branch where the third argument is not 1, the function KeyLinker-decodes the input, reads decoded byte 4 as the logical payload length, and returns `logical_len + 6 + 5*floor(logical_len/15)`. Therefore the observed empty frame maps to total native length 6, the earlier 10-byte CustomData response maps to 16, and a hypothetical 20-byte logical object maps to 31.
 
 A separate `third_arg == 1` branch exists and encodes a wider/special length field. The next static step is to identify the exact value passed from `OnReport` into `HandleGenericDeviceData(..., arg4)` and then into `receiveDataLength` for CustomData.
+
+## 2026-11-20 — OnReport closes type=0; official behavior for 0/10/20-byte CustomData is now deterministic
+
+`OnReport` parses normal generic responses as `seq=data[1]`, flags from `data[2]`, payload length from `data[3]`, payload at `data[4:]`, then calls `HandleGenericDeviceData(seq, segment, length, 0)`. Thus CustomData uses `receiveDataLength` type 0.
+
+Applying the recovered native formula:
+- the current 6-byte native frame with logical length 0 is one packet; `receiveDeviceCustomData` returns length 0 and managed returns `null`, so `MainViewModel` skips OTA;
+- the earlier 16-byte native frame with logical length 10 is one packet; managed returns `byte[10]`, after which the official `data[11]` mutation would index past the end of the array;
+- only a logical length of at least 12 can make index 11 valid, and the reconstructed 20-byte case maps to 31 native bytes / two outer packets.
+
+The Linux probe was updated to mirror this official packet-count behavior and to block `--execute` unless the managed-equivalent read produces exactly 20 bytes.
 

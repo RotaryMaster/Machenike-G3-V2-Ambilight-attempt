@@ -423,3 +423,20 @@ The 20-byte cap is statically tied to `Math.Min(source_length, 20)`. The two `Ge
 
 
 Correction: values 28/29 are not task IDs. `CreateTaskCompletionSource` stores the supplied value in `SeqMap[seq]`; they are internal operation/result type values associated with a sequence. The actual object-return completion source is stored in `ResultMap`, while write acknowledgements are tracked separately in `AckMap`.
+
+### CustomData managed dispatcher cases 28 and 29
+
+The managed CustomData operation types are now tied to their concrete receive behavior.
+
+For type 28 (read), `HandleGenericDeviceData` first calls `CheckPacketIndex` so the outer managed HID packets are reassembled before the native decoder is invoked. When the final managed packet has arrived, the accumulated `DataMap` bytes are converted to an array and passed to:
+
+```text
+GamepadInterop.receiveDeviceCustomData(bytes, count)
+```
+
+The native result is a `DeviceDataStruct`. The dispatcher checks `data != IntPtr.Zero`, `length > 0`, and `length <= 100`. The invalid branch removes the pending result/sequence and resolves the task with null.
+
+For type 29 (write), no native receive decoder is called. The dispatcher removes the pending transport maps and resolves the result completion source with boxed boolean `true`.
+
+The exact valid type-28 branch after IL offset `0x153B` still needs one focused dump because the previous extraction helper stopped on a branch-local `ret` before printing the fall-through target.
+

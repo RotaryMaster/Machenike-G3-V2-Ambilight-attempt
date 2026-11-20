@@ -4,7 +4,7 @@ Static, full disassembly of the small KeyLinker core used by the official
 MixDrive gamepad warm-up reads.
 
 Focus:
-- state helper 0x1800014C0
+- complete state helper 0x1800014C0
 - common read wrapper helper 0x180001BE0
 - exact read builders used before CustomData
 
@@ -19,8 +19,11 @@ import subprocess
 from pathlib import Path
 
 RANGES = [
-    ("KeyLinkerState",              0x1800014C0, 0x180001540),
-    ("CommonReadHelper_1BE0",       0x180001BE0, 0x180001F40),
+    # Previous stop at 0x180001540 cut this function in the middle of a branch
+    # to 0x1800015C2. Keep a generous bounded tail so its state transitions and
+    # return value are visible in full.
+    ("KeyLinkerState_COMPLETE",     0x1800014C0, 0x180001700),
+    ("CommonReadHelper_1BE0",       0x180001BE0, 0x180001C90),
     ("readRockerData",              0x180001F40, 0x180002010),
     ("readTriggerData",             0x180002010, 0x1800020E0),
     ("readDeviceMotorData",         0x180002CA0, 0x180002D70),
@@ -83,6 +86,11 @@ def main() -> None:
         print(f"{name}  0x{start:X} .. 0x{stop:X}")
         print("=" * 112)
         print(dump(args.objdump, dll, start, stop).rstrip())
+
+    print("\nKnown plaintext construction recovered from CommonReadHelper_1BE0:")
+    print("  B0 07 <state> <rand> <arg> <subcommand> <crc>")
+    print("  BeforeKeyChangeList: arg=0, subcommand=3")
+    print("  SupportTurboList   : arg=0, subcommand=4")
 
     print("\nNo DLL code was executed.")
     print("No HID/USB/SCSI access was performed.")

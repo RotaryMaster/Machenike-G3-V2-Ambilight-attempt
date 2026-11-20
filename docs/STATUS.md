@@ -320,3 +320,33 @@ The 20-byte cap is statically tied to `Math.Min(source_length, 20)`. The two `Ge
 
 
 Correction: values 28/29 are not task IDs. `CreateTaskCompletionSource` stores the supplied value in `SeqMap[seq]`; they are internal operation/result type values associated with a sequence. The actual object-return completion source is stored in `ResultMap`, while write acknowledgements are tracked separately in `AckMap`.
+
+### Managed async HID transport fully reconstructed
+
+The full async state machines in `Machenik.Infrastructure.dll` now close segmentation, sequence migration, retry, ACK, and timeout behavior.
+
+`SendDeviceDataAsync`:
+- records the initial `SeqTaskSource.Seq` as `lastSeq`;
+- computes packet count as `ceil(native_length / 20)`;
+- slices the native buffer in chunks of at most 20 bytes;
+- uses the original sequence for fragment 0;
+- allocates a fresh sequence for every later fragment;
+- migrates `ResultMap` and `SeqMap` to the new sequence and resets the fragment index bookkeeping;
+- builds each outer HID report as `80 F9 <seq> 00 <len> <native-bytes>`.
+
+For every non-final 20-byte transport fragment:
+- an entry is installed in `AckMap[currentSeq]`;
+- the report is written through `HidDevice.Write`;
+- the host waits for either ACK completion or a 5-second `Task.Delay`;
+- timeout triggers another send;
+- the retry loop permits three writes total (`retry = 0, 1, 2`);
+- failure after the retry limit returns `false`.
+
+The final transport fragment is written once and does not wait in this intermediate ACK loop. Completion of the overall operation is driven by the normal result path.
+
+`CheckTaskTimeoutAsync` races the result task against the caller-supplied timeout. On timeout it removes the sequence from `ResultMap`, `SeqMap`, `IndexMap`, `LengthMap`, `DataMap`, and `AckMap`, then returns `true`. `GetResultAsync` turns that `true` into `TimeoutException`.
+
+`GetNextSeq` increments an 8-bit counter under `Monitor` and skips zero, giving sequence values 1..255.
+
+This means the outer managed HID transport is now closed. The next OTA-specific target is the exact `GetDeviceCustomDataAsync` and `WriteDeviceCustomDataAsync` state-machine handoff into native `readDeviceCustomData` / `writeDeviceCustomData`, so the already-known `data[11] |= 0x80` mutation can be followed byte-for-byte through the final two native 0x3B fragments.
+

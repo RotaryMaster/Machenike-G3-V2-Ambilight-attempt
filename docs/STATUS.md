@@ -1468,3 +1468,27 @@ method.
 
 Do not assume ZC32RF1M pinout, debug protocol or read protection for G3V2
 until the exact chip marking is confirmed.
+
+
+### Exact updater request table independently verified
+
+The hash-guarded focused audit was run successfully against the official
+v1.48 updater (SHA-256
+`f0cf653ae3d3de70266b38d011ba6491a3d454aed5cf0a6ac482cbbfaa50c255`).
+
+It found **exactly four** calls through the dynamically resolved
+`deviceUsb_Request` pointer at `0x005F9864`, with no additional call sites:
+
+- `0x00402644`: F1 / DATA_IN / 20 bytes;
+- `0x00402872`: F0 / DATA_OUT / up to 512 bytes;
+- `0x00402897`: F2 / DATA_IN / 20 bytes;
+- `0x004028DE`: F2 / DATA_IN / 20 bytes.
+
+The script reported `count: 4`, `all four known sites present: True`, and
+`extra updater request sites: (none)`.
+
+This upgrades the updater-side conclusion from a focused interpretation to a
+closed host call table: **the official updater binary exposes no firmware
+backup/readback request**. Any future software dump route would therefore have
+to rely on an undocumented bootloader command not used by the updater, a
+normal-mode undocumented command, or physical debug/storage access.

@@ -457,3 +457,12 @@ This matches the previously observed live packets and upgrades the `80 F9 / 81 F
 
 
 Correction: values 28/29 are not task IDs. `CreateTaskCompletionSource` stores the supplied value in `SeqMap[seq]`; they are internal operation/result type values associated with a sequence. The actual object-return completion source is stored in `ResultMap`, while write acknowledgements are tracked separately in `AckMap`.
+
+### 2026-11-20 — CustomData managed valid branch closes read-to-write state count
+
+Focused IL extraction recovered the operation-28 branch omitted by the earlier range script. It explicitly allocates a byte array of `DeviceDataStruct.length`, copies `DeviceDataStruct.data` into it with `Marshal.Copy`, and resolves the pending result with that array.
+
+The same full branch shows that non-final read packets cause a new native `readDeviceCustomData(index+1)` call after managed sequence migration. Because 20 logical CustomData bytes encode into 31 native bytes, the OTA read consumes two native read requests before the managed `data[11] |= 0x80` mutation.
+
+This corrects the native state timeline. Observed/default sequence: selector0 uses SEQ/RAND `00/29`; selector1 uses `81/23`; writer then begins with E67C/E68C `0/2` and next rand `BE`. Conditional on E670=7, writer headers become `3B F4 02 BE` then `3B CB 8B 84`.
+

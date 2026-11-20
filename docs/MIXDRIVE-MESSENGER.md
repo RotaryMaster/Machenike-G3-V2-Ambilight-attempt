@@ -395,15 +395,15 @@ A raw binary search for the two-byte sequences `80 F9` / `81 F9` is explicitly c
 
 ### HID envelope closed from managed IL
 
-The managed transport is now statically proven. `GamepadDeviceManager.SendDeviceData` constructs a byte array of `payload_length + 5` and writes:
+The managed transport is now statically proven. `GamepadDeviceManager.SendDeviceData` computes `n = min(native_length, 20)`, constructs a byte array of `n + 5`, and writes:
 
 ```text
 [0] = 0x80                 # HID output report ID
 [1] = 0xF9                 # protocol marker
 [2] = seq                  # managed sequence number
 [3] = 0x00                 # flags/reserved on host TX
-[4] = payload_length
-[5..] = native payload
+[4] = n                     # n <= 20
+[5..] = native payload[0:n]
 ```
 
 It then calls `HidLibrary.HidDevice.Write(byte[])` directly. This closes the previously inferred `80 F9` envelope with direct managed IL evidence.
@@ -417,3 +417,6 @@ The receive callback `OnReport` requires `HidReport.ReportId == 0x81` and `repor
 If `flags & 1 != 0`, the callback resolves the matching entry in `AckMap` with success; otherwise the payload is passed into the normal receive/deframe path. This establishes the ACK path for writes, including CustomData task type 29.
 
 `GetNextSeq` increments an 8-bit counter under a lock and skips zero, so valid managed sequence values are 1..255 with wraparound back to 1.
+
+
+The 20-byte cap is statically tied to `Math.Min(source_length, 20)`. The two `GetPacketCount` overloads compute ceiling division by 20, confirming that longer native results are handled as 20-byte transport units rather than one oversized HID payload.

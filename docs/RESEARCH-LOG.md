@@ -544,3 +544,9 @@ The first controlled Linux transition attempt aborted safely before any OTA writ
 
 Earlier successful live evidence is more authoritative for this read path: after two `ZXPC_APP` pings, selector 0 at outer sequence 3 returned a 16-byte encoded response decoding to `19 10 00 6B 0A <10 data bytes> 28`. The probe has therefore been corrected to reproduce the two identity pings first, use outer sequences 3/4 for selectors 0/1, parse response command `0x19` by its declared logical length, and combine two 10-byte selector payloads into the 20-byte logical CustomData object. No OTA bit was written during the failed attempt.
 
+## 2026-11-20 — Corrected dry-run returns CRC-valid empty 0x19 frame
+
+With the same live order as the earlier successful A/B test (queue drain, two `ZXPC_APP` pings, selector 0 at outer sequence 3), the controller returned `B4 7B 0E 42 F1 DB`, decoding to `19 06 00 58 00 4A`. CRC validates and logical length is zero. The script stopped before any write.
+
+Earlier live evidence remains: selector 0 once returned `19 10 00 6B 0A 00 01 00 00 00 00 40 04 00 02 28`, i.e. 10 logical bytes, and selector 1 returned the same 10-byte payload with its own state/CRC. This means current documentation that promotes a 20-byte logical object from static interpretation is not yet fully reconciled with the device. No more live write attempts should occur until either a true power-cycle restores the known-good read or the managed packet-continuation criterion is recovered from IL.
+

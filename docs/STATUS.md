@@ -554,3 +554,31 @@ The device remained in the normal `413D:2131` personality and both `ZXPC_APP` pi
 
 Live OTA writes remain blocked. The next step is static only: recover the exact managed continuation predicate in `CheckPacketIndex` / `GetPacketCount` / `MigrateSeq` / `HandleGenericDeviceData`. A read-only helper is available as `tools/dump-gamepad-manager-il.py`.
 
+### Managed continuation criterion recovered: selector 1 is conditional on receiveDataLength
+
+Static CIL of `GamepadDeviceManager.CheckPacketIndex` closes the packet-count logic.
+
+For the first packet of an operation (`IndexMap[seq] == 0`), managed code executes:
+
+```text
+total = receiveDataLength(payload, payload_length, ...)
+packet_count = (total + 20 - 1) / 20
+LengthMap[seq] = packet_count
+```
+
+The received outer payload bytes are appended to `DataMap[seq]`, and `CheckPacketIndex` returns the current packet index.
+
+Each multi-packet handler then compares:
+
+```text
+current_index == LengthMap[seq] - 1
+```
+
+If true, it finalizes/reassembles/decodes the accumulated data. If false, it increments the index, calls `MigrateSeq`, generates the next native read request with `index + 1`, and sends it through `SendNextPacketOrFail`.
+
+Therefore selector 1 is **not unconditional**. It is requested only when native `receiveDataLength` says the current logical/native response requires more than one 20-byte outer HID packet.
+
+`MigrateSeq` itself does not reinterpret data; it obtains a fresh sequence and moves the existing `ResultMap`, `SeqMap`, `IndexMap`, `LengthMap`, and `DataMap` entries to that new sequence.
+
+Critical remaining discriminator: reconstruct native `receiveDataLength`. Its return value determines whether the observed 6-byte and 16-byte `0x19` responses are considered complete or require a subsequent selector.
+

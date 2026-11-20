@@ -248,3 +248,26 @@ Whenever a new fact is established:
 2. update `STATUS.md` if it changes the current state or roadmap;
 3. add the milestone or correction here when historically significant;
 4. explicitly mark superseded hypotheses as superseded instead of silently deleting the history.
+
+
+### CustomData manager wrapper semantics resolved
+
+Static IL of `Machenik.Infrastructure.dll` shows that the `10` in `GetDeviceCustomDataAsync(10)` is the method's `timeoutSeconds` argument.
+
+Read path:
+
+```text
+CreateTaskCompletionSource(28)
+readDeviceCustomData(0)
+GetResultAsync(..., timeoutSeconds)
+```
+
+Write path:
+
+```text
+CreateTaskCompletionSource(29)
+writeDeviceCustomData(data, data.Length)
+GetResultAsync(..., 10)
+```
+
+Thus `data[11] |= 0x80` acts on the native callback/result buffer itself. The remaining task is to reconstruct the native CustomData array layout and map index 11 to the on-wire BB payload.

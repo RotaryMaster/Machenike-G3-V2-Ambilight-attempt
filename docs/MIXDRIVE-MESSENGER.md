@@ -360,8 +360,27 @@ The branch threshold is exactly `0x15`: lengths below 21 follow the single-frame
 4-byte header + <=15-byte stream chunk + 1-byte CRC = <=20 bytes
 ```
 
-Immediately after decoding the single frame the helper initializes a constant `5`, matching the five framing bytes that must be removed (four-byte header plus CRC).
+After decoding a single frame, the helper shifts the decoded buffer left five times and returns length `input_length - 6`. The five leading bytes removed are the four-byte frame header plus the one-byte total logical-length prefix; the final CRC byte is excluded by the returned length. Therefore the single-frame result is exactly `decoded[5 : input_length-1]`.
 
-Because callers such as `receiveDeviceLamplightData` require the returned length to be divisible by the logical record width (6 bytes), the helper cannot be returning transport framing or the one-byte logical length prefix. The returned descriptor therefore represents reassembled logical payload data.
+For multi-frame input, the first 20-byte frame follows the same rule: remove four header bytes plus the total-length byte and exclude its CRC. Later frames remove only the four-byte header and exclude their CRC, then their payload bytes are concatenated.
 
-Consequence for the OTA path: the managed mutation `data[11] |= 0x80` addresses the twelfth logical CustomData byte, not a KeyLinker/HID header byte.
+This is the exact inverse of `writeDeviceCustomData`.
+
+For the G3 V2 20-byte CustomData object, the writer first creates `[0x14][data0..data19]`, then fragments it as 15 + 6 bytes. The first plaintext frame is therefore:
+
+```text
+offset 0..3   four-byte 0x3B frame header
+offset 4      0x14 total logical length
+offset 5..18  data[0]..data[13]
+offset 19     CRC
+```
+
+So the managed OTA mutation maps exactly as:
+
+```text
+data[11]  <=>  first plaintext 0x3B frame byte offset 16 (0x10)
+```
+
+The second frame contains `data[14]..data[19]` after its four-byte header and before its CRC.
+
+Consequence for the OTA path: `data[11] |= 0x80` modifies a logical CustomData byte that lives in the first write fragment, not any HID/KeyLinker framing byte. CRC is then recalculated and the whole frame is KeyLinker-encoded.

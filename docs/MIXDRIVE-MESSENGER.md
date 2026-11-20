@@ -580,3 +580,26 @@ Thus the correct **cold/default** two-frame header pair is:
 The previously recorded pair `3B F4 02 BE / 3B CB 8B 84` is not the cold sequence. It would require writer entry with `E670=7`, which can only occur after prior write-style traffic has advanced the process-global state.
 
 This distinction matters for byte-identical reproduction: `E670` is process-global runtime phase, not a fixed OTA constant. The header formulas remain exact, while the concrete byte pair in a live MixDrive session depends on prior native write traffic. The two CustomData read requests themselves do not change `E670`.
+
+
+### E670 is a write-frame phase counter
+
+A focused xref audit of every write to `0x18000E670` shows that the state is advanced only by frame-producing write routines. Every confirmed update has the same wrap/decrement form:
+
+```text
+if E670 == 0:
+    E670 = 8
+E670 -= 1
+```
+
+Therefore, if `W` is the number of native write frames emitted since cold DLL initialization, then:
+
+```text
+E670 = (-W) mod 8
+```
+
+The audit identified seven native writer regions that decrement `E670`. One is the already-known `writeDeviceCustomData` path using command `0x3B`. Two other multipart writers explicitly call the same `0x180001C90` header builder with command bytes `0x36` and `0x37`. Four additional fixed-size/single-frame generators also decrement `E670`; their exact export names still need RVA-to-export mapping.
+
+This changes how the cold OTA header pair should be interpreted. `3B 14 02 BE / 3B EB 8B 84` is the correct cold-state pair, but a normal MixDrive session may have advanced `E670` before firmware update through earlier configuration writes such as lighting, motor, turbo, remapping, or other device writes. Exact byte-for-byte reproduction of a specific vendor session therefore requires counting prior native write frames modulo 8.
+
+`E67C` and `E68C` are broader packet-phase state: both the read generator `0x1800014C0` and write-frame generators toggle/increment them. The CRT `rand()` stream is likewise consumed by packet construction. Thus the concrete OTA header bytes in an already-active MixDrive process depend on prior protocol traffic, even though the header formulas themselves are fully reconstructed.

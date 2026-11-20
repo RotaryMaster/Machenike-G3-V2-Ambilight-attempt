@@ -1492,3 +1492,42 @@ closed host call table: **the official updater binary exposes no firmware
 backup/readback request**. Any future software dump route would therefore have
 to rely on an undocumented bootloader command not used by the updater, a
 normal-mode undocumented command, or physical debug/storage access.
+
+
+### Same-family FOT crypto prior art
+
+External reverse-engineering published in October 2026 materially changes the
+non-invasive strategy.
+
+`LopeKinz/Manba-One-V2-Firmware-tools` documents a controller updater using
+the same `UsbUpdateAppX` template, `DeviceUsb.dll`, SCSI
+`F1 -> F0 -> F2` protocol and hardware-ID prefix
+`A1 CA 51 DA 72 4C B6 10 36 58 C0 5D 7D 4E`.
+
+That project identifies a plaintext FOT container header/directory followed by
+high-entropy encrypted `XCOD`/`XRES` payloads. Cross-version experiments on
+a sibling EasySMX X20 pair with the **same hardware ID** indicate a
+section-relative XOR-stream construction with a keystream reused across
+versions of that hardware ID, while different hardware-ID tails use unrelated
+streams.
+
+A second independent G01/ZhiXu research thread reports the same updater
+template and FOT family on `ZXD2271`, including an embedded image at file
+offset `0x1712F0`, and states that hardware dumping/decryption remains the
+open gap.
+
+Implication for G3V2/Z`XD2267`:
+- do not assume the 0x1712F0 high-entropy slice is the complete logical FOT
+  container until the entire EXE is scanned for plaintext FOT metadata;
+- the highest-value non-invasive artifact is a **second updater/image with the
+  exact `...2267` hardware ID**;
+- a public G3 V2 latency test records firmware **1.25 on 2025-01-28**, proving
+  an earlier G3V2 firmware generation existed before the current v1.48 package.
+  It is not yet proven that v1.25 used the same 16-byte hardware ID.
+
+Added:
+- `tools/dump-g3v2-fot-container-surface.py` to scan the complete updater for
+  FOT magic, XOR-0x80 section tags, exact HWID and metadata around the known F0
+  range;
+- `tools/find-zxd2267-firmware-corpus.py` to search selected local directories
+  for another exact-HWID updater/image without modifying files.

@@ -271,3 +271,16 @@ GetResultAsync(..., 10)
 ```
 
 Thus `data[11] |= 0x80` acts on the native callback/result buffer itself. The remaining task is to reconstruct the native CustomData array layout and map index 11 to the on-wire BB payload.
+
+
+### Native CustomData framing partially reconstructed
+
+`KeyLinkerlib.dll` exports the three managed P/Invoke targets directly.
+
+`readDeviceCustomData(index)` builds a six-byte `BB 06 ...` command, applies the known KeyLinker transform, and returns a native pointer+length descriptor with length 6.
+
+`receiveDeviceCustomData` is only a wrapper around helper `0x180001760`, copying its 16-byte result descriptor.
+
+`writeDeviceCustomData(data, length)` first creates a length-prefixed stream `[length][data...]`. It processes `length + 1` bytes in chunks no larger than 15 bytes. Each chunk is combined with a four-byte protocol header, one CRC byte, then KeyLinker-transformed.
+
+The exact receive-buffer layout is now isolated to helper `0x180001760` and its backing state.

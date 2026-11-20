@@ -311,3 +311,36 @@ The receive helper `0x180001760` decodes physical frames, strips five bytes befo
 A prior project assumption was corrected at this point: the G3 V2 `0x3B` CustomData object is **20 bytes**, not 10. The 10-byte length previously recorded belonged to a different decoded payload. This correction resolves the apparent contradiction with the confirmed OTA mutation `data[11] |= 0x80`.
 
 The only remaining component needed for a fully standalone byte-for-byte CustomData writer is the exact formula of `0x180001C90` for the four-byte write header.
+
+
+### CustomData header bitfields reconstructed
+
+The dedicated dump of `0x180001C90` closed the header field layout used by `writeDeviceCustomData`.
+
+Confirmed:
+
+```text
+header[0] = command
+header[1] = ((E670 & 7) << 5) | (frame_len & 0x1F)
+header[2] = toggle_bit(E67C) << 7 | (fragment_index & 0x0F) << 3 | (E68C & 7)
+header[3] = low byte returned by IAT 0x18000B150
+```
+
+The binary-string code in the native DLL is not cryptographic at this stage: it simply formats bitfields as ASCII `0`/`1`, concatenates them, and re-evaluates the resulting binary text through `value = 2*value + bit`.
+
+The write loop then advances state after every fragment:
+
+```text
+E670 = (E670 - 1) mod 8
+E68C = (E68C + 1) mod 8
+E67C = !E67C
+```
+
+For a 20-byte G3 V2 CustomData write, this makes the second frame header predictable from the first frame state.
+
+Remaining header details are now very small and isolated:
+- determine whether `0x18000B214` is ASCII `0` or `1` (and vice versa for `0x18000B218`), which fixes toggle polarity;
+- identify the import at IAT `0x18000B150` before naming the source of `header[3]`;
+- optionally confirm helper `0x180001400` as the three-string concatenation helper.
+
+The raw bytes previously printed for addresses `E670/E67C/E684/E68C` must not be treated as live protocol-state values. These globals are mutable runtime state; their effective values are established/updated by the protocol code.

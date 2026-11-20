@@ -33,6 +33,7 @@ DEFAULT_NAMES = {
     "SendDeviceDataAsync",
     "GetDeviceCustomDataAsync",
     "WriteDeviceCustomDataAsync",
+    "receiveDataLength",
 }
 
 class DnfileReader(CilMethodBodyReaderBase):
@@ -144,6 +145,22 @@ def parent_map(pe):
                 out[rid] = td
     return out
 
+def dump_implmap(pe, row):
+    table = getattr(pe.net.mdtables, "ImplMap", None)
+    if table is None:
+        return False
+    found = False
+    for im in table.rows:
+        forwarded = getattr(getattr(im, "MemberForwarded", None), "row", None)
+        if forwarded is not row:
+            continue
+        found = True
+        scope = getattr(getattr(im, "ImportScope", None), "row", None)
+        dll = str(getattr(scope, "Name", "?"))
+        name = str(getattr(im, "ImportName", "?"))
+        print(f"P/Invoke: {dll}!{name}")
+    return found
+
 def dump_method(pe, rid, row, parent):
     print()
     print("=" * 110)
@@ -154,7 +171,8 @@ def dump_method(pe, rid, row, parent):
     print(f"RVA   : 0x{row.Rva:08X}")
 
     if not row.Rva:
-        print("No method body (RVA=0).")
+        if not dump_implmap(pe, row):
+            print("No method body (RVA=0).")
         return
 
     try:
@@ -167,12 +185,32 @@ def dump_method(pe, rid, row, parent):
     print(f"Stack : {body.max_stack}")
     code_start = body.offset + body.header_size
 
-    # HandleGenericDeviceData is very large. For this investigation only the
-    # CustomData read/write switch cases are relevant:
-    #   operation 28 -> IL+0x1475
-    #   operation 29 -> IL+0x15C6
+    # dncil branch/switch operands are absolute offsets in the PE stream,
+    # not method-relative IL offsets. Recover the operation 28/29 switch
+    # targets dynamically and normalize them against code_start.
     if str(getattr(row, "Name", "")) == "HandleGenericDeviceData":
-        ranges = [(0x1440, 0x1640)]
+        ranges = []
+        switch_insn = next(
+            (i for i in body.instructions
+             if getattr(i, "mnemonic", str(i.opcode)) == "switch"
+             and isinstance(i.operand, list)
+             and len(i.operand) >= 22),
+            None,
+        )
+        if switch_insn is not None:
+            # The method does: ldloc.0 ; ldc.i4.8 ; sub ; switch.
+            # Thus switch slot 20 == operation 28, slot 21 == operation 29.
+            def rel(x):
+                return x - code_start if isinstance(x, int) and x >= code_start else x
+            op28 = rel(switch_insn.operand[20])
+            op29 = rel(switch_insn.operand[21])
+            start = max(0, op28 - 0x20)
+            end = min(body.code_size, op29 + 0x180)
+            ranges = [(start, end)]
+            print(f"Operation 28 target: IL+0x{op28:04X}")
+            print(f"Operation 29 target: IL+0x{op29:04X}")
+        if not ranges:
+            ranges = [(0, body.code_size)]
         print("Focused ranges: " + ", ".join(
             f"IL+0x{a:04X}..0x{b:04X}" for a, b in ranges
         ))

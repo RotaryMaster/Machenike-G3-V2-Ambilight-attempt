@@ -1533,3 +1533,13 @@ X+HOME active discovery returned only:
 No gameplay-side E9 address was exposed in that run. Keep the APP/config personality and
 gameplay identity separate; current evidence is insufficient to map the FOT E9 field to a
 live radio address.
+
+
+## 2026-11-20 — X+HOME auto discovery still shows only G3V2 APP
+
+With X+HOME selected, BlueZ discovered only the persistent ED-address APP/configuration
+peripheral. The expected gameplay name \`Xbox Wireless Controller\` did not appear.
+
+Manual evidence corroborates X+HOME as Bluetooth PC/mobile mode and B+HOME as dongle mode.
+Next diagnostic: force separate BR/EDR and LE scans while the controller indicator is
+flashing rapidly in X+HOME pairing state.

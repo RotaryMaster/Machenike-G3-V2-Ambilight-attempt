@@ -1732,3 +1732,23 @@ Important distinction:
 
 Current priority returns to static analysis of the v1.48 embedded FOT and the
 0x37 LampLight handler/persistence behavior.
+
+
+### FOT randomness check — Thumb scout false positives quantified
+
+The exact 0x5A400-byte FOT scan produced 201 halfword patterns matching
+Thumb \`CMP Rn,#imm8\` for the nine command immediates under investigation.
+
+For a uniformly random byte stream, scanning 184832 aligned halfwords gives:
+
+\`184832 * (9/256) * (8/256) = 203.0625\` expected hits.
+
+Observed 201 is essentially the random expectation. This quantitatively
+confirms that the apparent CMP clusters are not evidence of a plaintext
+protocol dispatcher. The vector-table heuristic hits are likewise not treated
+as executable-code evidence in this near-max-entropy payload.
+
+Current next step: scan the whole updater/container surface and the low-entropy
+edge regions to determine whether plaintext FOT metadata sits outside the
+0x1712F0 F0-transferred slice, and whether the updater sends transformed bytes
+directly or performs a host-side decode first.

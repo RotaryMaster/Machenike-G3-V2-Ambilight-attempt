@@ -429,3 +429,8 @@ After the two native CustomData reads used by the OTA path, a cold writer theref
 ```
 
 The older pair `3B F4 02 BE / 3B CB 8B 84` is only valid if prior write-style traffic already left `E670=7`. `E670` is runtime process-global phase, not an OTA constant.
+
+
+### E670 write-frame phase
+
+Static xrefs show `E670` is decremented once per native write frame, with zero wrapping to seven. Therefore `E670 = (-W) mod 8` from a cold DLL state, where `W` is the number of emitted write frames. The cold OTA headers remain valid for a fresh process, but a normal MixDrive session may reach OTA with a different `E670` phase if earlier device writes occurred. Exact writer export names for six non-CustomData paths are the next mapping target.

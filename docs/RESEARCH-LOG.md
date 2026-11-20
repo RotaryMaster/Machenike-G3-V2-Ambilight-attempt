@@ -1424,3 +1424,17 @@ an X20 version pair. Treat that as family-level guidance until reproduced for HW
 
 Added a local same-HWID corpus scanner. This is now the cheapest non-invasive
 test for an overlooked older/newer ...2267 image in project archives or Downloads.
+
+
+## 2026-11-20 — local corpus produced a same-HWID/same-version pair
+
+The recursive read-only corpus scan found two distinct G3V2 v1.48 FOT hashes with the
+same exact ...2267 hardware ID:
+- 0b97b5e38fc706182110cdfa1682b1c252a1c0dac8314f5c836d3f037a67e836
+- 0ad5d080c6451d9a26a28e32f77ce73789f163ce8cad12c035ff4314b10fb085
+
+The first is stored under \`firmware-original/G3V2-1006-2011-v1.48.fot\`. Available
+history does not establish how it was obtained, so do not label it a device dump yet.
+
+A section-aware comparator was added to determine whether the pair exhibits sparse,
+same-keystream-compatible differences or random-looking cross-ciphertext XOR.

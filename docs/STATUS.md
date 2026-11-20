@@ -904,3 +904,60 @@ stateful requests have already consumed the shared CRT `rand()` stream.
 This means matching the visible state byte alone does not reproduce the
 official request context. The random byte position and any other shared helper
 state must also be reproduced or understood.
+
+### All 11 baseline warm-up reads share the same KeyLinker state/rand stream
+
+Native helper `0x180001BE0`, used by
+`readDeviceBeforeKeyChangeList` and `readDeviceSupportTurboList`, is now
+closed. It directly calls:
+
+```text
+0x1800014C0  KeyLinkerState
+0x18000B150  CRT rand()
+0x180001080  KeyLinkerEncode
+```
+
+The helper returns at `0x180001C87`; the later second `rand()` seen at
+`0x180001EE3` belongs to the separate function beginning at
+`0x180001C90` and is not part of either generic-list read request.
+
+Therefore **all eleven baseline initializer reads consume exactly one
+KeyLinker state value and one CRT rand value per native request**.
+
+With a cold vendor-DLL process, no retries, and no continuation packets, the
+baseline state/rand sequence is:
+
+```text
+#   operation             state  rand(low8)
+1   BeforeKeyChangeList   00     29
+2   SupportTurbo          81     23
+3   CurrentTurbo          02     BE
+4   Rocker                83     84
+5   CustomData #1         04     E1
+6   Trigger               85     6C
+7   Motor                 06     D6
+8   CustomData #2         87     AE
+9   Lamplight             00     52
+10  CustomData #3         81     90
+11  CustomData #4/final   02     49
+```
+
+This table is only a baseline. Any retry or managed continuation inserts
+another state/rand consumption and shifts every later row.
+
+The final baseline CustomData request is therefore:
+
+```text
+plain: BB 06 02 49 00 D4
+wire : EE 95 26 90 B7 65
+```
+
+It must **not** be sent in isolation, because the device has not then observed
+the ten preceding stateful read requests.
+
+`tools/g3v2-mixdrive-warmup-readonly.py` reproduces the bounded initializer
+read sequence and dynamically consumes extra state/rand entries for proven
+continuation-capable builders. By default it only prints the plan; live HID
+read requests require explicit `--run-readonly`. The script contains no
+CustomData writer, no OTA-bit mutation, and no SCSI path.
+

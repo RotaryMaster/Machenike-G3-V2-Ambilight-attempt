@@ -1283,6 +1283,40 @@ RAM-only or commits NVM/flash. High-rate Ambilight writes should therefore
 remain disabled until persistence behavior is resolved.
 
 
+### Managed LampLight save/apply ordering
+
+Static CIL of the actual lighting save/apply paths resolves an important
+persistence hypothesis.
+
+`WriteDeviceLamplightAsync` uses managed operation/result type **22** and
+directly calls native `writeDeviceLamplightData` (command `0x37`).
+`WriteDeviceCustomDataAsync` uses type **29** and calls native
+`writeDeviceCustomData` (command `0x3B`).
+
+For `GamepadSettingViewModel::SaveLightAsync`, MixDrive first reads the
+20-byte CustomData block, writes logical brightness to byte 0 and mode to
+byte 1, and sends `0x3B`. Only after that does the applicable lighting branch
+build `DeviceLampLightStruct` and send `0x37`. G3V2 falls through the
+non-F1/non-G50 mode-limit path (max mode 7); the MACHENIKE branch uses 0x37
+for the RGB/breath-capable mode groups.
+
+`ResetLightAsync` likewise performs CustomData read/update/write before its
+LampLight `0x37` write.
+
+Other configuration-application paths can use the opposite ordering:
+`ApplyCurrentConfigAsync` and `ChangeGamepadConfigAsync` contain a
+LampLight write followed by a CustomData read/update/write.
+
+Therefore **0x3B is not a required commit/finalize command for 0x37**. Its
+confirmed role in these paths is updating the shared CustomData object
+(including light mode/brightness), while 0x37 carries the actual LampLight
+RGB/breath/brightness structure. The ordering is not fixed across callers.
+
+This narrows but does not settle persistence: 0x37 may itself update
+persistent storage, or it may alter live state that firmware later retains
+by some internal mechanism. There is no separate host-side gamepad-lighting
+commit API exposed by MixDrive.
+
 ### Gamepad lighting API surface
 
 A full static inventory of lighting-related exports and P/Invokes found only

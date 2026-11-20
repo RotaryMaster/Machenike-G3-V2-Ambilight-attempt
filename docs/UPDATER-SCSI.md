@@ -487,3 +487,10 @@ This is not merely theoretical for F2: the 10-byte F2 range spans `[ebp-0x18 .. 
 Conclusion: the official updater transmits stack residue in vendor CDB bytes that it nevertheless declares as a 10-byte CDB. This is a concrete updater implementation bug. The bootloader must either ignore those trailing bytes or tolerate arbitrary values for the official updater to be reliable.
 
 For a clean reimplementation, the canonical representation should be a fully zero-initialized 10-byte CDB with only byte 0 set to `F0`, `F1`, or `F2`. This canonicalization should first be validated with read-only F1/F2 before any F0 experiment.
+
+
+### Exit/recovery behavior: current evidence boundary
+
+The official G3 V2 updater sends no fourth vendor CDB after the final F2 status query. Its visible flow proceeds to success handling and closes the storage handle. Therefore any normal reboot/exit after a completed update is device/bootloader behavior rather than an explicit host-side exit command.
+
+A related Manba One V2 implementation of the same `Gamepad / Updater / 1.00` storage personality and F0/F1/F2 protocol is reported to leave update mode on unplug/replug. This is useful family corroboration but must not be promoted to confirmed G3 V2 recovery behavior until directly observed.

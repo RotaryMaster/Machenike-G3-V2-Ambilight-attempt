@@ -1013,3 +1013,50 @@ gamepad-lighting commit call was found after 0x37.
 The remaining unresolved question is firmware-side persistence of 0x37
 itself. Static host code cannot distinguish an immediate NVM write from a
 volatile apply followed by firmware-internal retention.
+
+
+## 2026-11-20 — FOT scan classifies package as transformed data
+
+`dump-g3v2-fot-layout.py` was run against the official v1.48 updater and
+carved exactly `0x5A400` bytes from file offset `0x1712F0`.
+
+Result:
+- SHA-256 `0ad5d080c6451d9a26a28e32f77ce73789f163ce8cad12c035ff4314b10fb085`;
+- total entropy 7.9968 bits/byte;
+- almost every 4 KiB block ~7.95 bits/byte;
+- no XCOD, XRES, ZXPC, G3V2 or MACHENIKE marker in the carved FOT;
+- no credible Cortex-M vector table;
+- 201 target-immediate Thumb-CMP-shaped byte pairs and four small clusters,
+  but the surrounding bytes remain high-entropy/random-looking, so these are
+  statistical false positives rather than protocol-handler evidence.
+
+Correction: the earlier documentation must not describe the carved FOT itself
+as containing XCOD/XRES regions. Those observations came from wider updater
+analysis. The exact transferred package is presently classified as encrypted,
+compressed or otherwise transformed data.
+
+This means following handler 0x37 inside the package first requires recovering
+the package transform. In parallel, obtaining a post-install firmware dump from
+the controller becomes more valuable.
+
+## 2026-11-20 — Firmware dump track opened; ZhiXu prior art found
+
+The exact G3V2 FCC filing `2BBT5-G3V2` now exposes five pages of internal
+photos (document `8099258`). These are the preferred source for identifying
+the MCU, external flash and debug pads before opening the user's controller.
+
+External project `AmjadAAYD/x20ctl` independently reversed another
+KeyLinker/ZhiXu Downloader platform. Its documented updater hardware-ID family
+uses the exact prefix `A1 CA 51 DA 72 4C B6 10 36 58 C0 5D 7D 4E` seen in
+our G3V2 package, and lists model code `2267`. Our hardware ID ends `22 67`
+and the official filename is `ZXD2267_...`.
+
+That project found `deviceUsb_Request` to be a generic
+`IOCTL_SCSI_PASS_THROUGH_DIRECT` wrapper, but its updater has only 20-byte
+DATA_IN identity/status calls and 512-byte DATA_OUT firmware chunks: no bulk
+firmware readback. This is highly relevant family-level prior art, not yet
+G3V2-specific proof.
+
+Added `tools/dump-deviceusb-readback-surface.py` to independently recover
+the G3V2 DeviceUsb exports, DeviceIoControl/SCSI wrapper, F0/F1/F2 call
+contexts, transfer lengths and data directions without touching hardware.

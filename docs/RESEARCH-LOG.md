@@ -776,3 +776,36 @@ A new static helper, `tools/dump-customdata-semantics.py`, was added to map
 all managed CustomData read/write call sites, G3V2 branches, length checks, and
 builder/mutation logic before any further live write experiment.
 
+
+
+## 2026-11-20 — Hardware-loader sequence and G3V2 CustomData semantics
+
+Static CIL audit of `GamepadHardwareLoader` closed the manager calls used by
+the normal KeyMap/Turbo/Rocker/Trigger/Motor/Light loaders. Rocker, Motor and
+Light each perform a `GetDeviceCustomDataAsync` read after their specialized
+manager read.
+
+Key findings:
+
+- `GetDeviceCustomDataAsync(10)` still means a 10-second timeout; the native
+  CustomData selector remains `readDeviceCustomData(0)`.
+- `LoadRockerAsync` requires a non-null logical CustomData payload of exactly
+  20 bytes.
+- G3V2-specific rocker semantics consume byte 3 nibbles, byte 8 and byte 10;
+  shared fields also use bytes 2, 7, 12 and 13.
+- `LoadMotorAsync` consumes CustomData byte 4 for `MotorGripMode`.
+- `LoadLightAsync` obtains R/G/B from `GetDeviceLamplightAsync` /
+  `DeviceLampLightStruct`, then uses CustomData byte 1 for light mode and
+  byte 0 for logical brightness.
+- Therefore CustomData/BB is a shared configuration object, not the primary
+  RGB carrier.
+
+A methodological correction was recorded: the section order printed by
+`dump-gamepad-hardware-loader-sequence.py` is fixed by its `TARGETS`
+tuple. The actual global sequence remains established by the separate
+`InitializeFromHardwareAsync` audit.
+
+Added `tools/dump-gamepad-manager-read-paths.py` to bridge the normal manager
+getters to their underlying `GamepadInterop`/KeyLinkerlib calls. This is the
+next step toward replacing the approximate Linux warm-up with the exact
+read-only MixDrive initialization sequence.

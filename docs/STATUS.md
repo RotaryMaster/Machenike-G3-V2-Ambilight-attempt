@@ -208,7 +208,17 @@ Confirmed:
 - package hardware ID: `A1 CA 51 DA 72 4C B6 10 36 58 C0 5D 7D 4E 22 67`
 - version field: `0x94` = 148 -> firmware 1.48
 
-The FOT has a structured header plus high-entropy XCOD/XRES/tail regions; the updater sends the packaged bytes directly through F0.
+A direct scan of the exact carved 0x5A400-byte FOT supersedes the earlier
+XCOD/XRES wording. The carved payload has total Shannon entropy **7.9968
+bits/byte**, almost every 4 KiB block is ~7.95 bits/byte, contains no XCOD,
+XRES, ZXPC, G3V2 or MACHENIKE marker, and yields no credible Cortex-M vector
+table. Apparent Thumb CMP-immediate clusters occur at the rate expected from
+near-random bytes and are not treated as code.
+
+Therefore the updater-carried FOT is currently classified as an
+**encrypted/compressed/otherwise transformed firmware package**, not plaintext
+ARM/Thumb firmware. The earlier XCOD/XRES observation came from a wider updater
+layout/region and must not be attributed to the carved FOT itself.
 
 ## Current critical unknown
 
@@ -1340,3 +1350,43 @@ Managed UI evidence also matters: `ChangeLightAsync` only changes the
 view-model color property, while actual hardware writes occur in save/apply/
 reset/config-change flows. This makes persistence behavior of command 0x37
 the next critical question before any high-frequency Ambilight use.
+
+
+### Firmware readback / controller dump path
+
+A parallel track now targets obtaining the controller's *installed* firmware,
+which could bypass the high-entropy updater package if the device stores
+plaintext executable code internally.
+
+Priority order:
+
+1. **Normal KeyLinker/HID/BLE read surface** — look for any memory/ROM/firmware
+   read primitive without entering the bootloader.
+2. **Updater mass-storage/SCSI read surface** — statically prove every
+   `deviceUsb_Request` caller and its transfer direction before any live
+   probe. A useful dump primitive must be DATA_IN, addressable and scalable;
+   20-byte identity/status reads do not qualify.
+3. **Physical debug/storage interface** — use the now-public exact G3V2 FCC
+   internal photos to identify MCU, external flash and SWD/JTAG/UART/ISP pads
+   before opening the user's device.
+
+Exact G3V2 FCC record:
+`2BBT5-G3V2`, internal-photo document `8099258`, five pages, released
+2025-09-03.
+
+External prior art from `AmjadAAYD/x20ctl` is highly relevant but not yet
+treated as proof for this unit. That project reversed a ZhiXu/KeyLinker
+Downloader bootloader with the same hardware-ID prefix
+`A1 CA 51 DA 72 4C B6 10 36 58 C0 5D 7D 4E`. It identifies model code
+`0x2267` in this family; our official G3V2 package ID ends in `22 67` and
+the updater filename begins `ZXD2267`.
+
+Their DeviceUsb implementation exposes a generic
+`IOCTL_SCSI_PASS_THROUGH_DIRECT` request wrapper, but the specific updater
+they audited has only 20-byte DATA_IN identity/status reads and a 512-byte
+DATA_OUT firmware path, i.e. no bulk readback. This is strong prior art that
+software backup may be unavailable, but the G3V2 binary must be independently
+closed before adopting that conclusion.
+
+Added `tools/dump-deviceusb-readback-surface.py` for that independent,
+read-only static audit.

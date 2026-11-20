@@ -1942,3 +1942,22 @@ No KeyLinker request was transmitted in enumerate-only mode.
 Added `g3v2-ble-probe-v2.py` to diagnose this specific Linux/BlueZ stage with bounded
 connection retries, fresh discovery between retries, and a read-only BlueZ state dump after
 failure. No automatic disconnect/pairing or controller-setting write was added.
+
+
+## 2026-11-20 — BLE v2 failed all connects; v3 isolates BlueZ discovery-lifetime hypothesis
+
+`g3v2-ble-probe-v2.py --enumerate-only` saw one `G3V2 APP` at roughly -64 dBm.
+Three connection attempts each timed out after 20 s. The probe successfully refreshed the
+advertisement between attempts, proving that the configuration peripheral remained on-air.
+
+After the third failure BlueZ no longer exposed the address as a Device object to
+`bluetoothctl info`. No application-level command was sent.
+
+This does not imply the peripheral requires pairing. The vendor manual explicitly says the
+Keylinker application can find `G3V2_APP` with the controller in any mode and that normal
+phone Bluetooth pairing is not required for configuration.
+
+A new `g3v2-ble-probe-v3.py` was added to keep BlueZ discovery active while connecting,
+then inspect the Device object before discovery is stopped. This isolates a known class of
+Linux/BlueZ failures where temporary unpaired LE objects disappear or connection behavior
+changes when discovery ends.

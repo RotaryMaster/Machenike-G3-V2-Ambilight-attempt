@@ -1825,3 +1825,23 @@ The active next target is offline reverse engineering of the still-unassigned Ke
 dispatcher/callers, KeyLinker 3.73/APK lighting/test-mode code, and the exact
 enter/exit-test-mode framing. Only a statically understood candidate for a volatile LED
 path should justify another live hardware probe.
+
+
+## 2026-11-20 — verification of prior offline RE work
+
+A history/artifact review corrected another duplication risk.
+
+Previously completed:
+- full Ghidra analysis of \`FUN_180001080\` and its callers;
+- extraction/static analysis of KeyLinker APK 3.73;
+- Android lighting path traced through \`A1()/z1() -> e.l0() -> 0x37\`;
+- no alternate exposed Android RGB-live writer found.
+
+Still incomplete:
+- exact semantics and argument/framing of the test-mode functions around
+  \`0x180004820\` and \`exitDeviceTestMode@0x180004920\`;
+- exact linkage of named constants \`0x1B CODE_TEST_SET_MODE\` and
+  \`0x1C CODE_TEST_NORMAL_MODE\` to those functions;
+- whether either is related to the firmware-local FN+Right effect cycle.
+
+No live 0x1B/0x1C command was sent.

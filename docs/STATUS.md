@@ -849,3 +849,44 @@ builders advances the same KeyLinker state / CRT `rand()` stream used by
 request is necessarily in a different state than MixDrive's fourth/final
 CustomData request.
 
+### Native warm-up state correlation: operations 3-11 share the CustomData KeyLinker path
+
+The focused native audit proves that the following initializer reads all call the
+same three primitives used by `readDeviceCustomData`:
+
+```text
+readDeviceTurboData
+readRockerData
+readTriggerData
+readDeviceMotorData
+readDeviceLamplightData
+readDeviceCustomData
+```
+
+Each directly calls:
+
+```text
+0x1800014C0  KeyLinker state helper
+0x18000B150  CRT rand() IAT
+0x180001080  KeyLinker encoder
+```
+
+Therefore, in the 11-operation initializer baseline, operations 3 through 11
+are definitely stateful KeyLinker requests. The final CustomData read is not
+equivalent to a cold first CustomData request: even ignoring the first two
+operations, eight prior stateful requests have already advanced the shared
+state/rand stream before the final CustomData builder runs.
+
+The first two operations remain unresolved:
+
+```text
+readDeviceBeforeKeyChangeList -> helper 0x180001BE0 with arg 3
+readDeviceSupportTurboList    -> helper 0x180001BE0 with arg 4
+```
+
+They do not reference the state/rand/encoder primitives directly in their tiny
+export wrappers. The next static target is helper `0x180001BE0` itself. If it
+also reaches the same primitives, then all 11 baseline reads share the same
+state machine and the final CustomData occurs after ten earlier stateful
+requests.
+

@@ -603,3 +603,20 @@ The audit identified seven native writer regions that decrement `E670`. One is t
 This changes how the cold OTA header pair should be interpreted. `3B 14 02 BE / 3B EB 8B 84` is the correct cold-state pair, but a normal MixDrive session may have advanced `E670` before firmware update through earlier configuration writes such as lighting, motor, turbo, remapping, or other device writes. Exact byte-for-byte reproduction of a specific vendor session therefore requires counting prior native write frames modulo 8.
 
 `E67C` and `E68C` are broader packet-phase state: both the read generator `0x1800014C0` and write-frame generators toggle/increment them. The CRT `rand()` stream is likewise consumed by packet construction. Thus the concrete OTA header bytes in an already-active MixDrive process depend on prior protocol traffic, even though the header formulas themselves are fully reconstructed.
+
+
+### Exact E670 writer-to-export map
+
+The PE export table closes the seven previously identified E670-writing regions unambiguously:
+
+| Export | Export RVA | E670 write RVA | Offset inside export |
+|---|---:|---:|---:|
+| `writeRockerData` | `0x2600` | `0x292A` | `+0x32A` |
+| `writeTriggerData` | `0x2960` | `0x2C69` | `+0x309` |
+| `writeDeviceMotorData` | `0x2E30` | `0x33DC` | `+0x5AC` |
+| `writeDeviceKeyChangeData` | `0x4E00` | `0x4FAD` | `+0x1AD` |
+| `writeDeviceLamplightData` | `0x56D0` | `0x5B3D` | `+0x46D` |
+| `writeDeviceTurboData` | `0x6800` | `0x6E4E` | `+0x64E` |
+| `writeDeviceCustomData` | `0x8EB0` | `0x905E` | `+0x1AE` |
+
+No E670 write was found in `writeDeviceMacroData` (RVA `0x83A0`) or `writeDeviceResetFactory` (RVA `0x4110`) in the focused xref audit. This means the E670 phase is advanced by the seven operations above, once per generated native frame. In particular, the multipart writers for KeyChange, Lamplight and CustomData use the common frame builder `0x180001C90`; the observed command bytes are `0x36`, `0x37` and `0x3B` respectively.

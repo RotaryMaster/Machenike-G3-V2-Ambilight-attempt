@@ -2873,3 +2873,18 @@ Added `tools/g3v2-ble-probe-v3.py`:
 - on failure queries `bluetoothctl info` before stopping discovery;
 - remains enumerate-only safe: no notify subscription, pairing, KeyLinker frame, 0x37,
   0x3B, OTA or SCSI command is sent.
+
+
+### G3 V2 BLE v3 — active discovery does not resolve connect timeout
+
+Observed in a live `tools/g3v2-ble-probe-v3.py --enumerate-only` run:
+- one `G3V2 APP` advertisement was tracked during continuously active discovery;
+- RSSI approximately -74 dBm during the probe, -78 dBm in BlueZ diagnostics;
+- three 20-second `BleakClient.connect()` attempts all ended with `TimeoutError`;
+- *before stopping discovery*, `bluetoothctl info` showed the unpaired public-address Device object, `Connected: no`, `Blocked: no`, and `AdvertisingFlags: 02`;
+- `uuids=[]` in this scan does not cancel the earlier advertisement where KeyLinker service `d7f010e0` was explicitly present; advertisement payloads vary;
+- no GATT characteristics or ATT exchanges were observed, and no application-level KeyLinker requests were sent.
+
+**Resolved/closed hypothesis:** keeping BlueZ discovery active does **not** by itself fix the G3 V2 connection. Do not run another general scan/timeout retry as the next experiment.
+
+**Remaining diagnostic question:** does Linux issue HCI LE Create Connection, and what controller HCI status / BlueZ management outcome follows? A bounded `btmon` capture during exactly one read-only v3 enumeration attempt is the next step. Decode error/status codes before proposing pairing, kernel changes, or further BLE behavior. Raw btmon files may contain device addresses; keep them local and redact before posting or committing.

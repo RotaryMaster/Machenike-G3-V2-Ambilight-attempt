@@ -444,3 +444,20 @@ PE exports map all seven E670-changing writers: `writeRockerData`, `writeTrigger
 ### Cold-start KeyLinker state proven
 
 The PE loader zero-fills the protocol-state tail of `.data` (`VirtualSize=0x6A8`, `RawSize=0x200`), proving cold-start values `E670=E67C=E68C=0` and likewise zero for the neighboring protocol globals through `E68C`. Native write command IDs are now mapped through CustomData: `0x31` Rocker, `0x32` Trigger, `0x33` Motor, `0x34` Turbo, `0x36` KeyChange, `0x37` Lamplight, `0x3B` CustomData.
+
+
+### Official updater SCSI command flow closed
+
+Static call-graph analysis of the official v1.48 updater now closes the DeviceUsb transfer roles:
+
+- `F1`: `DataIn=1`, 20-byte read; response bytes 0..15 are compared with the package hardware ID and bytes 16..17 are parsed as a little-endian firmware version.
+- `F0`: `DataIn=0`, firmware data write in blocks of up to 512 bytes.
+- `F2`: `DataIn=1`, 20-byte status read; the updater requires `status[0] == 0`.
+
+The v1.48 image is `0x5A400` bytes, so the official loop performs exactly 722 F0 transfers of 512 bytes.
+
+F2 is read after the first F0 block and again after the complete transfer.
+
+All three calls pass `cdbLength=10`. However, the updater visibly initializes only the first six bytes of each local CDB (`F0/F1/F2 00 00 00 00 00`). The remaining four bytes are not yet proven to be zero and appear to overlap stack padding/adjacent locals. Therefore only the opcode and the explicitly initialized leading bytes are treated as statically exact.
+
+Full reconstruction: [UPDATER-SCSI.md](UPDATER-SCSI.md).

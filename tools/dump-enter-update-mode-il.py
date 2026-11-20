@@ -96,11 +96,11 @@ def format_row(row: Any) -> str:
 
     if cls == "MethodSpecRow":
         base = getattr(getattr(row, "Method", None), "row", None)
-        inst = getattr(getattr(row, "Instantiation", None), "value", b"")
+        inst = getattr(row, "Instantiation", b"") or b""
         return f"MethodSpec::{format_row(base)} <blob={bytes(inst).hex(' ') if inst else ''}>"
 
     if cls == "TypeSpecRow":
-        sig = getattr(getattr(row, "Signature", None), "value", b"")
+        sig = getattr(row, "Signature", b"") or b""
         return f"TypeSpec(blob={bytes(sig).hex(' ') if sig else ''})"
 
     return f"{cls}:{row}"
@@ -123,18 +123,10 @@ def format_operand(pe: dnfile.dnPE, operand: Any) -> str:
 
 
 def find_parent_typedef(pe, method_rid: int):
-    types = list(pe.net.mdtables.TypeDef.rows)
-    method_count = len(pe.net.mdtables.MethodDef.rows)
-    for i, td in enumerate(types):
-        start = getattr(getattr(td, "MethodList", None), "row_index", None)
-        if start is None:
-            continue
-        if i + 1 < len(types):
-            end = getattr(getattr(types[i + 1], "MethodList", None), "row_index", method_count + 1)
-        else:
-            end = method_count + 1
-        if start <= method_rid < end:
-            return td
+    for td in pe.net.mdtables.TypeDef.rows:
+        for idx in getattr(td, "MethodList", []):
+            if getattr(idx, "row_index", None) == method_rid:
+                return td
     return None
 
 

@@ -106,6 +106,41 @@ def tx(fd, seq, payload):
         raise RuntimeError(f"short HID write: {wrote}/{REPORT_LEN}")
     print(f"TX seq={seq:02X}: {hx(report[:5+len(payload)])}")
 
+def ping_app(fd, seq):
+    # ConnectDeviceAsync special path: 80 F9 <seq> 01 01 30
+    report = bytes([0x80, 0xF9, seq & 0xFF, 0x01, 0x01, 0x30])
+    report += bytes(REPORT_LEN - len(report))
+    wrote = os.write(fd, report)
+    if wrote != REPORT_LEN:
+        raise RuntimeError(f"short HID ping write: {wrote}/{REPORT_LEN}")
+    print(f"PING TX seq={seq:02X}: {hx(report[:6])}")
+
+    deadline = time.monotonic() + 3.0
+    while True:
+        rem = deadline - time.monotonic()
+        if rem <= 0:
+            raise TimeoutError(f"timeout waiting ZXPC_APP ping seq={seq:02X}")
+        r, _, _ = select.select([fd], [], [], rem)
+        if not r:
+            continue
+        try:
+            b = os.read(fd, REPORT_LEN)
+        except BlockingIOError:
+            continue
+        if len(b) < 5:
+            continue
+        print(f"PING RX raw: {hx(b[:min(len(b),32)])}" + (" ..." if len(b)>32 else ""))
+        if b[0] != 0x81 or b[1] != 0xF9 or b[2] != (seq & 0xFF):
+            continue
+        n = b[4]
+        if 5 + n > len(b):
+            raise RuntimeError("truncated identity response")
+        payload = bytes(b[5:5+n])
+        if b"ZXPC_APP" not in payload:
+            raise RuntimeError(f"identity response missing ZXPC_APP: {hx(payload)}")
+        print(f"PING seq={seq:02X}: ZXPC_APP OK")
+        return payload
+
 def rx(fd, seq, timeout=2.0, ack=None):
     deadline = time.monotonic() + timeout
     while True:
@@ -131,26 +166,48 @@ def rx(fd, seq, timeout=2.0, ack=None):
         print(f"RX seq={seq:02X} flags={flags:02X} len={n}: {hx(payload)}")
         return flags, payload
 
+def parse_custom_response(wire, selector):
+    p = decode(wire)
+    print(f"Plain selector {selector}:", hx(p))
+    if len(p) < 6:
+        raise RuntimeError(f"selector{selector} response too short: {len(p)}")
+    if p[-1] != crc8(p[:-1]):
+        raise RuntimeError(f"selector{selector} CRC mismatch")
+    if p[0] != 0x19:
+        raise RuntimeError(f"selector{selector} unexpected response command 0x{p[0]:02X}")
+    if p[1] != len(p):
+        raise RuntimeError(
+            f"selector{selector} frame length mismatch: header={p[1]} actual={len(p)}"
+        )
+    logical_len = p[4]
+    if len(p) != logical_len + 6:
+        raise RuntimeError(
+            f"selector{selector} logical length mismatch: "
+            f"declared={logical_len} frame={len(p)}"
+        )
+    data = bytes(p[5:-1])
+    print(f"CustomData[{selector}] ({len(data)} bytes):", hx(data))
+    return data
+
 def read_custom(fd):
     print("\n=== READ CustomData selector 0 ===")
-    tx(fd, 1, READ0_WIRE)
-    _, w0 = rx(fd, 1, timeout=3.0, ack=False)
-    if len(w0) != 20: raise RuntimeError(f"selector0 expected 20 native bytes, got {len(w0)}")
-    p0 = decode(w0); print("Plain0:", hx(p0))
-    if p0[-1] != crc8(p0[:-1]): raise RuntimeError("selector0 CRC mismatch")
-    if len(p0) < 6 or p0[4] != 0x14:
-        raise RuntimeError(f"selector0 logical length not 0x14: {hx(p0)}")
+    tx(fd, 3, READ0_WIRE)
+    _, w0 = rx(fd, 3, timeout=3.0, ack=False)
+    d0 = parse_custom_response(w0, 0)
+    if len(d0) != 10:
+        raise RuntimeError(f"selector0 expected 10 logical bytes, got {len(d0)}")
 
     print("\n=== READ CustomData selector 1 ===")
-    tx(fd, 2, READ1_WIRE)
-    _, w1 = rx(fd, 2, timeout=3.0, ack=False)
-    if len(w1) != 11: raise RuntimeError(f"selector1 expected 11 native bytes, got {len(w1)}")
-    p1 = decode(w1); print("Plain1:", hx(p1))
-    if p1[-1] != crc8(p1[:-1]): raise RuntimeError("selector1 CRC mismatch")
+    tx(fd, 4, READ1_WIRE)
+    _, w1 = rx(fd, 4, timeout=3.0, ack=False)
+    d1 = parse_custom_response(w1, 1)
+    if len(d1) != 10:
+        raise RuntimeError(f"selector1 expected 10 logical bytes, got {len(d1)}")
 
-    data = bytes(p0[5:-1] + p1[4:-1])
-    if len(data) != 20: raise RuntimeError(f"decoded CustomData expected 20 bytes, got {len(data)}")
-    print("\nCustomData atual :", hx(data))
+    data = d0 + d1
+    if len(data) != 20:
+        raise RuntimeError(f"combined CustomData expected 20 bytes, got {len(data)}")
+    print("\nCustomData combinado:", hx(data))
     return data
 
 def build_ota_frames(data):
@@ -172,17 +229,17 @@ def build_ota_frames(data):
 def write_ota(fd, w0, w1):
     print("\n=== WRITE OTA CustomData ===")
     for attempt in range(1, 4):
-        tx(fd, 3, w0)
+        tx(fd, 5, w0)
         try:
-            rx(fd, 3, timeout=2.0, ack=True)
+            rx(fd, 5, timeout=2.0, ack=True)
             print(f"ACK fragment 0 OK (attempt {attempt})")
             break
         except TimeoutError:
             if attempt == 3: raise
             print(f"ACK timeout; retrying fragment 0 ({attempt}/3)")
-    tx(fd, 4, w1)
+    tx(fd, 6, w1)
     try:
-        flags, payload = rx(fd, 4, timeout=1.5, ack=False)
+        flags, payload = rx(fd, 6, timeout=1.5, ack=False)
         print(f"Final result received: flags={flags:02X}, payload={hx(payload)}")
     except (TimeoutError, OSError) as e:
         print(f"Final response not observed ({e}); re-enumeration may already be in progress.")
@@ -209,6 +266,10 @@ def main():
     fd = os.open(dev, os.O_RDWR | os.O_NONBLOCK)
     try:
         print("Fila antiga descartada:", drain(fd))
+        print("\n=== PINGS ZXPC_APP ===")
+        ping_app(fd, 1)
+        ping_app(fd, 2)
+        print("Pings ZXPC_APP: OK")
         data = read_custom(fd)
         new, p0, p1, w0, w1 = build_ota_frames(data)
         print("\nCustomData OTA   :", hx(new))

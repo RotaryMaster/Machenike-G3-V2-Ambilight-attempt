@@ -142,9 +142,29 @@ IRecipient<EnterUpdateModeMessage>
 
 The async state machine `<Receive>d__21::MoveNext` reads `message.Device`, resolves or creates a `GamepadDeviceManager`, calls `GetDeviceCustomDataAsync`, then calls `WriteDeviceCustomDataAsync`.
 
-This changes the working model significantly: the official transition is now expected to be a specific **CustomData mutation** in the normal HID protocol.
+The full IL dump then closed the mutation itself.
 
-The next static step is to decode the exact IL/data manipulation between those two calls.
+MixDrive calls:
+
+```text
+GetDeviceCustomDataAsync(10)
+```
+
+and, if the returned byte array is non-null, performs:
+
+```text
+data[11] |= 0x80;
+```
+
+followed by:
+
+```text
+WriteDeviceCustomDataAsync(data)
+```
+
+Therefore the official managed-side OTA transition is definitively a **CustomData read-modify-write** that sets bit `0x80` of managed buffer index `11`.
+
+The remaining task is not to find the mutation anymore, but to map managed index `11` through `GamepadDeviceManager` to the exact 10-byte CustomData/on-wire HID byte.
 
 
 ## Open questions
@@ -165,9 +185,14 @@ Confirmed:
 
 This strongly indicates that the official HID -> update-mode transition is encoded as a mutation of the normal CustomData object rather than as an unrelated transport.
 
+Confirmed managed mutation:
+- `GetDeviceCustomDataAsync(10)`;
+- non-null result is modified as `data[11] |= 0x80`;
+- the same array is passed to `WriteDeviceCustomDataAsync(data)`.
+
 Need to determine:
-- exact field/value changed between the read and write;
-- exact 10-byte CustomData representation of that change;
+- how managed array index `11` maps to the 10-byte CustomData protocol representation;
+- exact final HID/KeyLinker packet;
 - expected disconnect/re-enumeration;
 - timeout/retry behavior.
 

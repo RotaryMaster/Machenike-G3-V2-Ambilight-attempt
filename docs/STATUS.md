@@ -2330,3 +2330,25 @@ Practical Ambilight implication:
 - do not assume high-frequency \`0x37\` writes are volatile/safe for flash endurance;
 - before using the normal lighting command as a realtime Ambilight transport, perform the
   controlled one-write persistence test that isolates \`0x37\` from \`0x3B\`.
+
+
+### Stronger identity-storage inference after E8/E9/EA/ED mapping
+
+The same physical controller preserves one lower-24-bit device suffix across all observed
+Bluetooth personalities (E8/E9/EA/ED), while the previously completed whole-FOT scan
+found that live suffix nowhere in either known v1.48 FOT, including raw, reversed and
+family-prefix-combined forms.
+
+This makes a separate per-unit identity source substantially more likely than direct
+storage of the runtime address in the generic update image.
+
+Current leading possibilities:
+1. dedicated NVM/OTP/efuse or reserved MCU flash outside the update payload;
+2. a bootloader-preserved per-device configuration region;
+3. deterministic derivation from another hardware-unique identifier.
+
+This also explains how one generic official FOT can update many controllers without
+cloning their Bluetooth identities.
+
+The fixed E9-form value at FOT offset 0x112 should therefore be treated as
+identity/provisioning metadata or a default/reference value until its lifecycle is proven.

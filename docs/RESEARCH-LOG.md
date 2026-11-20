@@ -1392,3 +1392,8 @@ This changes the classification from "entire FOT is opaque transformed data"
 to "plaintext FOT metadata/container wrapping high-entropy encrypted payload
 sections." The previous statistical CMP conclusion still stands for the
 encrypted payload: raw Thumb-looking hits there remain random false positives.
+
+
+Added \`tools/analyze-g3v2-fot-crypto-surface.py\` to keep subsequent crypto
+analysis region-aware and prevent whole-image entropy from masking the
+plaintext FOT metadata.

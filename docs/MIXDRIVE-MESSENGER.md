@@ -328,3 +328,40 @@ KeyLinker transform
 ```
 
 The still-unresolved step is the exact buffer returned by `0x180001760`, which determines how managed index `11` maps to CustomData.
+
+
+## receiveDeviceCustomData ABI and inverse framing
+
+Further static analysis resolves the apparent argument mismatch in `receiveDeviceCustomData`.
+
+On Windows x64 the native function returns a 16-byte descriptor/struct through a hidden structure-return pointer in `RCX`. The explicit managed arguments therefore arrive shifted:
+
+```text
+RCX = hidden return descriptor
+RDX = datas
+R8D = length
+```
+
+The export at `0x180004DD0` preserves `RDX/R8D` while replacing only `RCX` with a local output descriptor before calling `0x180001760`.
+
+Inside `0x180001760`:
+
+```text
+R12  <- RDX   input byte buffer
+R13D <- R8D   input length
+R15  <- RCX   output descriptor
+```
+
+The helper allocates `length` bytes, copies the input, and for packets of at most 20 bytes calls `0x1800011C0`, which is the receive-side inverse/decoder corresponding to the send-side KeyLinker transform.
+
+The branch threshold is exactly `0x15`: lengths below 21 follow the single-frame path; lengths of 21 or more take the multi-frame path. This matches the write-side frame maximum of 20 bytes:
+
+```text
+4-byte header + <=15-byte stream chunk + 1-byte CRC = <=20 bytes
+```
+
+Immediately after decoding the single frame the helper initializes a constant `5`, matching the five framing bytes that must be removed (four-byte header plus CRC).
+
+Because callers such as `receiveDeviceLamplightData` require the returned length to be divisible by the logical record width (6 bytes), the helper cannot be returning transport framing or the one-byte logical length prefix. The returned descriptor therefore represents reassembled logical payload data.
+
+Consequence for the OTA path: the managed mutation `data[11] |= 0x80` addresses the twelfth logical CustomData byte, not a KeyLinker/HID header byte.

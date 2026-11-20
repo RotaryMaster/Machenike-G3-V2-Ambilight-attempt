@@ -1658,3 +1658,26 @@ the field cannot yet be called the final live MAC.
 Most plausible possibilities are separate per-device NVM, bootloader/runtime patching or
 derivation, or provisioning/reference metadata. The A/B FOT delta still shows this is an
 identity/personalization-related header field, but its exact lifecycle is unresolved.
+
+
+## 2026-11-20 — A+HOME maps to E8 / MACHENIKE G3V2; lighting survives mode changes
+
+A+HOME discovery produced a BR/EDR gameplay identity with:
+- prefix \`98:B6:E8\`
+- name \`MACHENIKE G3V2\`
+- same lower-24-bit per-unit suffix as the already mapped ED/EA/E9 personalities.
+
+The confirmed personality map is now:
+- ED = G3V2 APP (BLE configuration)
+- EA = Xbox Wireless Controller (X+HOME, BR/EDR)
+- E9 = Pro Controller (Y+HOME, BR/EDR)
+- E8 = MACHENIKE G3V2 (A+HOME, BR/EDR)
+- B+HOME = 2.4 GHz dongle path, host sees Xbox 360 Controller
+
+The user also observed that the previously configured blue breathing lighting state
+survived repeated power-off/startup and switching among these modes. This is direct
+evidence that the final lighting configuration is persistent across normal power cycles
+and mode changes.
+
+Do not yet attribute persistence to \`0x37\` alone: the exact write sequence that originally
+committed the state must be isolated before using that command at realtime Ambilight rates.

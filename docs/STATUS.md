@@ -1197,3 +1197,83 @@ before the 15-byte fragmentation step. A focused static tool,
 `tools/dump-lamplight-detail.py`, was added to dump the entire native
 read/receive/write functions together with the managed
 `DeviceLampLightStruct` metadata and LampLight call sites.
+
+
+### LampLight 0x37 logical payload fully reconstructed
+
+The native `writeDeviceLamplightData` serialization is now reconstructed
+exactly.
+
+Managed layout:
+
+```text
+LampLightStruct (sequential, 24 bytes)
++0x00 int32 R
++0x04 int32 G
++0x08 int32 B
++0x0C int32 breathSpeed
++0x10 int32 breathSwitch
++0x14 int32 brightness
+
+DeviceLampLightStruct
++0x00 LampLightStruct lampLight0
++0x18 LampLightStruct lampLight1
++0x30 LampLightStruct lampLight2
++0x48 LampLightStruct lampLight3
++0x60 int32 lampLightNumber
+```
+
+The `+0x60` count is independently confirmed by both native reader and
+writer.
+
+The writer reduces each 24-byte managed lamp record to six protocol bytes.
+The complete logical stream before 15-byte fragmentation is:
+
+```text
+byte 0 = lampLightNumber * 6
+
+for lamp n:
+  byte 1+6n = R & 0xFF
+  byte 2+6n = G & 0xFF
+  byte 3+6n = B & 0xFF
+
+  packed = ((breathSpeed & 0x7FFF) << 1) | (breathSwitch & 1)
+
+  byte 4+6n = packed & 0xFF
+  byte 5+6n = (packed >> 8) & 0xFF
+  byte 6+6n = brightness & 0xFF
+```
+
+The apparently complex ASCII `'0'/'1'` conversion in the optimized native
+code is just a roundabout implementation of that 16-bit packing. The receive
+path performs the inverse operation and expands each six-byte record back to
+six `int32` fields.
+
+For one lamp the logical stream is therefore only seven bytes:
+
+```text
+06 R G B packed_lo packed_hi brightness
+```
+
+After serialization, `writeDeviceLamplightData` fragments this logical
+stream into chunks of at most 15 bytes and wraps each chunk with
+`HeaderBuilder(command=0x37,...)`, checksum/CRC, then
+`KeyLinkerEncode`.
+
+The corresponding read request is also fully resolved:
+
+```text
+B7 06 <state> <rand> <index> <crc>
+```
+
+where `index` is the managed continuation index passed to
+`readDeviceLamplightData(index)`.
+
+Managed write operation/result type is `22`; read type remains `21`.
+
+Important persistence note: the same `WriteDeviceLamplightAsync` path is
+used by `SaveLightAsync`, `ResetLightAsync`, `ApplyCurrentConfigAsync`
+and `ChangeGamepadConfigAsync`. This proves it is the normal configuration
+write path, but does NOT yet prove whether each 0x37 transaction is volatile
+RAM-only or commits NVM/flash. High-rate Ambilight writes should therefore
+remain disabled until persistence behavior is resolved.

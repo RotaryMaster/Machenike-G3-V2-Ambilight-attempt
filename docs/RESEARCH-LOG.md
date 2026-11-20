@@ -1326,3 +1326,24 @@ tools/probe-firmware-history-api.py
 It tests only a small fixed set of plausible firmware/history/id GET routes
 using product id 8 and firmware id 11; it does not enumerate large ID ranges,
 write to the API, or touch the controller.
+
+
+## 2026-11-20 — Scope correction: stop historical-version detour
+
+Historical firmware probing was recognized as unnecessary for the current
+objective. The connected G3V2 reports 1.48 and the official API serves the same
+v1.48 updater already under analysis (identical SHA256).
+
+Older versions are now considered optional future material for differential
+analysis only.
+
+The current artifact set is sufficient to proceed:
+- official v1.48 updater EXE;
+- known embedded FOT payload;
+- static updater protocol map;
+- managed/native lighting protocol map.
+
+Do not equate the embedded update payload with a complete raw flash dump yet:
+bootloader, per-device configuration/calibration, or other NVM regions may be
+outside the OTA image. Resume FOT/container analysis and trace firmware-side
+handling of LampLight command 0x37.

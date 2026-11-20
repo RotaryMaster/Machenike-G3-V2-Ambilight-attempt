@@ -66,6 +66,26 @@ Confirmed so far:
 
 The goal remains to understand the complete lighting model well enough to support effects such as Ambilight without depending on MixDrive.
 
+### Official firmware API identity
+
+The official MixDrive endpoint has now closed the catalog identity for this device.
+
+Confirmed request parameters:
+
+```text
+brand=MACHENIKE
+product_name=G3V2
+product_type=2
+```
+
+The endpoint returns firmware **1.48** and the official updater filename:
+
+```text
+ZXD2267_JRH_G3V2_MACHENIKE_v1.48_20250815.exe
+```
+
+The same query with `brand=THUNDEROBOT` returned HTTP 404.
+
 ### Official firmware updater
 
 The official v1.48 updater has been analyzed statically.
@@ -76,6 +96,12 @@ Known updater SHA-256:
 f0cf653ae3d3de70266b38d011ba6491a3d454aed5cf0a6ac482cbbfaa50c255
 ```
 
+Extracted `DeviceUsb.dll` SHA-256:
+
+```text
+fad660bc7e006c58f37db9d75b72bf30c089ef62fc4e72673cbfd424d247b5e5
+```
+
 The updater dynamically loads `DeviceUsb.dll` and resolves:
 - `deviceUsb_OpenByDrv`
 - `deviceUsb_Close`
@@ -84,24 +110,51 @@ The updater dynamically loads `DeviceUsb.dll` and resolves:
 
 The actual firmware-transfer protocol is SCSI pass-through using opcodes `F0`, `F1`, and `F2`.
 
+### Embedded FOT image
+
+The updater embeds a complete 369664-byte FOT image.
+
+Confirmed:
+- FOT file offset in updater: `0x001712F0`
+- FOT RVA: `0x001732F0`
+- FOT VA: `0x005732F0`
+- complete transfer size: `0x5A400` = 369664 bytes
+- exact transfer count: 722 blocks x 512 bytes
+- package hardware ID: `A1 CA 51 DA 72 4C B6 10 36 58 C0 5D 7D 4E 22 67`
+- version field: `0x94` = 148 -> firmware 1.48
+
+The FOT has a structured header plus high-entropy XCOD/XRES/tail regions; the updater sends the packaged bytes directly through F0.
+
 ## Current critical unknown
 
-The updater itself expects the device to already be available through the Windows storage/SCSI path. It does not contain the normal HID command that performs the transition.
+The Windows updater expects the device to already be available through the Windows storage/SCSI path. It does not contain the normal HID command that performs the transition.
 
-MixDrive, however, sends a gamepad-specific messenger/event immediately before launching the updater.
+MixDrive sends a gamepad-specific message immediately before launching the updater.
 
-**Highest-priority next target:** trace that messenger to the exact HID command that makes the G3 V2 leave `413D:2131` normal mode and re-enumerate in firmware-update mode.
+The managed-code path has now been narrowed further:
+
+- `Machenik.exe` contains `Machenik.Messages.CheckFirmwareUpdateMessage`.
+- `FirmwareUpdateViewModel.UpdateFirmwareAsync` and its generated async/lambda state machines are present.
+- The same assembly references `WeakReferenceMessenger::get_Default`.
+- It also references `IMessengerExtensions::Register`, `RegisterAll`, and `Send`.
+- A global metadata scan found the relevant messaging/update symbols even though the current IL decoder failed to emit method-body contexts.
+
+This proves the previous zero-hit scan was a tooling false negative. It does **not** yet prove that `CheckFirmwareUpdateMessage` is the specific pre-updater message.
+
+**Highest-priority target:** resolve the concrete generic type/value used by the `Send<T>` immediately before process launch, then trace its receiver to the exact HID bootloader/OTA command.
 
 ## Next steps
 
-1. Trace the pre-updater MixDrive messenger/event to its receiver.
-2. Recover the exact normal-HID OTA/bootloader command without sending it.
-3. Determine the update-mode USB identity and interface class from code or passive observation.
-4. Implement a Linux read-only probe for the update personality.
-5. Issue only `F1` and `F2` in the first live SCSI test.
-6. Compare returned hardware ID/version with the embedded updater metadata.
-7. Document recovery/rollback possibilities before any `F0` write.
-8. Only after the above, implement a Linux updater with explicit write safeguards.
+1. Resolve generic `MethodSpec` signatures for `Send<T>` / `Register<T>` in `Machenik.exe` without relying on the failing `dncil` body parser.
+2. Identify the exact pre-updater message type and payload.
+3. Find every receiver of that message.
+4. Follow the receiver into the gamepad manager and recover the exact normal-HID OTA/bootloader request.
+5. Determine the update-mode USB identity and interface class from code or passive observation.
+6. Implement a Linux read-only probe for the update personality.
+7. Issue only `F1` and `F2` in the first live SCSI test.
+8. Compare returned hardware ID/version with the embedded updater metadata.
+9. Document recovery/rollback possibilities before any `F0` write.
+10. Only after the above, implement a Linux updater with explicit write safeguards.
 
 ## Conditions before a write test
 

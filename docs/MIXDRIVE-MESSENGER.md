@@ -468,3 +468,59 @@ After those requests, the native sequence state entering `writeDeviceCustomData`
 
 Therefore, conditional on `E670=7` at writer entry, the corrected two 0x3B frame headers are `3B F4 02 BE` and `3B CB 8B 84`. The older one-read candidates `3B F4 81 23` / `3B CB 0A BE` are superseded.
 
+
+
+### Exact 0x1C90 header builder and CRC
+
+Further static disassembly closes the native four-byte frame-header builder and the table checksum used by both CustomData read and write.
+
+Helper `0x180001400` is a direct three-string concatenator: it allocates enough space, copies argument 1, appends argument 2, then appends argument 3. This removes the remaining ambiguity in the bit ordering used by `0x180001C90`.
+
+For `0x180001C90(command, fragment_index, frame_len)`, the returned four bytes are exactly:
+
+```text
+header[0] = command
+header[1] = ((E670 & 0x07) << 5) | (frame_len & 0x1F)
+header[2] = ((E67C & 1) << 7) | ((fragment_index & 0x0F) << 3) | (E68C & 0x07)
+header[3] = rand() & 0xFF
+```
+
+The apparently complicated ASCII construction is only binary-string packing. `E670` is emitted as three bits, `frame_len` as five bits, `E67C` as one bit, `fragment_index` as four bits, and `E68C` as three bits.
+
+The writer passes `frame_len = chunk_length + 5`, where the five extra bytes are the four-byte header plus the final checksum byte. For a 20-byte G3 V2 CustomData object, the length-prefixed logical stream is 21 bytes and is fragmented as 15 + 6 bytes, producing plaintext frame lengths 20 and 11.
+
+After each encoded write fragment, native state advances as:
+
+```text
+E67C = !E67C
+E68C = (E68C + 1) mod 8
+E670 = (E670 - 1) mod 8
+```
+
+The checksum table at `0x18000B320` is used with the exact recurrence:
+
+```text
+crc = 0
+for each byte in header + payload:
+    crc = TABLE[crc XOR byte]
+append crc
+```
+
+This rule reproduces the observed read packets exactly:
+
+```text
+CRC(BB 06)             = 60
+CRC(BB 06 00 29 00)    = 27
+CRC(BB 06 81 23 00)    = C0
+```
+
+and is the same loop used by `writeDeviceCustomData` before passing the complete plaintext frame through KeyLinker encoder `0x180001080`.
+
+Because the official G3 V2 20-byte read uses two native read requests before the write, the already-corrected writer-entry state is `E67C=0, E68C=2` for the fresh/default observed sequence. Therefore, conditional on `E670=7`, the first two 0x3B headers are structurally confirmed as:
+
+```text
+3B F4 02 BE
+3B CB 8B 84
+```
+
+The only remaining qualification on those exact four-byte values is the writer-entry `E670` value and the assumption that no additional CRT `rand()` consumer occurs in the already-traced path.

@@ -2570,3 +2570,26 @@ Interpretation target:
 - if FN+Right changes the visible effect and zero host->device payload appears, the mode
   transition is controller-local rather than initiated by software on the host;
 - if output traffic appears, inspect it before making any conclusion.
+
+
+### Correction: FN+Right usbmon test had already been completed
+
+A prior live usbmon capture during FN+Right was recovered from project history and makes
+the newly proposed duplicate capture unnecessary.
+
+Observed in that earlier capture:
+- 15,634 USB transfers observed;
+- 7,817 received packets;
+- **0 OUT / host-to-device transfers** during the FN+Right lighting-mode change;
+- recurring input-side patterns included \`00140400\` / \`00140800\`;
+- no RGB/configuration command was emitted by the host.
+
+Combined with the newer observation that FN+Right changes solid -> breathing while B7
+remains byte-identical (\`00 FF FF 00 00 FF\`), the evidence now strongly supports:
+
+- FN+Right lighting-mode switching is handled locally by controller firmware;
+- the active visual mode is independent of the six-byte B7 LampLight payload;
+- no host-originated USB command is required for that mode transition.
+
+Do not repeat the usbmon FN+Right experiment unless a new hypothesis specifically requires
+a different transport/interface or higher-resolution timing.

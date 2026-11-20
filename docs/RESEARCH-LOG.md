@@ -1568,3 +1568,20 @@ Correction: use bluetoothctl's native non-interactive timeout option:
 
 Re-run X+HOME identity discovery with btmon after this correction. Earlier negative scan
 results are not evidence of absence.
+
+
+## 2026-11-20 — X+HOME live gameplay identity captured
+
+Corrected scan method (\`bluetoothctl --timeout 25 scan on\`) plus btmon produced:
+
+- LE \`98:B6:ED:68:58:43\` — \`G3V2 APP\`
+- BR/EDR \`98:B6:EA:68:58:43\` — \`Xbox Wireless Controller\`
+
+Both share the exact lower 24 bits \`68:58:43\`, proving the APP and gameplay personalities
+belong to the same physical unit while using different public address prefixes.
+
+This is decisive evidence that the FOT E9 fields are not the current live addresses of
+this unit. The two FOT suffixes B0:25:BE and CE:4B:03 do not occur in the live identities.
+
+The next read-only experiment is to map Y+HOME and A+HOME in the same way and see whether
+their gameplay personalities preserve the same suffix under other family prefixes.

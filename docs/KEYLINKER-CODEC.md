@@ -224,6 +224,48 @@ data[11] |= 0x80
 
 The managed array passed to `WriteDeviceCustomDataAsync` therefore has a valid byte 11.
 
+## Exact 20-byte CustomData split
+
+For the G3 V2 logical CustomData size of 20 bytes, the native writer builds a 21-byte stream:
+
+```text
+14 data[0] data[1] ... data[19]
+^^
+logical length = 0x14
+```
+
+That stream is split exactly as follows.
+
+First plaintext frame, length 20:
+
+```text
+[header0 header1 header2 header3]
+[14]
+[data0 ... data13]
+[CRC]
+```
+
+Second plaintext frame, length 11:
+
+```text
+[header0 header1 header2 header3]
+[data14 ... data19]
+[CRC]
+```
+
+Therefore the confirmed OTA mutation `data[11] |= 0x80` maps to **plaintext byte offset 16 of the first frame**:
+
+```text
+frame[4]  = logical length 0x14
+frame[5]  = data[0]
+...
+frame[16] = data[11]   <- OTA bit 0x80
+...
+frame[19] = CRC
+```
+
+The CRC must be recomputed after this mutation, and only then is the 20-byte first frame passed to the KeyLinker encoder.
+
 ## OTA relevance
 
 The official MixDrive update-mode transition is now narrowed to:

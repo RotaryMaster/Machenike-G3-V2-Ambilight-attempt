@@ -1796,3 +1796,32 @@ with the current unchanged-B7 result across solid and breathing states, this str
 supports controller-local firmware handling of lighting mode selection.
 
 The newly proposed duplicate usbmon capture is no longer needed.
+
+
+## 2026-11-20 — consolidated closed lighting experiments to prevent duplicate work
+
+Recovered earlier project history shows that the lighting fingerprint work had already
+gone further than the latest STATUS summary reflected.
+
+Already completed:
+- FN+Right traversed 13 physical effects;
+- passive USB capture showed the key/input event but no host->device OUT traffic causing
+  the effect transition;
+- B7 and BB fingerprints remained unchanged while FN+Right changed the visible hardware
+  effect;
+- static app analysis mapped Solid/Breathing/Rainbow-related normal configuration paths;
+- no exposed volatile/realtime RGB writer was found;
+- subsequent live work proved standalone 0x37 persistence across power loss.
+
+Do not repeat those tests.
+
+Unexecuted, intentionally deferred:
+- test-mode opcodes 0x1B/0x1C (\`CODE_TEST_SET_MODE\` /
+  \`CODE_TEST_NORMAL_MODE\`);
+- they must remain offline-analysis targets until their arguments and side effects are
+  fully understood.
+
+The active next target is offline reverse engineering of the still-unassigned KeyLinker
+dispatcher/callers, KeyLinker 3.73/APK lighting/test-mode code, and the exact
+enter/exit-test-mode framing. Only a statically understood candidate for a volatile LED
+path should justify another live hardware probe.

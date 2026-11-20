@@ -270,7 +270,7 @@ writeDeviceCustomData(data, data.Length)
 GetResultAsync(..., 10)
 ```
 
-Thus `data[11] |= 0x80` acts on the native callback/result buffer itself. The remaining task is to reconstruct the native CustomData array layout and map index 11 to the on-wire BB payload.
+Thus `data[11] |= 0x80` acts on the native callback/result buffer itself. Later native framing analysis establishes that the logical G3 V2 CustomData object is 20 bytes; the previous 10-byte-size assumption was incorrect.
 
 
 ### Native CustomData framing partially reconstructed
@@ -291,3 +291,23 @@ The exact receive-buffer layout is now isolated to helper `0x180001760` and its 
 The thin export at `0x180004DD0` is explained by Windows x64 structure-return ABI: `RCX` is the hidden return descriptor, while `RDX` and `R8D` carry the explicit `datas` and `length` arguments. The helper `0x180001760` copies the raw input, decodes it, uses a 20-byte maximum-frame boundary, and begins stripping five framing bytes. This aligns exactly with the write-side 4-byte header + up-to-15-byte chunk + CRC format.
 
 This establishes that the OTA bit mutation at managed index 11 is in logical CustomData, not in raw HID framing.
+
+
+### KeyLinker codec and CustomData framing closed
+
+Static disassembly of `KeyLinkerlib.dll` closed the core transport codec:
+
+- `0x180001080` is the exact encoder;
+- `0x1800011C0` is its inverse decoder;
+- table `0x18000B2E0` is the 40-byte XOR stream;
+- table `0x18000B308` is the 16-byte position-mix table;
+- table `0x18000B320` is the 256-byte CRC/check table;
+- the known vector `BB 06 00 29 00 27 -> C0 B3 40 70 99 96` is reproduced exactly.
+
+`writeDeviceCustomData` was also closed at the framing level. It prefixes the logical object with one length byte, fragments the stream into at most 15 bytes per frame, obtains a four-byte header from `0x180001C90`, computes CRC over header+chunk, appends CRC, then applies the KeyLinker encoder. Physical frames are therefore at most 20 bytes.
+
+The receive helper `0x180001760` decodes physical frames, strips five bytes before the first logical fragment (four-byte header plus total-length byte), four bytes before later fragments, drops each final CRC byte, and concatenates the payload.
+
+A prior project assumption was corrected at this point: the G3 V2 `0x3B` CustomData object is **20 bytes**, not 10. The 10-byte length previously recorded belonged to a different decoded payload. This correction resolves the apparent contradiction with the confirmed OTA mutation `data[11] |= 0x80`.
+
+The only remaining component needed for a fully standalone byte-for-byte CustomData writer is the exact formula of `0x180001C90` for the four-byte write header.

@@ -249,7 +249,8 @@ def main():
         ptn = type_name(parent)
 
         if name in names and (
-            "GamepadDeviceManager" in ptn
+            name == "receiveDataLength"
+            or "GamepadDeviceManager" in ptn
             or "Machenik.Infrastructure.Manager" in ptn
         ):
             matches.append((rid, row, parent))

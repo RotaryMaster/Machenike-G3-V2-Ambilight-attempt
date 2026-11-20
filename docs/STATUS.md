@@ -2435,3 +2435,18 @@ Priority shifts to finding a volatile lighting path, in this order:
 4. keep high-frequency 0x37 streaming disabled.
 
 The original lighting state was successfully restored at the end of the test.
+
+
+### LampLight path works even when CustomData reads are empty
+
+During the successful standalone 0x37 persistence/restore test, every CustomData read in
+the official warm-up returned logical length zero, while:
+- B7 LampLight reads succeeded;
+- the standalone 0x37 write was accepted;
+- the post-write B7 readback matched;
+- persistence survived power-cycle;
+- the restore 0x37 write and B7 verification also succeeded.
+
+Therefore the LampLight read/write path can operate independently of a valid 20-byte
+CustomData result in the same session. CustomData is not a prerequisite for basic B7/0x37
+lighting control on this unit.

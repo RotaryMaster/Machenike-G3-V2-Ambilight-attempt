@@ -541,3 +541,16 @@ and selector 1 returned another 10-byte logical payload. Therefore the repositor
 
 Immediate policy: no OTA write while the read path does not reproduce a non-empty known-good response.
 
+### Power-cycle does not restore non-empty CustomData response
+
+A full controller power-cycle followed by the same known-good outer sequence still returned a CRC-valid empty selector-0 response:
+
+```text
+wire : 8D D2 63 51 F6 5F
+plain: 19 06 00 0A 00 EE
+```
+
+The device remained in the normal `413D:2131` personality and both `ZXPC_APP` pings succeeded. This rules out a simple stale-HID or warm-session explanation for the empty `0x19` response.
+
+Live OTA writes remain blocked. The next step is static only: recover the exact managed continuation predicate in `CheckPacketIndex` / `GetPacketCount` / `MigrateSeq` / `HandleGenericDeviceData`. A read-only helper is available as `tools/dump-gamepad-manager-il.py`.
+

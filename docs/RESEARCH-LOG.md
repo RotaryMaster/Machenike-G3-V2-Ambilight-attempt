@@ -1845,3 +1845,40 @@ Still incomplete:
 - whether either is related to the firmware-local FN+Right effect cycle.
 
 No live 0x1B/0x1C command was sent.
+
+
+## 2026-11-20 — 0x1B/0x1C test-mode framing resolved; 0x180004EA9 eliminated from lighting
+
+Ran the focused static audit `tools/dump-keylinker-test-mode.py` against the same
+`KeyLinkerlib.dll`.
+
+Confirmed:
+- `enterDeviceTestlevelMode` export @ `0x180004900`
+- `exitDeviceTestMode` export @ `0x180004920`
+- `keyTestBeforeEffect` export @ `0x1800049E0`
+- `keyTestAfterEffect` export @ `0x180004A00`
+
+`FUN_180004820` is the common 0x1B builder. Its 9-byte pre-transform frame is:
+`1B 09 <state> <rand> 03 DF AB <mode> <checksum>`
+followed by `KeyLinkerEncode(..., 9)`.
+
+Concrete caller arguments:
+- `keyTestBeforeEffect` -> mode 0
+- `keyTestAfterEffect` -> mode 1
+- `enterDeviceTestlevelMode` -> forwards caller-supplied mode
+
+`exitDeviceTestMode` builds the 8-byte 0x1C frame:
+`1C 08 <state> <rand> 02 DF AC <checksum>`
+followed by `KeyLinkerEncode(..., 8)`.
+
+This closes the exact linkage of:
+- `0x1B = CODE_TEST_SET_MODE`
+- `0x1C = CODE_TEST_NORMAL_MODE`
+
+The formerly suspicious site `0x180004EA9` is inside the exported
+`writeDeviceKeyChangeData` routine and calls `HeaderBuilder` with command `0x36`.
+It belongs to the fragmented key-change writer and is not a lighting path.
+
+No live 0x1B/0x1C command was sent. The static result does not connect test-mode mode values
+to FN+Right's 13 lighting effects, so these commands remain excluded from live lighting
+experiments unless a new independent static clue links them to LED control.

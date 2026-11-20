@@ -2807,3 +2807,37 @@ Next safe live target:
    KeyLinker-frame transport and B7 record shape/latency;
 3. do not send 0x37 over BLE until read-only behavior is confirmed and the G3 V2-specific
    persistence risk is still explicitly accounted for.
+
+
+### First live BLE enumeration attempt: advertisement confirmed, GATT connect timed out
+
+The first execution of `tools/g3v2-ble-probe-v1.py --enumerate-only` produced a new
+transport-level result without sending any KeyLinker application frame.
+
+Confirmed from the live scan:
+- exactly one `G3V2 APP` candidate was seen;
+- RSSI was approximately -68 dBm;
+- the advertisement explicitly included both:
+  - `0000ff12-0000-1000-8000-00805f9b34fb`
+  - `d7f010e0-660d-46e9-96c3-19c4148bdab5`
+- therefore the controller really advertises the expected KeyLinker configuration service
+  while operating wirelessly.
+
+The subsequent Bleak/BlueZ connection attempt ended with `TimeoutError` before GATT
+enumeration completed. Because v1 did not distinguish LE-link timeout from BlueZ service
+resolution timeout, no conclusion about characteristic accessibility can yet be drawn.
+
+No application write, notification subscription, pairing, 0x37, 0x3B, OTA or SCSI command
+was sent during this failed run.
+
+A new read-only diagnostic revision, `tools/g3v2-ble-probe-v2.py`, was added. It:
+- retries the BLE/GATT connection up to three times;
+- refreshes the BLEDevice advertisement between attempts;
+- reports each failure stage;
+- queries `bluetoothctl info` read-only after repeated failure to reveal whether BlueZ is
+  still holding a connection;
+- never disconnects a pre-existing BlueZ connection automatically;
+- preserves the same read-only opcode guard and `--enumerate-only` behavior.
+
+This is a targeted follow-up to the first failed connection, not a repeat of the already
+closed USB lighting experiments.

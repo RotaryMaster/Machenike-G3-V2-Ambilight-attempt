@@ -434,3 +434,8 @@ The older pair `3B F4 02 BE / 3B CB 8B 84` is only valid if prior write-style tr
 ### E670 write-frame phase
 
 Static xrefs show `E670` is decremented once per native write frame, with zero wrapping to seven. Therefore `E670 = (-W) mod 8` from a cold DLL state, where `W` is the number of emitted write frames. The cold OTA headers remain valid for a fresh process, but a normal MixDrive session may reach OTA with a different `E670` phase if earlier device writes occurred. Exact writer export names for six non-CustomData paths are the next mapping target.
+
+
+### Exact E670 export mapping
+
+PE exports map all seven E670-changing writers: `writeRockerData`, `writeTriggerData`, `writeDeviceMotorData`, `writeDeviceKeyChangeData`, `writeDeviceLamplightData`, `writeDeviceTurboData`, and `writeDeviceCustomData`. No E670 write was found in the focused audit of `writeDeviceMacroData` or `writeDeviceResetFactory`. This closes the identity of every known E670 writer.

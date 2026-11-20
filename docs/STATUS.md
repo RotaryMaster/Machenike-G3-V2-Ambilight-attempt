@@ -2593,3 +2593,52 @@ remains byte-identical (\`00 FF FF 00 00 FF\`), the evidence now strongly suppor
 
 Do not repeat the usbmon FN+Right experiment unless a new hypothesis specifically requires
 a different transport/interface or higher-resolution timing.
+
+
+## Lighting investigation guardrail — do not repeat closed experiments
+
+The following live experiments are already closed and should not be proposed again unless
+a new hypothesis specifically requires a different transport or measurement:
+
+- FN+Right cycles the controller through 13 physical lighting effects.
+- Passive USB capture during FN+Right showed no host-to-device OUT transfer associated
+  with the lighting-mode change; the transition is controller-local.
+- B7/BB fingerprints were compared across physical FN+Right lighting-mode changes and did
+  not expose the active effect state.
+- The same six-byte B7 payload can correspond to both solid and breathing visual output.
+- Current USB BB reads can return zero-length CustomData while physical effect switching
+  still works.
+- The documented 0x37 LampLight path is persistent across a real power-cycle and therefore
+  must not be treated as a safe realtime Ambilight transport.
+- MixDrive/KeyLinker static analysis already mapped normal exposed lighting writes; no
+  exposed preview/realtime RGB writer was found.
+
+Previously identified but NOT executed live:
+- \`0x1B = CODE_TEST_SET_MODE\`
+- \`0x1C = CODE_TEST_NORMAL_MODE\`
+- corresponding test-mode infrastructure includes \`enterDeviceTestMode\` /
+  \`exitDeviceTestMode\`.
+
+These test-mode commands were intentionally not sent to the G3V2 because their arguments
+and side effects were not sufficiently understood, and there is no proof that they emulate
+FN+Right or provide a volatile RGB path.
+
+### Current first unresolved lighting target
+
+Stop doing state/fingerprint experiments. The first useful unresolved target is offline
+reverse engineering aimed at locating an internal/undocumented lighting-mode or volatile
+LED path:
+
+1. finish/corroborate all callers and dispatch context around the common KeyLinker transform
+   helper previously labeled \`FUN_180001080\`, especially any caller not already assigned
+   to known read/write command families;
+2. inspect the KeyLinker 3.73/APK/native libraries for G3V2-specific lighting/test-mode
+   handlers, mode tables and any command adjacent to the 13 firmware-local FN+Right
+   effects;
+3. fully disassemble \`enterDeviceTestMode\` / \`exitDeviceTestMode\` and determine exact
+   framing/arguments before considering any live test of 0x1B/0x1C;
+4. only after a candidate command is statically understood should another live probe be
+   considered.
+
+This section exists specifically to prevent the project from looping back through already
+completed usbmon/B7/BB/FN+Right experiments.

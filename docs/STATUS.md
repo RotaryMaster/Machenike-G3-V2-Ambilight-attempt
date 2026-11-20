@@ -1390,3 +1390,8 @@ closed before adopting that conclusion.
 
 Added `tools/dump-deviceusb-readback-surface.py` for that independent,
 read-only static audit.
+
+
+Added `tools/dump-keylinker-firmware-readback.py` to statically inventory
+normal-mode KeyLinker/managed firmware, ROM and memory readback candidates
+before attempting any bootloader or physical-access experiment.

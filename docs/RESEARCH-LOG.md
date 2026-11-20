@@ -1519,3 +1519,17 @@ The manual lists gameplay modes/names:
 
 The FOT E9 field may therefore belong to one of those gameplay/factory identities rather
 than the APP peripheral. Scan those modes read-only before assigning the E9 field.
+
+
+## 2026-11-20 — B+HOME mode correction; X+HOME scan saw only APP peripheral
+
+Confirmed by user observation:
+- B+HOME = dongle mode
+- dongle mode appears as Xbox 360 Controller
+
+X+HOME active discovery returned only:
+\`98:B6:ED:68:58:43 G3V2 APP\`
+
+No gameplay-side E9 address was exposed in that run. Keep the APP/config personality and
+gameplay identity separate; current evidence is insufficient to map the FOT E9 field to a
+live radio address.

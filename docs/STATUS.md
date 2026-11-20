@@ -2120,3 +2120,47 @@ or the transport-specific equivalents:
 This keeps the bluetoothctl client alive and lets discovery persist for the intended
 window. All previous conclusions based on "X+HOME gameplay identity absent from scan"
 must be treated as unproven until repeated with this corrected invocation.
+
+
+### X+HOME Bluetooth identities confirmed on the physical G3V2
+
+A corrected 25-second BlueZ discovery with simultaneous btmon capture resolved the
+controller's two live Bluetooth personalities.
+
+Configuration/app personality:
+- transport: LE
+- public address: \`98:B6:ED:68:58:43\`
+- complete name: \`G3V2 APP\`
+- legacy advertising PDU: ADV_IND
+- address type: Public
+
+Gameplay personality in X+HOME:
+- transport: BR/EDR
+- public address: \`98:B6:EA:68:58:43\`
+- complete name: \`Xbox Wireless Controller\`
+- class: \`0x000508\` (Peripheral)
+- observed through Extended Inquiry Result / MGMT Device Found
+
+The shared suffix \`68:58:43\` strongly ties both personalities to the same physical unit.
+Only the third prefix byte differs:
+- APP/config: ED
+- X+HOME gameplay: EA
+
+This directly corrects the earlier assumption that the live gameplay identity would
+necessarily use the FOT's \`98:B6:E9:xx:xx:xx\` field.
+
+The two known v1.48 FOTs contain:
+- \`98:B6:E9:B0:25:BE\`
+- \`98:B6:E9:CE:4B:03\`
+
+Neither suffix matches the live unit (\`68:58:43\`), so those FOT values are not the
+current live Bluetooth addresses of this controller.
+
+Family-level corroboration is notable: public X20 tooling comments that AgreementConfig
+lists E9/EC/ED family prefixes while an actual X20 device can appear live as \`98:B6:EA\`.
+This makes it plausible that the FOT E9 field is a template/base/factory family value
+rather than the exact runtime address used by every personality. Exact semantics remain
+unproven.
+
+Next safe mapping step: repeat the same real discovery for Y+HOME and A+HOME and record
+whether the live suffix remains \`68:58:43\` while the prefix changes by mode.

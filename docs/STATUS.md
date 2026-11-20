@@ -1448,3 +1448,23 @@ unproven possibility.
 
 Added `tools/dump-g3v2-updater-request-table.py` to verify the exact updater
 hash and print the four firmware-request call sites without device I/O.
+
+
+### ZhiXu hardware-family clue
+
+External evidence suggests a likely physical-dump architecture, but this is
+**not yet confirmed for the G3V2 PCB**.
+
+ZhiXu's own product material states that at least some of its controller PCBAs
+use a custom MCU with integrated Flash and no external EEPROM. Independent
+teardowns of related ZXD-series boards (for example ZXD2222) identify a
+ZhiXu `ZC32RF1M` QFN40 controller with a 26 MHz crystal. Other FCC filings
+also identify `ZC32RF1M` as the gamepad RF/controller chip.
+
+This makes an external 8-pin firmware flash less likely if the G3V2 follows
+the same architecture. The exact G3V2 chip must still be read from its own FCC
+internal photographs or a physical board before choosing a programmer/debug
+method.
+
+Do not assume ZC32RF1M pinout, debug protocol or read protection for G3V2
+until the exact chip marking is confirmed.

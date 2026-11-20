@@ -1420,3 +1420,7 @@ Simple ECB is ruled out; no exact cipher is identified.
 External same-family ZXD2055/ZXD2271 research independently reports the same structure,
 the same KEY constant, and bootloader-side decryption, plus same-HWID keystream reuse in
 an X20 version pair. Treat that as family-level guidance until reproduced for HWID ...2267.
+
+
+Added a local same-HWID corpus scanner. This is now the cheapest non-invasive
+test for an overlooked older/newer ...2267 image in project archives or Downloads.

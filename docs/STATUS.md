@@ -2283,3 +2283,50 @@ metadata, but not necessarily user-unit MAC programming data.
 
 Do not describe either FOT as belonging to a specific physical unit solely from the
 \`0x112\` value until a direct device/FOT correspondence is demonstrated.
+
+
+### A+HOME identity confirmed; live mode/address matrix now nearly complete
+
+With the 2.4 GHz dongle out of the way, A+HOME advertised over BR/EDR as:
+- prefix: \`98:B6:E8\`
+- complete name: \`MACHENIKE G3V2\`
+- class: \`0x002504\`
+- Limited Discoverable Mode
+
+The lower 24-bit per-unit suffix matched the same physical unit's other Bluetooth
+personalities and is intentionally redacted from persistent documentation.
+
+Current confirmed live identity map for this physical G3V2:
+
+| Function / startup mode | Transport | Prefix | Advertised identity |
+|---|---|---|---|
+| Configuration peripheral | BLE | \`98:B6:ED\` | \`G3V2 APP\` |
+| X+HOME | BR/EDR | \`98:B6:EA\` | \`Xbox Wireless Controller\` |
+| Y+HOME | BR/EDR | \`98:B6:E9\` | \`Pro Controller\` |
+| A+HOME | BR/EDR | \`98:B6:E8\` | \`MACHENIKE G3V2\` |
+| B+HOME | 2.4 GHz USB dongle | not BlueZ/HCI | appears to host as \`Xbox 360 Controller\` |
+
+The same per-unit suffix is preserved across the E8/E9/EA/ED Bluetooth personalities.
+This strongly supports a model of one device-specific lower-24-bit identity plus a
+personality/mode-specific prefix.
+
+### Lighting state persistence observed across shutdown and mode changes
+
+The controller remained in the previously configured blue breathing lighting state after:
+- powering off and restarting into other startup modes;
+- changing Bluetooth personalities / pairing mode;
+- repeating multiple mode-discovery tests.
+
+Therefore the lighting configuration itself is persistent across normal controller
+power-off/on and mode changes.
+
+Important limitation: this observation does **not yet isolate which write path persists
+the state**. Previous software flows can use both \`0x37\` (lighting write) and
+\`0x3B\` (CustomData save/write) in related save operations. The observation proves that
+the resulting lighting state is stored persistently, but not that a standalone \`0x37\`
+write by itself commits to NVM.
+
+Practical Ambilight implication:
+- do not assume high-frequency \`0x37\` writes are volatile/safe for flash endurance;
+- before using the normal lighting command as a realtime Ambilight transport, perform the
+  controlled one-write persistence test that isolates \`0x37\` from \`0x3B\`.

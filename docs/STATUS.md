@@ -509,3 +509,12 @@ The updater uses data_in=0 for F0 writes and data_in=1 for F1/F2 reads. The x86 
 The F0/F1/F2 command buffers are passed with `cdb_len=10` but only bytes 0..5 are explicitly initialized. Bytes 6..9 are stack residue. For F2 specifically, bytes 8..9 overlap the function security cookie at `[ebp-0x10]`. The official updater therefore sends non-semantic stack data in the declared CDB.
 
 Project policy: do not reproduce this bug. Use deterministic zero-filled 10-byte CDBs and validate the normalization with read-only F1/F2 before any F0 write.
+
+
+### Controlled update-mode transition probe prepared
+
+A Linux probe is now available at `tools/g3v2-enter-updater-linux.py`. It is fail-closed and dynamically selects only the G3 V2 normal USB personality `413D:2131` MI_01 (`:1.1`). It validates the two known BB read vectors, reads and reconstructs the complete 20-byte CustomData object, validates both inner CRCs, changes only `CustomData[11] |= 0x80`, and requires an explicit `--execute` flag before sending the two 0x3B write frames.
+
+The probe does not issue any SCSI command. Its active boundary is only the normal-HID -> update-personality transition and post-transition USB/block enumeration.
+
+Recovery evidence is not yet G3-V2-specific. A closely related Manba One V2 device using the same `Gamepad / Updater / 1.00` storage identity and F0/F1/F2 family is documented to leave update mode after unplug/replug. This is treated only as family corroboration until observed directly on the G3 V2.

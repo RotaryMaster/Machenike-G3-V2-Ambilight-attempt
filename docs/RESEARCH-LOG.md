@@ -1397,3 +1397,26 @@ encrypted payload: raw Thumb-looking hits there remain random false positives.
 Added \`tools/analyze-g3v2-fot-crypto-surface.py\` to keep subsequent crypto
 analysis region-aware and prevent whole-image entropy from masking the
 plaintext FOT metadata.
+
+
+## 2026-11-20 — G3V2 v1.48 crypto-surface run completed
+
+Region-aware scan confirms:
+- official updater hash exact
+- FOT hash 0ad5d080c6451d9a26a28e32f77ce73789f163ce8cad12c035ff4314b10fb085
+- FOT metadata 0x5A400 / HWID ...2267 / version 148
+- directory copy at 0x59200 is byte-identical to first 0x200
+- KEY=00000001eae32e09
+- XCOD @0x200 and XRES @0x58600 have no repeated aligned 16-byte blocks
+- XCOD entropy 7.999503 and near-uniform chi-square
+- XRES statistics are also consistent with encrypted/random-looking data despite its smaller sample
+- DOWN @0x594C0 and BT-BOX / LE-Remoter are plaintext config-region evidence
+
+Interpretation:
+the updater contains the correct v1.48 firmware package, but not a plaintext installed-flash
+dump. The encrypted code/resource payload is transformed on-device by the bootloader.
+Simple ECB is ruled out; no exact cipher is identified.
+
+External same-family ZXD2055/ZXD2271 research independently reports the same structure,
+the same KEY constant, and bootloader-side decryption, plus same-HWID keystream reuse in
+an X20 version pair. Treat that as family-level guidance until reproduced for HWID ...2267.

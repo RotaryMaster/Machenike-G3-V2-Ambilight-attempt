@@ -1256,3 +1256,32 @@ however, a direct raw-firmware extraction path.
 
 Added \`tools/dump-firmware-api-contract.py\` to statically recover the exact
 route attributes and parameter names from \`Machenik.HttpApi*.dll\`.
+
+
+## 2026-11-20 — Exact firmware API route recovered
+
+The focused \`Machenik.HttpApi.dll\` audit resolved the full MixDrive firmware
+catalog contract.
+
+\`FirmwareUpdateApiService.GetLatestVersionAsync\` has parameters
+\`productType\`, \`brand\`, \`productName\`, and its async state machine embeds:
+
+- route: \`/firmware/by-product-info\`;
+- query key: \`brand\`;
+- query key: \`product_name\`;
+- query key: \`product_type\`.
+
+The client-software updater is separate and uses \`/software/latest\`.
+
+Combined with the already-established G3V2 values, the controller firmware
+catalog request is:
+
+\`GET https://mixdriver.thunderobot.com/api/firmware/by-product-info?brand=MACHENIKE&product_name=G3V2&product_type=2\`
+
+This is sufficient to reproduce the catalog lookup without altering the
+controller's reported firmware version or entering updater mode.
+
+Added \`tools/get-g3v2-firmware.py\`. It defaults to catalog-only operation,
+prints/saves the raw JSON and resolved download URL, and only downloads the
+returned executable when \`--download\` is explicitly supplied. It never
+communicates with the controller or starts the updater.

@@ -2543,3 +2543,30 @@ current BB read path does not expose a populated CustomData object.
 Next high-value experiment: capture host/controller HID/USB traffic while pressing FN+Right.
 If no host->device command occurs, the effect transition is entirely controller-local and
 should be investigated as firmware-internal/NVM state rather than a host-side command.
+
+
+### External manual corroborates FN+Right as lighting-mode control
+
+Public G3 V2 manual mirrors describe:
+- FN + D-pad Right = light mode adjustment / cycles lighting modes;
+- FN + D-pad Left = lighting brightness adjustment.
+
+This independently matches the live observation that FN+Right restored the breathing
+effect without changing the B7 LampLight payload.
+
+### Read-only USB capture prepared for FN+Right
+
+Added \`tools/capture-g3v2-fn-light-usbmon.sh\`.
+
+The capture:
+- detects the live USB 413D:2131 device dynamically;
+- reads usbmon only;
+- sends no HID command;
+- asks for one FN+Right press during a short capture window;
+- prints all matching G3V2 traffic;
+- separately summarizes output URBs carrying host->device traffic.
+
+Interpretation target:
+- if FN+Right changes the visible effect and zero host->device payload appears, the mode
+  transition is controller-local rather than initiated by software on the host;
+- if output traffic appears, inspect it before making any conclusion.

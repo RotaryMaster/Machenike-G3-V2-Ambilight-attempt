@@ -230,4 +230,26 @@ A firmware write should not be attempted until all of these are known:
 
 Therefore `MainViewModel`'s `data[11] |= 0x80` targets logical CustomData byte 11 (zero-based).
 
-**Resolved:** the remainder of `0x180001760` and complete `0x1800011C0` confirm the receive-side stripping and concatenation. The next target is now only `0x180001C90`, the four-byte write-header builder.
+**Resolved:** the remainder of `0x180001760` and complete `0x1800011C0` confirm the receive-side stripping and concatenation.
+
+### CustomData write header resolved
+
+Static disassembly now closes `0x180001C90` itself:
+
+```python
+header[0] = command
+header[1] = ((E670 & 7) << 5) | (frame_len & 0x1F)
+header[2] = ((E67C & 1) << 7) | ((fragment_index & 0x0F) << 3) | (E68C & 7)
+header[3] = rand() & 0xFF
+```
+
+Evidence:
+- `0x18000B214` contains ASCII `"1"`;
+- `0x18000B218` contains ASCII `"0"`;
+- the conditional move selects `"1"` when `E67C == 1`;
+- IAT `0x18000B150` is `api-ms-win-crt-utility-l1-1-0.dll!rand`;
+- helper `0x180001400` concatenates its three string arguments in order.
+
+After every write fragment the state evolves as `E670=(E670-1) mod 8`, `E68C=(E68C+1) mod 8`, and `E67C` toggles.
+
+**Current highest-priority target:** recover the runtime initialization/synchronization of `E670/E67C/E68C` and the CRT PRNG seed/state. This is the last barrier to reproducing MixDrive's exact write bytes offline; it does not require sending any HID command.

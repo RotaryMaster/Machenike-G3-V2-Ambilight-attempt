@@ -1146,3 +1146,54 @@ The next static step is native disassembly of those exports, especially
 reads preceding CustomData. The existing
 `tools/dump-keylinker-warmup-native.py` already targets exactly these read
 builders and should be used before modifying the live warm-up.
+
+
+### LampLight native command family and write command
+
+Static native disassembly of `KeyLinkerlib.dll` now exposes the read-command
+family used by the normal gamepad initializer:
+
+```text
+readRockerData             -> plaintext begins B1 06 ...
+readTriggerData            -> plaintext begins B2 06 ...
+readDeviceMotorData        -> plaintext begins B3 06 ...
+readDeviceTurboData        -> plaintext begins B4 06 ...
+readDeviceAfterKeyChange   -> plaintext begins B6 06 ...
+readDeviceLamplightData    -> plaintext begins B7 06 ...
+readDeviceCustomData       -> plaintext begins BB 06 ...
+```
+
+All of those specialized readers call the same `KeyLinkerState`, consume
+`rand()`, build a six-byte plaintext request and pass it through
+`KeyLinkerEncode`. The exact omitted middle bytes of the LampLight read are
+being audited separately, but its command byte is now statically confirmed as
+`0xB7`.
+
+Most importantly for the Ambilight path, `writeDeviceLamplightData` calls:
+
+```text
+HeaderBuilder(command=0x37, fragment_index, frame_length)
+-> KeyLinkerEncode(...)
+```
+
+The writer uses a maximum logical fragment payload of 15 bytes and adds the
+same four-byte KeyLinker header plus trailing checksum/CRC byte, producing the
+same broad write framing family already reconstructed for CustomData.
+
+This confirms a protocol split at native level:
+
+```text
+LampLight read  : 0xB7
+LampLight write : 0x37
+CustomData read : 0xBB
+CustomData write: 0x3B
+```
+
+Therefore Ambilight should target the dedicated `0x37` LampLight writer,
+not repeated CustomData/0x3B writes.
+
+The remaining blocker is the logical LampLight payload layout serialized
+before the 15-byte fragmentation step. A focused static tool,
+`tools/dump-lamplight-detail.py`, was added to dump the entire native
+read/receive/write functions together with the managed
+`DeviceLampLightStruct` metadata and LampLight call sites.

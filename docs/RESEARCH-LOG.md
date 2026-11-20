@@ -419,3 +419,20 @@ BB 06 81 23 00 C0
 ```
 
 prove the state transition `(E67C,E68C) 0,0 -> 1,1`, while the low-byte CRT random stream advances `29 -> 23`.
+
+
+### Exact managed OTA byte mapping closed
+
+Full static dataflow of `receiveDeviceCustomData` helper `0x180001760` confirms the receive/write symmetry.
+
+For a single decoded frame, the helper shifts away five leading bytes and returns `input_length - 6` bytes: four header bytes plus the one-byte logical-length prefix are removed from the front, while the final CRC is excluded by the returned length. For fragmented input, only the first frame removes the extra logical-length byte; later frames remove four header bytes and their final CRC before concatenation.
+
+For the 20-byte G3 V2 CustomData object, `writeDeviceCustomData` creates the stream `[0x14][data0..data19]` and fragments it as 15 + 6 bytes. Thus the first plaintext frame is `header[4] + 0x14 + data[0..13] + CRC`, total 20 bytes, and the second is `header[4] + data[14..19] + CRC`, total 11 bytes.
+
+The managed OTA mutation therefore maps exactly to:
+
+```text
+data[11]  <=>  first plaintext 0x3B frame offset 0x10
+```
+
+This closes the managed-index/native-frame ambiguity. The remaining byte-identical OTA reconstruction depends on runtime sequence state (`E670/E67C/E68C`), CRT `rand()` position, the final HID envelope, and post-write re-enumeration behavior.

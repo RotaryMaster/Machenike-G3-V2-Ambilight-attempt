@@ -366,7 +366,7 @@ For multi-frame input, the first 20-byte frame follows the same rule: remove fou
 
 This is the exact inverse of `writeDeviceCustomData`.
 
-For the G3 V2 20-byte CustomData object, the writer first creates `[0x14][data0..data19]`, then fragments it as 15 + 6 bytes. The first plaintext frame is therefore:
+A 20-byte CustomData input to the writer would create `[0x14][data0..data19]` and fragment as 15 + 6 bytes. This writer-side construction is statically proven, but live G3 V2 reads have also returned a 10-byte logical object and, in a later cold-state probe, a zero-length object. Therefore 20 bytes must not be treated as a universally proven live read size until the managed continuation criterion is reconciled. Under the 20-byte writer case, the first plaintext frame is:
 
 ```text
 offset 0..3   four-byte 0x3B frame header
@@ -454,7 +454,7 @@ task.SetResult(result);
 
 The same branch also proves how multi-packet CustomData reads continue. If the current packet is not the last expected packet, managed code updates `IndexMap`, migrates to a fresh managed sequence with `MigrateSeq`, calls `readDeviceCustomData(currentIndex + 1)`, and immediately sends the returned native request with `SendNextPacketOrFail`.
 
-For the G3 V2 20-byte CustomData object, the native encoded result is 31 bytes, so the outer 20-byte managed HID transport requires two native read requests. This means the official OTA read-to-write path consumes two native sequence/rand steps, not one.
+If the managed OTA read yields a 20-byte logical CustomData object, its encoded native representation spans 31 bytes and would require two native read requests through the 20-byte outer transport. However, live reads have also produced a complete 10-byte logical response in one 16-byte native frame. The exact condition under which managed code continues with `readDeviceCustomData(index+1)` is therefore still the critical discriminator; the two-read OTA timeline remains conditional until that criterion is recovered.
 
 Fresh/default observed progression:
 

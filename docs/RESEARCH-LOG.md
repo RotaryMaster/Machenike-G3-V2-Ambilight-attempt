@@ -1543,3 +1543,14 @@ peripheral. The expected gameplay name \`Xbox Wireless Controller\` did not appe
 Manual evidence corroborates X+HOME as Bluetooth PC/mobile mode and B+HOME as dongle mode.
 Next diagnostic: force separate BR/EDR and LE scans while the controller indicator is
 flashing rapidly in X+HOME pairing state.
+
+
+## 2026-11-20 — correct interpretation of separate BREDR/LE scan test
+
+The X+HOME BREDR-only and LE-only attempts both left only the known \`G3V2 APP\` device in
+\`bluetoothctl devices\`. Do not infer transport from that post-scan listing: it reflects
+BlueZ-known device objects rather than serving as a per-transport event transcript.
+
+Use \`btmon\` next to capture real MGMT/HCI discovery events and determine whether the
+gameplay personality emits BR/EDR Inquiry results, LE advertising reports, or nothing
+while X+HOME is actively pairable.

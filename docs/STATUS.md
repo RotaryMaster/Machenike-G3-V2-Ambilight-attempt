@@ -961,3 +961,47 @@ continuation-capable builders. By default it only prints the plan; live HID
 read requests require explicit `--run-readonly`. The script contains no
 CustomData writer, no OTA-bit mutation, and no SCSI path.
 
+### Read-only official warm-up reproduced live: CustomData stays empty
+
+The bounded Linux warm-up reproduced the concrete 11-read
+`GamepadConfigInitializer` baseline over USB-only and received valid,
+CRC-correct responses for every non-CustomData operation:
+
+```text
+BeforeKeyChangeList  logical 9
+SupportTurbo         logical 10
+CurrentTurbo         logical 13
+Rocker               logical 14
+Trigger              logical 14
+Motor                logical 8
+Lamplight            logical 6
+```
+
+All four CustomData reads returned a valid six-byte native response with
+logical length zero:
+
+```text
+CustomData #1 -> 0 bytes
+CustomData #2 -> 0 bytes
+CustomData #3 -> 0 bytes
+CustomData #4 -> 0 bytes
+```
+
+No continuation packet was requested, so the live run consumed exactly the
+11 baseline KeyLinker requests. The final request was the predicted cold
+baseline `BB 06 02 49 00 D4`.
+
+This disproves the hypothesis that the current empty CustomData is caused only
+by skipping MixDrive's warm-up/read sequence. The normal transport, codec,
+state/rand progression, and unrelated read paths are all working.
+
+Managed loader semantics also show that CustomData is optional state:
+`LoadRockerAsync` only consumes it when `data != null && data.Length == 20`;
+otherwise it skips the extended fields. `LoadLightAsync` and
+`LoadMotorAsync` also branch away when the CustomData result is null.
+
+The next target is therefore the set of **CustomData write call sites**:
+identify which G3V2 actions create/populate a 20-byte block, and whether the
+earlier successful 10-byte A/B read occurred after one of those actions.
+Live writes remain frozen until this is understood.
+

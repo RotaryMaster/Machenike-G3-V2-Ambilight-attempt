@@ -556,3 +556,11 @@ After a real controller power-off/disconnect/reconnect cycle, normal USB enumera
 
 Therefore the empty response is not explained by a stale hidraw node or by merely retaining the previous protocol session across reconnect. Live writes remain frozen. A new read-only CIL helper, `tools/dump-gamepad-manager-il.py`, was added to recover the exact packet-count/continuation condition in `GamepadDeviceManager`.
 
+## 2026-11-20 — CheckPacketIndex proves selector continuation is conditional
+
+Focused CIL of `GamepadDeviceManager.CheckPacketIndex` shows that the first response packet is passed to native `receiveDataLength`. Managed code computes `ceil(total/20)` as `(total + 19) / 20` and stores it in `LengthMap`. It appends the received bytes to `DataMap` and returns the current packet index.
+
+Handlers compare the returned index with `LengthMap[seq] - 1`. Only a non-final result causes index increment, `MigrateSeq`, and a new native read request for `index + 1`. `MigrateSeq` simply migrates all pending maps to a fresh outer HID sequence.
+
+This invalidates the earlier unconditional-two-read interpretation. Whether selector 1 is issued depends entirely on native `receiveDataLength`. That function is now the next static target.
+

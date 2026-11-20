@@ -2259,3 +2259,27 @@ Important provenance implication: the local \`firmware-original\` file must not 
 a dump of the user's current controller. Its E9 identity does not match the live unit.
 Likewise, the official updater image appears to contain a different pre-personalized or
 reference identity rather than the user's current live Pro Controller address.
+
+
+### Important constraint: generic updater image means the E9 field is not necessarily the final runtime BD_ADDR
+
+The Y+HOME test proves that live G3V2 Pro Controller mode uses the \`98:B6:E9\` address
+namespace. However, the official updater distributes one generic FOT image containing one
+fixed E9-form value at \`0x112..0x117\`.
+
+A generic update image cannot safely assign the same final Bluetooth address to every
+controller. Therefore the current interpretation must stay narrower:
+
+- \`0x112..0x117\` is strongly associated with the E9 / Pro Controller identity domain;
+- it is **not yet proven** to be the final runtime BD_ADDR programmed into the radio;
+- plausible mechanisms include:
+  - device-specific identity stored separately in NVM and preserved across firmware updates;
+  - bootloader/firmware patching or deriving the runtime address from another per-unit source;
+  - the FOT field acting as provisioning/reference/default metadata rather than the live address.
+
+The fact that the two same-payload v1.48 FOTs differ only in this E9-form suffix plus byte
+\`0x101\` still proves that this block is personalization/identity-related container
+metadata, but not necessarily user-unit MAC programming data.
+
+Do not describe either FOT as belonging to a specific physical unit solely from the
+\`0x112\` value until a direct device/FOT correspondence is demonstrated.

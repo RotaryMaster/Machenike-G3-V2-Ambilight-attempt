@@ -34,6 +34,7 @@ DEFAULT_NAMES = {
     "GetDeviceCustomDataAsync",
     "WriteDeviceCustomDataAsync",
     "receiveDataLength",
+    "OnReport",
 }
 
 class DnfileReader(CilMethodBodyReaderBase):
@@ -169,6 +170,19 @@ def dump_method(pe, rid, row, parent):
     print(f"RID   : {rid}")
     print(f"Token : 0x{0x06000000 | rid:08X}")
     print(f"RVA   : 0x{row.Rva:08X}")
+    sig = _blob_to_bytes(getattr(row, "Signature", None))
+    if sig:
+        print(f"Sig   : {sig.hex(' ')}")
+    params = []
+    for pidx in getattr(row, "ParamList", []) or []:
+        prow = getattr(pidx, "row", None)
+        if prow is None:
+            continue
+        params.append(
+            f"{getattr(prow, 'Sequence', '?')}:{getattr(prow, 'Name', '')}"
+        )
+    if params:
+        print("Params: " + ", ".join(params))
 
     if not row.Rva:
         if not dump_implmap(pe, row):
@@ -214,6 +228,24 @@ def dump_method(pe, rid, row, parent):
         print("Focused ranges: " + ", ".join(
             f"IL+0x{a:04X}..0x{b:04X}" for a, b in ranges
         ))
+    elif str(getattr(row, "Name", "")) == "OnReport":
+        insns = list(body.instructions)
+        hit_offsets = []
+        for insn in insns:
+            operand = insn.operand
+            if isinstance(operand, Token):
+                resolved = resolve_token(pe, operand)
+                if getattr(resolved, "Name", None) == "HandleGenericDeviceData":
+                    hit_offsets.append(insn.offset - code_start)
+        ranges = []
+        for hit in hit_offsets:
+            ranges.append((max(0, hit - 0x80), min(body.code_size, hit + 0x50)))
+        if ranges:
+            print("HandleGenericDeviceData call ranges: " + ", ".join(
+                f"IL+0x{a:04X}..0x{b:04X}" for a, b in ranges
+            ))
+        else:
+            ranges = None
     else:
         ranges = None
 

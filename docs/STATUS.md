@@ -47,9 +47,66 @@ Therefore:
 - `0x48` -> text `"48"` -> decimal 48
 - displayed firmware = **1.48**
 
-The remaining four bytes form two internal IDs:
-- `0x1006`
-- `0x2011`
+The remaining four bytes are the controller's **logical gamepad identity**:
+- `Item3 << 8 | Item4 = 0x1006`
+- `Item5 << 8 | Item6 = 0x2011`
+
+This is now proven by `<LoadGamepadAsync>d__27::MoveNext`: after
+`ConnectDeviceAsync(3)`, MixDrive constructs the firmware version from
+`Item1/Item2`, constructs the two 16-bit IDs from `Item3..Item6`, and calls
+`GamepadDeviceHelper.FindGamepadInfo(0x1006, 0x2011)`.
+
+This closes an apparent identity mismatch. The attached controller has two
+identity layers:
+
+```text
+physical HID enumeration : 413D:2131
+ZXPC_APP logical identity: 1006:2011
+logical model            : G3V2
+firmware                  : 1.48
+```
+
+`GamepadKeyTestMapping.GetMappingByVidPid` explicitly maps both
+`1006:2011` and `3973:7001` to the G3V2 mapping. The static
+`Gamepad.SupportedList` also contains a G3V2 record at `3973:7001`, while
+the physical `413D:2131` pair appears in a different initial catalog record.
+That is not a contradiction: `LoadGamepadAsync` first opens/matches the
+physical HID device, then re-resolves the gamepad information from the
+six-byte `ZXPC_APP` tuple and attaches that logical `GamepadInfo` while
+retaining the same physical `HidDevice`.
+
+### USB vs. 2.4 GHz transport gate
+
+The firmware-update gate `DeviceType == 2` means only `Gamepad`
+(`Unknown=0, Keyboard=1, Gamepad=2, Mouse=3`). `DeviceMode` is also not a
+transport selector; it is a model string such as `G3V2`, `G60`, or
+`G5Pro V2`.
+
+No managed transport gate has been found before `EnterUpdateModeMessage`.
+The normal loader and the updater transition both keep using the same
+`HidDevice` that was opened from the physical HID enumeration. The current
+test configuration is therefore valid as USB-only; the disconnected 2.4 GHz
+dongle is not required by any proven managed condition.
+
+This does not prove that the device firmware behaves identically on every
+transport. It does remove the earlier hypothesis that MixDrive's managed
+update path explicitly requires the receiver.
+
+### Warm-session CustomData state is now the main live blocker
+
+The current zero-length CustomData response must not be treated as evidence
+that USB is the wrong transport. MixDrive normally reaches firmware update
+with a previously initialized `GamepadDeviceManager`.
+
+Static xrefs show that normal hardware/config initialization calls
+`GetDeviceCustomDataAsync` from multiple loaders, including light, motor,
+rocker, sensor, and generic custom-data initialization. The update receiver
+later reuses the cached manager when available.
+
+The next static target is therefore the exact read-only initialization order
+leading from gamepad connection to those CustomData reads. The next live probe
+should reproduce only the necessary initialization/read sequence first.
+OTA writes remain blocked while a cold standalone read resolves to null/zero.
 
 ### OTA feature
 

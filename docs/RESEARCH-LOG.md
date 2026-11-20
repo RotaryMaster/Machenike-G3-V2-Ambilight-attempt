@@ -1483,3 +1483,20 @@ Current interpretation:
 
 Next safe test: observe the live controller address and compare it with the two FOT
 candidates. Querying BlueZ/known devices is read-only; no firmware write/update is needed.
+
+
+## 2026-11-20 — live G3V2 BLE address does not match FOT E9 personalization
+
+Active read-only discovery found \`98:B6:ED:68:58:43 G3V2 APP\`.
+
+This does not match either known FOT field at 0x112:
+- \`98:B6:E9:B0:25:BE\`
+- \`98:B6:E9:CE:4B:03\`
+
+So the FOT E9 field must not be described as the live BLE address of the physical unit.
+Same-family KeyLinker evidence supports multiple Bluetooth personalities/interfaces, so an
+E9 standard-gamepad identity and an ED app/configuration identity can coexist conceptually.
+That relationship still needs to be proven for G3V2.
+
+Added a read-only identity-surface scanner to search header/config for related family
+addresses and the observed live suffix.

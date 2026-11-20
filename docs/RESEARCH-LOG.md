@@ -734,3 +734,23 @@ state helper, the final initializer CustomData read can therefore return to
 state byte `0x00` while the CRT `rand()` stream is already eight calls
 ahead. A state-byte match alone is not sufficient evidence that the Linux
 probe matches MixDrive's request context.
+
+## 2026-11-20 — Generic read helper closes operations 1-2 as stateful
+
+Disassembly of `0x180001BE0` proves that the generic read helper used by
+BeforeKeyChangeList and SupportTurbo directly calls the same
+`KeyLinkerState`, CRT `rand()`, and KeyLinker encoder as the other read
+builders. Its own function returns at `0x180001C87`; the later `rand()`
+at `0x180001EE3` is part of the separate function starting at
+`0x180001C90`.
+
+Thus all eleven baseline initializer reads consume one state/rand pair per
+native request. Under a cold no-retry/no-continuation baseline, the final
+CustomData is request #11 and uses state/rand `02/49`, yielding plaintext
+`BB 06 02 49 00 D4` and encoded wire `EE 95 26 90 B7 65`.
+
+A new bounded live helper,
+`tools/g3v2-mixdrive-warmup-readonly.py`, was added. It defaults to plan-only
+and requires `--run-readonly` to send the read-request sequence. It contains
+no OTA write or SCSI support.
+

@@ -494,3 +494,32 @@ BB 06 81 23 00 C0
 ```
 
 This proves the observed starting sequence state was `E67C=0, E68C=0` and that the next read saw `E67C=1, E68C=1`. It also independently confirms the CRT default `rand()` progression `0x29 -> 0x23`.
+
+
+### Conditional OTA writer headers after one fresh read
+
+For a 20-byte CustomData array, `writeDeviceCustomData` constructs the logical stream:
+
+```text
+14  data[0] data[1] ... data[19]
+^^
+20-byte length prefix
+```
+
+It fragments that 21-byte stream as:
+
+```text
+fragment 0 payload: 14 + data[0..13]   (15 bytes)
+fragment 1 payload: data[14..19]       (6 bytes)
+```
+
+Since the four-byte header and one-byte CRC are included in the builder's frame length, the corresponding lengths are `20 (0x14)` and `11 (0x0B)`.
+
+After a verified first read, `E67C/E68C` are `1/1`. If `E670=7` and the next two CRT random low bytes are `23/BE`, the plaintext frames begin:
+
+```text
+3B F4 81 23  14 data[0..13] CRC
+3B CB 0A BE  data[14..19]    CRC
+```
+
+The `E670=7` premise is strongly corroborated by real `0x37` write headers but is being kept explicitly conditional until the session/DLL initialization path is closed.

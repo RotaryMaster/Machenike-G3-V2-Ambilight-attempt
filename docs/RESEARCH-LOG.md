@@ -1918,3 +1918,27 @@ the newest packaged simultaneous dongle+BLE behavior.
 The useful conclusion is narrower: direct KeyLinker-over-GATT is now independently
 corroborated by another implementation, and the G3 V2 BLE read-only probe is justified as
 the next safe transport experiment. A G3 V2 lighting write over BLE remains deferred.
+
+
+## 2026-11-20 — G3V2 APP BLE advertisement proven; first GATT connection timed out
+
+Executed `g3v2-ble-probe-v1.py --enumerate-only` with the controller off USB and available
+wirelessly.
+
+Observed:
+- 7 BLE devices in the scan;
+- exactly 1 G3V2 candidate;
+- name `G3V2 APP`;
+- RSSI about -68 dBm;
+- advertised UUIDs included `0000ff12-0000-1000-8000-00805f9b34fb` and the exact
+  KeyLinker configuration service `d7f010e0-660d-46e9-96c3-19c4148bdab5`.
+
+The following Bleak connection attempt timed out before the script could list GATT
+characteristics. v1 emitted only the top-level `TimeoutError`, so the evidence does not
+yet distinguish a failed LE connection from BlueZ waiting for GATT service resolution.
+
+No KeyLinker request was transmitted in enumerate-only mode.
+
+Added `g3v2-ble-probe-v2.py` to diagnose this specific Linux/BlueZ stage with bounded
+connection retries, fresh discovery between retries, and a read-only BlueZ state dump after
+failure. No automatic disconnect/pairing or controller-setting write was added.

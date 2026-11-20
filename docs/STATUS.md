@@ -639,3 +639,18 @@ Static xrefs in `Machenik.exe` show that the firmware-update worker sends `Enter
 
 The current live setup uses the controller over USB only; the 2.4 GHz dongle is disconnected. The semantic meaning of enum value `2` must therefore be resolved before concluding whether the official OTA path expects wired USB, receiver/2.4G, Bluetooth, or another device classification. `tools/dump-device-type.py` scans extracted managed assemblies for the enum definition and nearby `get_DeviceType` comparisons.
 
+### DeviceType == 2 resolved: Gamepad, not transport mode
+
+`Machenik.Shared.Models.Devices.DeviceType` is:
+
+```text
+Unknown  = 0
+Keyboard = 1
+Gamepad  = 2
+Mouse    = 3
+```
+
+Therefore the firmware-update gate `DeviceType == 2` means only “this device is a gamepad.” It does **not** distinguish wired USB from 2.4 GHz receiver or Bluetooth.
+
+The current live setup remains USB-only with the 2.4 GHz dongle disconnected, but transport-specific behavior must be encoded elsewhere (another property, model subtype, HID identity, connection state, or device metadata). The next static target is to inventory connection/transport-related members and their use in the gamepad firmware-update path.
+

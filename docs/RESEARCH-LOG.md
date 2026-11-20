@@ -1143,3 +1143,37 @@ The inventory count was exactly 4 and reported no extra request-pointer call
 sites. This closes the host-side updater request table and confirms that no
 bulk/addressable DATA_IN firmware-read command is present in the official
 v1.48 updater.
+
+
+## 2026-11-20 — Same-family ZhiXu FOT research opens a second-image route
+
+Recent public reverse-engineering of Manba One V2 (`ZXD2055`) and Anbernic
+RG G01 (`ZXD2271`) independently matches our updater architecture:
+`UsbUpdateAppX`, `DeviceUsb.dll`, SCSI F1/F0/F2 and the common
+14-byte hardware-ID prefix.
+
+The Manba research found:
+- plaintext FOT header/directory;
+- encrypted high-entropy XCOD/XRES regions;
+- firmware transmitted byte-for-byte to the bootloader;
+- same-hardware-ID sibling versions behaving like
+  `ciphertext = plaintext XOR reused_section_keystream`;
+- different hardware IDs producing unrelated keystreams;
+- no useful USB read-flash command.
+
+An October 2026 coordination issue for ZXD2271 reports the same FOT family and
+the same embedded-image offset 0x1712F0 used by its updater, reinforcing that
+this is a vendor platform rather than a brand-specific design.
+
+This prompts a correction in investigation order: before treating our
+0x1712F0 slice as the complete encrypted object, scan the whole G3V2 updater
+for plaintext FOT metadata and exact hardware-ID placement.
+
+A separate public G3 V2 test from 2025-01-28 reports firmware v1.25. This proves
+an older firmware generation existed. If an updater/image for that generation
+can be recovered and its F1/header hardware ID is also
+`a1ca51da724cb6103658c05d7d4e2267`, it becomes the best current
+non-invasive cryptanalytic lead.
+
+Added `dump-g3v2-fot-container-surface.py` and
+`find-zxd2267-firmware-corpus.py`.

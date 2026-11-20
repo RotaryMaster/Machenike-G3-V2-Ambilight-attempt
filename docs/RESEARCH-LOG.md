@@ -1285,3 +1285,44 @@ Added \`tools/get-g3v2-firmware.py\`. It defaults to catalog-only operation,
 prints/saves the raw JSON and resolved download URL, and only downloads the
 returned executable when \`--download\` is explicitly supplied. It never
 communicates with the controller or starts the updater.
+
+
+## 2026-11-20 — Live firmware catalog verified; official updater hash matched
+
+The exact recovered G3V2 catalog request was run successfully against the
+official MixDrive API.
+
+Response:
+- product id 8, MACHENIKE, G3V2, type 2;
+- product created/updated 2026-05-07 14:41:08 UTC;
+- firmware id 11;
+- version 1.48;
+- changelog "性能优化";
+- download path
+  /download/firmware/69fd65594961c_ZXD2267_JRH_G3V2_MACHENIKE_v1.48_20250815.exe;
+- file size 2,245,632 bytes;
+- published_at 2026-05-08 04:23:53 UTC;
+- download_cnt 0.
+
+The updater was then downloaded without execution. Its SHA256 is
+f0cf653ae3d3de70266b38d011ba6491a3d454aed5cf0a6ac482cbbfaa50c255,
+identical to the updater already under analysis. This confirms the current
+official API serves exactly the same v1.48 host updater.
+
+Storage prefix clue:
+0x69fd6559 = Unix 1778214233 = 2026-05-08 04:23:53 UTC, exactly the API
+published_at timestamp. The filename prefix has 13 hex digits
+(69fd65594961c), matching the shape produced by PHP uniqid() (seconds plus a
+microsecond component). Treat this as a strong inference only.
+
+Because the product row itself was created in May 2026 while the original
+updater filename embeds 20250815, the current backend catalog was likely
+populated after the binary build. That makes it plausible that older firmware
+such as 1.25 is not returned by /firmware/by-product-info even if its updater
+file still exists elsewhere on the server.
+
+Added a conservative read-only route probe:
+tools/probe-firmware-history-api.py
+It tests only a small fixed set of plausible firmware/history/id GET routes
+using product id 8 and firmware id 11; it does not enumerate large ID ranges,
+write to the API, or touch the controller.

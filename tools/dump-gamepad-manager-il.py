@@ -82,6 +82,22 @@ def type_name(row: Any) -> str:
         return f"{ns}.{name}".strip(".")
     return str(row)
 
+def _blob_to_bytes(blob: Any) -> bytes:
+    if blob is None:
+        return b""
+    if isinstance(blob, (bytes, bytearray, memoryview)):
+        return bytes(blob)
+    value = getattr(blob, "value", None)
+    if isinstance(value, (bytes, bytearray, memoryview)):
+        return bytes(value)
+    data = getattr(blob, "data", None)
+    if isinstance(data, (bytes, bytearray, memoryview)):
+        return bytes(data)
+    try:
+        return bytes(blob)
+    except Exception:
+        return b""
+
 def format_row(row: Any) -> str:
     if row is None:
         return "?"
@@ -98,11 +114,11 @@ def format_row(row: Any) -> str:
         return type_name(row)
     if cls == "MethodSpecRow":
         base = getattr(getattr(row, "Method", None), "row", None)
-        inst = getattr(row, "Instantiation", b"") or b""
-        return f"MethodSpec::{format_row(base)} <blob={bytes(inst).hex(' ') if inst else ''}>"
+        inst = _blob_to_bytes(getattr(row, "Instantiation", None))
+        return f"MethodSpec::{format_row(base)} <blob={inst.hex(' ') if inst else ''}>"
     if cls == "TypeSpecRow":
-        sig = getattr(row, "Signature", b"") or b""
-        return f"TypeSpec(blob={bytes(sig).hex(' ') if sig else ''})"
+        sig = _blob_to_bytes(getattr(row, "Signature", None))
+        return f"TypeSpec(blob={sig.hex(' ') if sig else ''})"
     return f"{cls}:{row}"
 
 def format_operand(pe: dnfile.dnPE, operand: Any) -> str:
@@ -151,8 +167,22 @@ def dump_method(pe, rid, row, parent):
     print(f"Stack : {body.max_stack}")
     code_start = body.offset + body.header_size
 
+    # HandleGenericDeviceData is very large. For this investigation only the
+    # CustomData read/write switch cases are relevant:
+    #   operation 28 -> IL+0x1475
+    #   operation 29 -> IL+0x15C6
+    if str(getattr(row, "Name", "")) == "HandleGenericDeviceData":
+        ranges = [(0x1440, 0x1640)]
+        print("Focused ranges: " + ", ".join(
+            f"IL+0x{a:04X}..0x{b:04X}" for a, b in ranges
+        ))
+    else:
+        ranges = None
+
     for insn in body.instructions:
         iloff = insn.offset - code_start
+        if ranges is not None and not any(a <= iloff <= b for a, b in ranges):
+            continue
         raw = " ".join(f"{b:02x}" for b in insn.get_bytes())
         op = getattr(insn, "mnemonic", str(insn.opcode))
         operand = format_operand(pe, insn.operand)

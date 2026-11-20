@@ -503,3 +503,10 @@ No device I/O was performed.
 Static analysis of updater function `0x00402A70` recovered its bootloader discovery loop. It scans A..Z from `GetLogicalDrives`, only examines `DRIVE_REMOVABLE` entries, opens each candidate with `deviceUsb_OpenByDrv`, obtains `deviceUsb_GetInfo`, and matches the exact 28-byte identity string `Gamepad Updater         1.00`.
 
 The 28-byte length splits exactly as SCSI INQUIRY's 8-byte Vendor + 16-byte Product + 4-byte Revision fields, yielding the strong hypothesis Vendor=`Gamepad `, Product=`Updater         `, Revision=`1.00`. The DeviceUsb implementation still needs to confirm the source of those fields.
+
+
+## 2026-11-20 — DeviceUsb storage identity implementation closed
+
+Disassembly of `deviceUsb_GetInfo` at `0x10001200` proved that the updater does not obtain its bootloader identity by directly issuing INQUIRY from that function. It calls `IOCTL_STORAGE_QUERY_PROPERTY (0x002D1400)`, requires `BusTypeUsb (7)`, and extracts the standard `STORAGE_DEVICE_DESCRIPTOR` Vendor/Product/Revision strings. This confirms the exact identity tuple `Gamepad ` / `Updater         ` / `1.00`.
+
+The firmware command path is distinct: `deviceUsb_Request` uses `IOCTL_SCSI_PASS_THROUGH_DIRECT (0x0004D014)` for the F0/F1/F2 CDBs.

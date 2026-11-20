@@ -2072,3 +2072,24 @@ External G3V2 manuals corroborate the user-verified mode map:
 Because BlueZ automatic discovery may interleave LE and BR/EDR, the next read-only test is
 to force BR/EDR-only and LE-only discovery separately. Do not interpret the absent gameplay
 device from the auto scan as evidence that the FOT E9 identity is not used by the controller.
+
+
+### Method correction — transport-specific bluetoothctl scan vs device cache/listing
+
+A subsequent X+HOME test ran separate \`bluetoothctl scan bredr\` and
+\`bluetoothctl scan le\` passes but \`bluetoothctl devices\` showed only the already-known
+\`98:B6:ED:68:58:43 G3V2 APP\` after both passes.
+
+Important correction: \`scan bredr\` / \`scan le\` correctly select the discovery
+transport, but a later \`bluetoothctl devices\` listing is not a per-scan evidence log.
+Therefore seeing the APP device after a BR/EDR pass does **not** prove that the APP
+peripheral was discovered through BR/EDR.
+
+Current X+HOME evidence is only:
+- no additional gameplay identity became visible to the BlueZ device list;
+- the persistent APP/config peripheral remains known;
+- transport of that APP observation is not established by the post-scan \`devices\` list.
+
+Next read-only diagnostic is HCI/MGMT monitoring with \`btmon\`, which can show the actual
+discovery events and transport-specific reports in real time while X+HOME is placed in
+rapid-flash pairing mode.

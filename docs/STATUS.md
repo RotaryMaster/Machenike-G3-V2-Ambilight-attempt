@@ -60,7 +60,7 @@ The normal feature response was reconstructed and decoded. Native code maps bit 
 Confirmed so far:
 - CustomData read selector: `0xBB`
 - BB sub-selector: `0x00`
-- expected CustomData length: 10 bytes
+- logical CustomData block size: **20 bytes**
 - real A/B readback was successful
 - a breathing-blue configuration was successfully exercised
 
@@ -230,4 +230,4 @@ A firmware write should not be attempted until all of these are known:
 
 Therefore `MainViewModel`'s `data[11] |= 0x80` targets logical CustomData byte 11 (zero-based).
 
-**Next target:** disassemble `0x1800018E0..` through the end of `0x180001760` plus `0x1800011C0` to confirm exact stripping offsets, returned length calculation, and multi-frame concatenation.
+**Resolved:** the remainder of `0x180001760` and complete `0x1800011C0` confirm the receive-side stripping and concatenation. The next target is now only `0x180001C90`, the four-byte write-header builder.

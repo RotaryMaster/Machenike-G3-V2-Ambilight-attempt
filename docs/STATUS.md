@@ -2207,3 +2207,55 @@ Implication for further Y+HOME Bluetooth identity mapping:
   automatic 2.4 GHz reconnection can terminate or obscure the intended Bluetooth pairing
   state.
 - no controller pairing data needs to be erased.
+
+
+### Y+HOME confirms E9 as the live Pro Controller BR/EDR personality
+
+With the 2.4 GHz dongle removed, a real 25-second discovery + btmon capture in Y+HOME
+resolved the gameplay personality:
+
+- LE config/app:
+  - \`98:B6:ED:68:58:43\`
+  - \`G3V2 APP\`
+- BR/EDR gameplay:
+  - \`98:B6:E9:68:58:43\`
+  - \`Pro Controller\`
+  - class \`0x002508\`
+  - Limited Discoverable Mode
+
+This is direct G3V2 evidence that the E9 prefix is used by the Pro Controller personality.
+It supersedes any same-family semantic mapping that assigned E9/ED differently.
+
+The suffix remains exactly \`68:58:43\`, matching the X+HOME EA personality and the
+persistent ED APP personality. Current live mapping for this physical unit:
+
+- ED: \`G3V2 APP\` (LE configuration)
+- EA: \`Xbox Wireless Controller\` (BR/EDR, X+HOME)
+- E9: \`Pro Controller\` (BR/EDR, Y+HOME)
+
+This substantially changes the interpretation of FOT header offset \`0x112..0x117\`.
+Both known v1.48 FOTs carry E9-form addresses there:
+
+- local FOT A: \`98:B6:E9:B0:25:BE\`
+- official-updater FOT B: \`98:B6:E9:CE:4B:03\`
+
+Since the physical controller's live Pro Controller address is instead
+\`98:B6:E9:68:58:43\`, neither FOT header is personalized with this unit's current E9
+identity.
+
+Because A and B have byte-identical XCOD/XRES/config/tail but differ only at:
+- header byte \`0x101\`, and
+- the last three bytes of the E9 address at \`0x115..0x117\`,
+with the same four-byte delta mirrored in the directory copy, the strongest current
+interpretation is per-image/per-device Bluetooth personalization metadata layered over a
+shared firmware payload.
+
+The exact role of \`0x101\` is still unknown. Its co-variation with the E9 address makes it
+a strong candidate for a dependent checksum/integrity/derivation byte, but this is not
+proven and should not be labeled as a checksum without additional samples or algorithmic
+confirmation.
+
+Important provenance implication: the local \`firmware-original\` file must not be called
+a dump of the user's current controller. Its E9 identity does not match the live unit.
+Likewise, the official updater image appears to contain a different pre-personalized or
+reference identity rather than the user's current live Pro Controller address.

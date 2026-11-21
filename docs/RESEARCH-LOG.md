@@ -2358,3 +2358,44 @@ The latter verifies all UUIDs/CCCD and sends only 0x91, then 0xB7
 iff identity gets a decoded, CRC-valid, matching-serial notification.
 No firmware writes, OTA, pairing, lighting 0x37, or retries.
 **Not yet executed on hardware.**
+
+
+## 2026-11-20 — BREAKTHROUGH: Android-coded 0x91 + B7 over BLE really answer
+
+The user ran `g3v2-le-android-identity-b7.py --mode identity-then-b7`
+on the real G3 V2. Direct LE Public connect: **505.1 ms**.
+CCCD `0x000A` read one byte `01` before standard `01 00`
+subscription, and subscription got an ATT Write Response.
+
+**Identity read 0x91**
+- TX plain: `91 05 01 CB 33`
+- TX APK wire: `02 30 4A F2 C6`
+- RX e2 wire: `C8 A0 BD 88 22 F5 C0 14 A5 37 C0 E1 16`
+- RX APK decoded: `19 0D 01 31 07 10 06 20 11 01 48 46 B8`
+- native response opcode `0x19`, CRC valid, matching serial `0x01`;
+- 7-byte identity `10 06 20 11 01 48 46`: logical hardware
+  `1006:2011`, firmware `1.48`, raw flags `0x46`;
+- query round-trip **23.0 ms**.
+
+**LampLight read 0xB7**
+- TX plain: `B7 06 82 FA 00 E7`
+- TX APK wire: `1C 71 F7 C1 93 CD`
+- RX e2 wire: `32 FB 77 41 15 B3 F3 F1 FE 40 BD 46`
+- RX APK decoded: `19 0C 82 7A 06 00 FF FF 00 00 FF F9`
+- native response opcode `0x19`, CRC valid, matching serial `0x82`;
+- six-byte logical record `00 FF FF 00 00 FF`, matching the earlier
+  USB LampLight B7 baseline exactly. RGB=(0,255,255),
+  breath/switch packed field 0, brightness=255;
+- query round-trip **22.0 ms**.
+
+Conclusions: valid native KeyLinker application responses have been
+received over Linux direct LE GATT; Android APK codec and serial
+are correct; CCCD one-byte Read Response did not prevent the e2
+notification after standard subscribe; the BlueZ/Bleak BR/EDR
+selection issue can be sidestepped with direct typed LE L2CAP.
+
+No lighting configuration write or OTA/SCSI command was sent.
+The successful reads do not resolve whether `0x37` writes commit
+flash or are safe for continuous ambilight. Record this milestone
+in `docs/G3V2-BLE-VERIFIED.md` and protect against confusion
+with the earlier unsuccessful probes. No repeat is required.

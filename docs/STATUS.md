@@ -3192,3 +3192,52 @@ controller MAC explicitly on the command line; keep that MAC off
 public GitHub files and documentation. Earlier B7 probe is retained
 for reproducibility but should not be rerun without understanding
 the one-byte CCCD behavior.
+
+
+### BLE B7 first ATT transport acceptance but no notification (2026-11-20)
+
+User executed \`tools/g3v2-le-keylinker-b7-v2.py --b7\` using explicit
+LE Public L2CAP CID 4 on the live G3 V2; connection succeeded in
+**398.6 ms**.
+
+GATT primary service and e1/e2 characteristic declarations were unchanged;
+verified CCCD handle \`0x000A\` again identified UUID \`0x2902\` and its
+ATT Read Response was \`0B 01\` (1 value byte \`01\`, rather than
+standard 2-octet CCCD encoding).
+
+A **single B7 KeyLinker read** was encoded from cold session state:
+- plain: \`B7 06 00 29 00 A4\`
+- wire:  \`CC B3 40 70 99 15\`
+- written to e1 ATT value handle \`0x0007\` via ATT Write Request;
+- ATT Write Response \`13\` was received (transport-level acceptance);
+- **no ATT Handle Value Notification arrived at e2** before timeout.
+
+No CCCD write, lighting configuration write, 0x37, 0x3B,
+OTA, SCSI, pairing or request retry occurred. **Do not claim
+KeyLinker accepted the command or that BLE read works**: only the
+GATT write was acknowledged. Lack of response is consistent with
+a missing effective notify subscription OR model/session initialization
+requirements; neither explanation is confirmed.
+
+Bluetooth Core GATT specification defines CCCD as a two-octet
+per-client configuration field and enables notify with \`01 00\`.
+The observed one-byte \`01\` cannot be treated as proof the server
+activated notifications, especially before an explicit client write.
+
+New targeted tool \`tools/g3v2-le-b7-subscribe-v3.py\`
+(final commit \`157cac8\`) does the following on one connection:
+- re-discovers the KeyLinker service/e1/e2 characteristic and CCCD;
+- verifies the original CCCD value is the previously observed
+  \`01\` or canonical \`01 00\`; refuses any other initial state;
+- sends **one ATT Write Request** to the verified CCCD with the
+  standard notify-enable value \`01 00\` (not a persistent lighting write);
+- checks the ATT Write Response and re-reads the CCCD;
+- only if readback is \`01\` or \`01 00\`, submits a **single guarded
+  B7 read request** on the verified e1 and listens on e2, without
+  retries or firmware/configuration mutations.
+
+The canonical CCCD write is a connection-scoped subscription. This
+script does not explicitly restore the original one-byte encoding;
+it closes the LE socket on exit. Neither successful notification
+subscription nor B7 response has been tested yet. The MAC is
+provided at runtime and intentionally not stored in GitHub.

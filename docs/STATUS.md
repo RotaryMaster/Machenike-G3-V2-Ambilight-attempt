@@ -3241,3 +3241,63 @@ script does not explicitly restore the original one-byte encoding;
 it closes the LE socket on exit. Neither successful notification
 subscription nor B7 response has been tested yet. The MAC is
 provided at runtime and intentionally not stored in GitHub.
+
+
+### 2026-11-20 — CCCD explicitly subscribed; B7 transport ACK but still no e2 notification
+
+Physical execution of `tools/g3v2-le-b7-subscribe-v3.py`:
+- direct LE Public connect **639.3 ms**;
+- KeyLinker service e0 and characteristic handles confirmed unchanged:
+  e1 Write = `0x0007`, e2 Notify = `0x0009`, CCCD `0x2902` = `0x000A`;
+- CCCD ATT read before subscription = `0B 01` (one-byte value `01`);
+- explicit **standard `01 00` CCCD subscription via ATT Write Request** returned
+  ATT Write Response (transport ACK);
+- CCCD ATT read after subscription was **still `0B 01`**;
+- exactly one native `B7` read frame
+  `B7 06 00 29 00 A4` encoded by the existing **USB/MixDrive codec** to
+  `CC B3 40 70 99 15`, sent on e1, produced ATT Write Response;
+- **no e2 notification** before the timeout, even after explicit subscription.
+
+**New conclusion:** a missing explicit standard CCCD write is *not by itself*
+enough to explain the observed B7 silence. The descriptor's abnormal
+single-byte `01` readback persists across the write; ATT ACK does not
+prove the server internally honors notifications. Session initialization,
+BLE-specific frame encryption, or firmware filtering remain possible.
+Do not rerun B7 with the same encoded bytes/CCCD sequence.
+
+**Potential protocol incompatibility discovered by offline comparison:**
+The EasySMX X20 Pro's KeyLinker Android-app-derived `CodeHelper.encrypt`
+as independently reproduced in
+`AmjadAAYD/x20ctl/x20ctl/protocol.py` does **not** use the same scramble
+operation as the G3V2 Windows MixDrive's `KeyLinkerlib.dll`
+(`tools/g3v2-warmup-readonly.py`).
+
+For the **same plaintext frame** `B7 06 00 29 00 A4`, CRC included:
+- our verified **Windows USB/MixDrive** codec -> `CC B3 40 70 99 15`;
+- x20ctl's **Android KeyLinker-family** codec -> `71 A2 A2 90 2C 8E`.
+
+The common CRC table and logical opcode do **not** prove the
+scramble/cipher bytes match. We were sending the USB-verified wire
+frame over BLE, but have **not yet established** which codec is used
+by the *actual* G3V2 Android KeyLinker APK 3.73.
+
+**Prioritize an offline differential inspection of the G3V2 Android
+APK's `CodeHelper.encrypt`/GATT send path** against the actual
+`KeyLinkerlib.dll` codec and the X20 Pro Android-derived version.
+Do **not** transmit X20 Pro frames to the G3V2 without validating the
+model-specific APK path first. This is a distinct explanatory hypothesis,
+not a claimed root cause.
+
+**Additional user-reported physical behavior (separate hypothesis):**
+The user noticed that **manually powering the controller off and leaving
+it on the charging dock for an unmeasured time** causes the most recent
+lighting configuration to appear forgotten. Earlier rapid restart tests
+where a 0x37-configured color survived should no longer be described
+as definitive nonvolatile/flash persistence. Charging behavior might
+override a transient lighting mode, extended power-off could clear
+volatile RAM, or the firmware may reload saved/default profiles.
+No cause or timing established. Avoid claims about flash writes per
+0x37 ACK and flash wear until a controlled off+dock versus off+no-dock
+comparison is performed (prefer only normal controls, no repeated
+0x37 writes). Document the observed behavior, not a proven reset of
+flash contents.

@@ -617,3 +617,32 @@ Previous identical-read attempts with MixDrive native USB encoding
 were not valid Android application packets and should not be repeated.
 Do not infer realtime writable LED safety or flash endurance.
 See `docs/G3V2-BLE-VERIFIED.md`.
+
+
+### Android lighting write serializers — 2026-11-21
+
+Additional direct APK caller trace resolves two independent
+`0x37` **input preparations**, not independent transport
+commands:
+
+- `b1.A1(List<LightingDataBean>)` builds
+  `[length = 6*N, R,G,B,data4,data5,brightness, ...]`,
+  partitions at 15 bytes, sends all chunks via `e.l0()`.
+- `b1.z1(...)` gathers up to four 6-field lamp records and
+  repacks UI-style `[R,G,B,flag,brightness,speed]` into
+  `[R,G,B,speed_low,packed_high,brightness]`, where
+  `packed_high = ((speed >> 8) & 15) | (flag ? 128 : 0)`
+  according to the app's explicit 12-bit string split.
+  This path also uses `e.l0()` for all chunks.
+
+These use the **same KeyLinker lighting config writer 0x37**
+and the previously reconstructed 6-byte G3V2 LampLight layout;
+neither is a verified volatile/preview LED command.
+
+Distinct `e.X`/`e.h0` builder opcode **0x25**
+is used in `b1.f1` for grouped three-byte elements,
+not RGB lighting records.
+The KeyLinker-family command reference from x20ctl
+calls `0x25` **`CODE_TOOBLE_MODE` (Turbo)**.
+Do not confuse decimal 37 (0x25) with hexadecimal 0x37.
+No high-frequency 0x37 write has been cleared as safe.

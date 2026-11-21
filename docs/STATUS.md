@@ -2955,3 +2955,46 @@ BR/EDR globally or change daemon startup settings as a first workaround.
 The success criterion is establishing an LE link and enumerating GATT service
 `d7f010e0`; read requests and lighting writes remain deferred until that happens.
 Retain raw HCI logs locally, redact addresses before publishing.
+
+
+### BLE LE submenu: interface unavailable; malformed/misinterpreted advertisement flags hypothesis
+
+The user initiated an LE-only scan with `bluetoothctl`, discovered `G3V2 APP`,
+then ran `menu le` -> `connect <controller>`. The command returned
+`org.bluez.Bearer.LE1 is not available on <controller>`.
+
+The BlueZ `bluetoothctl` source checks for a live D-Bus proxy implementing
+`org.bluez.Bearer.LE1` on the Device object and prints this exact message
+when it is missing. **The explicit LE command did not initiate an LE radio
+connection; this is not another HCI timeout.** The existence of the LE submenu
+alone does not prove the optional/experimental LE bearer D-Bus interface
+is exposed on that device.
+
+A stronger explanation has emerged for the earlier unwanted BR/EDR attempt.
+The G3V2's `bluetoothctl info` showed:
+- `AddressType = public` (from the Device display)
+- `AdvertisingFlags = 0x02` (LE General Discoverable, but without bit 0x04
+  BR/EDR Not Supported)
+
+Current BlueZ `btd_adapter_device_found` source infers BR/EDR support for
+a discovered **LE public** address whose nonzero advertising flags omit the
+`EIR_BREDR_UNSUP` bit. In this situation it may attempt classic SDP/ACL
+connection; our actual HCI trace confirmed classic `Create Connection` and
+`Page Timeout`.
+
+BlueZ upstream commit `9965f36c6318e3a6f9879f5b0d842791a290e3ee`
+(2026-07-20) fixed analogous **LE random address** false BR/EDR inference,
+but explicitly preserves inference for **LE public addresses**, so it is
+not a proven fix for the G3V2 case.
+
+The hypothesis of incorrectly inferred dual-mode capability is now
+strongly supported, **not yet confirmed** as the sole reason BLE is
+unreachable. We still lack explicit evidence of a successful LE connection,
+the exact GATT service map, and whether the firmware intentionally supports
+BR/EDR or incorrectly advertises flags.
+
+Next strictly non-mutating check with the existing `bluetoothctl` session:
+`menu le` -> `list`, `show <device>`; `back` -> `info <device>`,
+`bearer <device>` (query only), then `scan off`, `quit`.
+Do not perform another ordinary `connect`, enable bluetoothd experimental
+mode, modify the immutable base, pair/bond, or write 0x37/0x3B.

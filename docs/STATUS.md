@@ -4118,3 +4118,18 @@ or broad source searches with the same queries.
 A new or closer revision may still fail to
 give plaintext if its entire code stream differs.
 All analysis remains offline and read-only.
+
+
+### 2026-11-21 — Additional real-world LED tests imported from user-supplied Claude conversation
+
+See full evidence/measurements and guards in [AMBILIGHT-TESTES-2026-11-21.md](AMBILIGHT-TESTES-2026-11-21.md).
+
+The user supplied a full PDF transcript containing further completed G3V2 experiments, previously **absent from this repository**. Do NOT repeat them just to rebuild evidence.
+
+- **Persistent B7 versus dark LEDs:** user applied green via official KeyLinker BEFORE docking; hours later lights were off, but three off-dock BLE reads still returned unchanged RGB(21,246,5), B7 `15 F6 05 00 00 FF`. FN+Right activated rainbow. Correct prior speculation: the green was NOT autonomously set by the charging dock. This proves that B7 may remain programmed while the visible LEDs are off; it does NOT prove the MCU saved B7 to Flash or establish whether charging/sleep causes light-off.
+- **Official app Apply forces solid:** from rainbow, user pressed Apply with purple selected. Visual effect changed to solid purple, and subsequent BLE B7 returned `80 00 FF 00 00 FF` (RGB 128,0,255; brightness 255). This is a host/app initiated action, not a demonstrated RAM-only streaming opcode.
+- **New v2 equal-vs-changed USB timing:** one warm-up write plus 8 repeated-same and 8 color-changing `0x37` writes; final B7 state restored to white `FF FF FF 00 00 FF` and snapshot removed. ACK medians 5.88ms (same) vs 6.88ms (changed), mean difference changed−same = −2.26ms with permutation p≈0.830. B7 post-write medians 5.02ms vs 8.02ms, mean difference +1.51ms, p≈0.076. Single same-value ACK outlier 31.89ms. No reliable flash-write discriminator found. **Do not repeat writing/timing experiments** to refine marginal p-values.
+- **Safety audit needed:** exported transcript shows an invocation of `g3v2-light-write-timing-v2.py --dry-run` adjacent to 0x37 TX logs. The v2 source is not in GitHub and transcript provenance does not prove command/output alignment. It could be a bug or later full run output. DO NOT run this script or trust its dry-run without reviewing the actual Python source offline. No new hardware writes were performed in this documentation review.
+- The G3V2 firmware XCOD remains encrypted, independent of these lighting observations. No wear-safe high-rate RGB writer has been demonstrated.
+
+This updates the experimental state, NOT the known no-streaming safety policy.

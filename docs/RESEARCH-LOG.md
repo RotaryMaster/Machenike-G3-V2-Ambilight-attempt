@@ -1984,3 +1984,27 @@ already failed/cleaned up.
 The next diagnostic is a **single**, bounded read-only `btmon` HCI trace spanning one
 v3 attempt, avoiding any more repeated three-attempt runs. Keep unredacted controller and
 other-device MAC addresses in local files only; publish/analyze sanitized HCI status lines.
+
+
+## 2026-11-20 — HCI/MGMT capture reveals BR/EDR-address failure (transport-selection hypothesis)
+
+One v3 enumerate-only run was recorded using `btmon -t`. BLE scan found the
+`G3V2 APP`, but the sole Bleak connection timed out after 20s.
+
+The prior summarizer output contained:
+
+```text
+@ MGMT Event: Connect Failed (0x000d)
+    BR/EDR Address: [redacted]
+    Status: Connect Failed (0x04)
+```
+
+This is **not** an HCI `Page Timeout` diagnosis; `0x04` here is a BlueZ MGMT
+status. MGMT address type `BR/EDR` is nonetheless notable because the desired
+configuration service is BLE.
+
+No extracted HCI `Create Connection` / `LE Create Connection` command was included
+in the first filtered output. Do not conclude which bearer was attempted without
+reading those events from the existing raw capture. Read-only offline log analysis is
+the next experiment; further live retries are not justified yet. Address values and
+unredacted btmon files stay local.

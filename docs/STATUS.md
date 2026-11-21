@@ -4142,3 +4142,15 @@ The user's previously missing `g3v2-light-write-timing-v2.py` and `g3v2-le-conne
 The prior **unreviewed script safety warning** is now **resolved for the supplied source**: the `--dry-run` branch is correctly guarded. Tests with all HID calls mocked showed **0 0x37 writes and 6 synthetic B7 reads** in `--dry-run --reads 3`. Full write-path simulation produced 17 *synthetic* 0x37 operations, 24 B7 reads and restored the original six-byte lamp state. BLE diagnostics with a fake socket connected and closed once, and issued no packets. Both sources passed Python syntax compilation.
 
 This validates *software control flow only*. It does not prove safety of physical writes to flash, complete restoration of effect mode, or a volatile RGB register. The user had already performed the physical timing v2 test; **do not repeat it**. The previously published claim that v2 had not been audited and should not be trusted is superseded. The need for a true RAM-only lighting method remains unresolved.
+
+
+### 2026-11-21 — Future troubleshooting reference: G5 Pro receiver/controller firmware recovery
+
+At user request, archived external Reddit report for reference if the G3 V2 later develops symptoms after calibration, lost 2.4 GHz, or permanently pressed triggers:
+https://www.reddit.com/r/Controller/comments/1v0dmci/solved_machenike_g5_pro_triggers_permanently/
+
+Full structured G3V2-safe note: [TROUBLESHOOTING-REFERENCES.md](TROUBLESHOOTING-REFERENCES.md).
+
+Reddit author reports G5 Pro USB/Bluetooth working but 2.4 GHz failure and triggers LT/RT held at 1.00 after calibration; recovery by installing matching official Chinese **G5 Pro** tri-mode controller and receiver firmwares separately. This is user anecdote, **not** confirmation of the same failure or safe repair for G3 V2.
+
+Relevant cross-check: our downloaded official G3 V2 package already has two distinct executables for controller vs receiver. If G3 V2 ever fails, inspect both components' IDs/versions/communications read-only before considering any firmware action. **Never flash G5 Pro binaries or execute G5 Pro recovery hotkeys on a G3 V2.** No existing G3 V2 hardware issue is asserted.

@@ -2998,3 +2998,38 @@ Next strictly non-mutating check with the existing `bluetoothctl` session:
 `bearer <device>` (query only), then `scan off`, `quit`.
 Do not perform another ordinary `connect`, enable bluetoothd experimental
 mode, modify the immutable base, pair/bond, or write 0x37/0x3B.
+
+
+### 2026-11-20 — Device1 present, LE1 absent and PreferredBearer query empty (live)
+
+A new interactive `bluetoothctl` `scan le` found the same `G3V2 APP` again.
+The LE submenu explicitly returned **no devices** for `list` and
+`LE bearer not found on <controller>` for `show <controller>`. Its
+`connect` had earlier reported `org.bluez.Bearer.LE1 is not available`.
+In the main menu `info` displayed the device as `public`, `Connected: no`,
+and `AdvertisingFlags: 02`. The query `bearer <controller>`, without a new
+value, printed **nothing**.
+
+Source checked: BlueZ `client/main.c` `cmd_bearer` only calls
+`print_property(proxy, "PreferredBearer")` on an omitted value. No
+output is consistent with this optional experimental D-Bus property being
+absent, not evidence that the preferred bearer is already `le`.
+BlueZ `doc/org.bluez.Device.rst` confirms the property is optional and
+experimental. As a result, **do not assume** `bearer <controller> le`
+will work, and **do not** interpret `menu le` being present as proof the
+LE1 object is registered.
+
+The normal BlueZ D-Bus route currently cannot force LE for this device
+using the exposed interfaces. The wrong-bearer evidence and public-address /
+flags 0x02 correlation remain strong; the BLE peripheral itself has not
+yet been tested with an explicitly LE-address-typed link.
+
+Next safe path: **check only local availability** of an LE-public direct
+client (`btgatt-client` or legacy `gatttool`) and the Python version /
+`socket.BDADDR_LE_PUBLIC` support. `btgatt-client` source establishes
+an ATT (L2CAP CID 4) socket with explicit `BDADDR_LE_PUBLIC`, bypassing
+BlueZ Device1 automatic bearer choice; Python 3.14+ also supports the typed
+L2CAP socket address tuple. If suitable tooling exists, attempt **one**
+bounded LE ATT socket connection with no KeyLinker writes, without pairing,
+disabling BR/EDR globally, or editing the immutable OS base. No device MAC
+is published.

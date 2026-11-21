@@ -3102,3 +3102,50 @@ address at runtime; no personal Bluetooth address is committed.
 
 Script syntax and UUID/response-record smoke tests were completed locally.
 **No real GATT service discovery has yet been executed**; await user's output.
+
+
+### G3V2 BLE GATT verified on real hardware: KeyLinker service and handles (2026-11-20)
+
+**Confirmed physical measurement** using `tools/g3v2-le-gatt-discover-readonly.py`
+over the direct Linux LE Public ATT CID=4 socket:
+- LE connection established in **459.9 ms**, no pairing;
+- exactly **two primary services** were enumerated:
+  - `0x0005–0x000A`: `d7f010e0-660d-46e9-96c3-19c4148bdab5` (KeyLinker);
+  - `0x000B–0x0012`: `0xFF12` (do not assume purpose without further evidence);
+- **KeyLinker characteristic declarations** in service `0x0005–0x000A`:
+  - declaration `0x0006`, **value handle `0x0007`**,
+    `d7f010e1-660d-46e9-96c3-19c4148bdab5`, property `0x08` (Write);
+  - declaration `0x0008`, **value handle `0x0009`**,
+    `d7f010e2-660d-46e9-96c3-19c4148bdab5`, property `0x10` (Notify).
+
+This conclusively proves accessible BLE/GATT service discovery and verifies the
+exact KeyLinker service/characteristics previously reconstructed from the app;
+prior Bleak/`bluetoothctl` timeouts were transport-selection/API failures,
+not an inability to access the controller's GATT database from Bazzite.
+The run issued **only ATT 0x10/0x08 discovery requests**. No KeyLinker
+application-level request or BLE characteristic/descriptor write was sent.
+
+The only remaining handle in the KeyLinker service, `0x000A`, **might**
+be the Client Characteristic Configuration Descriptor (`0x2902`) for
+the Notify e2 characteristic. **It has not yet been discovered or verified**:
+do not infer a CCCD from a remaining handle. A current BlueZ 2026 issue
+highlights the risk of synthesized/unverified CCCDs.
+
+**Next guarded tool published:** `tools/g3v2-le-keylinker-b7-readonly.py`
+(commit 2aca8d2). It independently:
+1. re-discovers the KeyLinker service and e1/e2 properties;
+2. verifies the real CCCD with ATT Find Information (`0x04`) and reads
+   its value with ATT Read (`0x0A`); `--inspect-only` stops here with
+   absolutely no ATT writes;
+3. optional `--b7`: enables e2 notification by ATT Write Request (`0x12`)
+   to the **verified CCCD only**, sends exactly one preexisting KeyLinker
+   **read opcode `B7`** as the value of e1 using an ATT Write Request,
+   receives the e2 ATT notification (`0x1B`), validates encoded
+   KeyLinker CRC and reconstructs one non-fragmented Lamplight read result;
+   attempts to restore the CCCD to its original value before disconnecting.
+
+Important semantics: `--b7` **does send ATT writes** (to the temporary
+subscription descriptor and to e1 carrying a **read-only query**). This is
+*not* an application-level lighting writer (no `0x37`), nor OTA/SCSI.
+It is guarded to only one B7 request and no repeats; no writes occur in
+`--inspect-only`. Neither mode has yet been executed on hardware.

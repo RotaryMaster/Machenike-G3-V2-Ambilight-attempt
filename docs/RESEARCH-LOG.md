@@ -2319,3 +2319,42 @@ direct source-grounded path to verify the BLE transformation rather
 than continuing speculative frame replays. The method bodies have
 **not yet been supplied or independently inspected**. No protocol
 difference is yet confirmed for the G3V2.
+
+
+## 2026-11-20 — Decompiled APK e.java proves BLE codec and serial differ from USB
+
+Read user's complete 689-line `com/pulsenet/inputset/util/e.java`
+from actual KeyLinker APK (SHA256 `09408b714d319461e6a29293d2170d2e7a6e4bcd60438998cd2e6c2f100ebdee`).
+
+Direct source observations:
+- outgoing GATT write in `util/b.java` calls `e.A().h(bArr)` before
+  `BluetoothGatt.writeCharacteristic` to e1;
+- incoming e2 `onCharacteristicChanged` calls `e.A().g(value)`;
+- e.h lines 384–409 uses `(serial + nonce - 154)`,
+  `(serial + nonce + 155)` and f2746g / f2747h masks;
+- e.g lines 356–378 is the corresponding inverse;
+- e.k lines 444–449 is CRC using the table common to both;
+- e.K() lines 92–99 starts `01`, then `82`, `03`, `84`, while USB
+  host session from native KeyLinkerlib starts `00`;
+- e.E() uses Java Random for the nonce;
+- e.L() is 0x91 identification with no payload;
+- e.q(0) is B7 lighting read with one selector byte 00.
+
+Verified static vectors with fixed nonce 0x29:
+`B7 06 00 29 00 A4` -> USB `CC B3 40 70 99 15`
+versus Android `71 A2 A2 90 2C 8E`.
+Android `91 05 01 29 FB` -> `48 A0 A5 90 21`.
+Android B7 after identity `B7 06 82 29 00 96`
+-> `EF 20 24 90 A2 BC`.
+
+The BLE silence under v2/v3 is thus not a meaningful rejection
+of valid app protocol; the transmitted host bytes did not match the
+actual Android e.h transform or serial generator.
+
+Published `tools/g3v2-android-keylinker-codec.py` and
+`tools/g3v2-le-android-identity-b7.py`, with separate portable
+codec and single-link, bounded identity-first read experiment.
+The latter verifies all UUIDs/CCCD and sends only 0x91, then 0xB7
+iff identity gets a decoded, CRC-valid, matching-serial notification.
+No firmware writes, OTA, pairing, lighting 0x37, or retries.
+**Not yet executed on hardware.**

@@ -2086,3 +2086,23 @@ supports `(bdaddr, psm, cid, bdaddr_type)` for L2CAP sockets. Check tool
 availability before implementation. Refrain from global BR/EDR shutdown:
 it requires cycling adapter power, can disrupt unrelated devices and is
 unnecessary at this stage.
+
+
+## 2026-11-20 — Python 3.15.2 supports explicit LE public ATT socket on user's Bazzite
+
+Runtime capability probe showed `AF_BLUETOOTH=31`, `BTPROTO_L2CAP=0`,
+`BDADDR_LE_PUBLIC=1` in Python **3.15.2**, but neither
+`btgatt-client` nor `gatttool` is installed. RPM did not recognize
+`bluez` and `bluez-deprecated` as installed packages, which must not
+be interpreted as absence of the functioning daemon.
+
+Verified Python docs: since 3.14, the socket L2CAP address has
+`(bdaddr, psm, cid, bdaddr_type)`. Verified BlueZ's own direct ATT client:
+`SOCK_SEQPACKET` + L2CAP + fixed ATT CID 4 + LE Public destination type.
+
+Published `tools/g3v2-le-att-connect-readonly.py` for one **not yet
+executed** direct kernel LE ATT socket connection, with an interactive
+MAC prompt and no user-level ATT/GATT payloads, pairing or settings writes.
+Next step is a single bounded execution, then evaluate the connection result
+or errno (including possible CID ownership/privilege issues). No new
+BlueZ/daemon/kernel modifications are warranted.

@@ -2915,3 +2915,43 @@ preceding HCI commands or the lower-layer HCI status. **Next step: inspect the a
 saved local `/tmp/g3v2-hci-raw.txt` for HCI `Create Connection` vs
 `LE [Extended] Create Connection`, Command Status, Connection Complete and related
 Bluetoothd messages, without repeating any live Bluetooth probe or making system changes.**
+
+
+### HCI root cause of tested BLE connect attempt: BR/EDR Page Timeout (confirmed)
+
+Full inspection of the *already captured* `/tmp/g3v2-hci-raw.txt` confirmed
+the HCI command and failure (times from the capture):
+
+```text
+23:15:55.172894  HCI Command: Create Connection (0x01|0x0005)
+23:15:55.175138  HCI Event: Command Status — Success (0x00)
+23:16:00.295198  HCI Event: Connect Complete (0x03)
+                 Status: Page Timeout (0x04)
+23:16:00.295226  MGMT Event: Connect Failed (0x000d)
+                 BR/EDR Address, Status: Connect Failed (0x04)
+```
+
+**Confirmed for this one captured attempt:** BlueZ/controller initiated a **BR/EDR
+(classic) Create Connection**, and its HCI result was **Page Timeout**. This is not
+an LE Create Connection attempt. The MGMT status code (also `0x04`) is a separate
+namespace from HCI Page Timeout.
+
+This is stronger evidence than the earlier bearer-selection hypothesis: a wrong-bearer
+connection was actually attempted. The cause of BlueZ selecting BR/EDR is not yet proven;
+avoid stating that controller firmware or GATT/KeyLinker is defective.
+
+Vendor documentation/previous APK analysis indicates the G3V2 APP configuration channel
+uses BLE KeyLinker GATT. BlueZ's Device1.Connect may select between LE and BR/EDR for
+dual-mode identities according to bearer selection/last-used/last-seen rules.
+
+**Next experiment (not yet executed):** use the official BlueZ `bluetoothctl`
+`menu le` -> `connect <device>` command while an LE advertisement is active.
+This explicitly requests LE, without changing OS installation, kernel, firmware, or
+pairing/bonding. It is not the same as merely changing the scan transport. If the
+installed BlueZ lacks the LE submenu, check whether `bearer <dev> le` is exposed;
+that property is experimental and only available for dual-mode devices. Do not disable
+BR/EDR globally or change daemon startup settings as a first workaround.
+
+The success criterion is establishing an LE link and enumerating GATT service
+`d7f010e0`; read requests and lighting writes remain deferred until that happens.
+Retain raw HCI logs locally, redact addresses before publishing.

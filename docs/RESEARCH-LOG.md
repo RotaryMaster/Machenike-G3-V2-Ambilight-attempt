@@ -2295,3 +2295,27 @@ optional verified portable Eclipse Temurin 21 JRE via Adoptium API
 the immutable Bazzite OS and physical gamepad remain untouched.
 Next action: run the updated script once, inspect Java/GATT class output,
 then compare exact app encryption. No new controller tests yet.
+
+
+## 2026-11-20 — JADX output identifies precise obfuscated Android KeyLinker codec calls
+
+Temurin JRE and JADX CLI were downloaded to the user's cache,
+not installed in immutable Bazzite. JADX exit code 3 but yielded
+4,314 Java sources. The initial scoring discovered only
+`com/pulsenet/inputset/util/b.java`, as the app is obfuscated.
+
+Static evidence from the user's decompilation:
+- notification decode: `e.A().g(bluetoothGattCharacteristic.getValue())`,
+  then dispatch decoded data to listener;
+- outgoing KeyLinker e1 characteristic write:
+  `characteristic.setValue(e.A().h(bArr))`;
+- on service discovery, app finds KeyLinker e0/e2 and enables
+  notifications via `BluetoothGatt.setCharacteristicNotification` plus
+  `BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE` in the 0x2902 CCCD.
+
+Next source is `com/pulsenet/inputset/util/e.java`, specifically
+method bodies `g(byte[])`, `h(byte[])`, and their constants. This is a
+direct source-grounded path to verify the BLE transformation rather
+than continuing speculative frame replays. The method bodies have
+**not yet been supplied or independently inspected**. No protocol
+difference is yet confirmed for the G3V2.

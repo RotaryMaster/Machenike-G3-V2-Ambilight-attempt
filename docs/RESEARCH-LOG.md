@@ -2165,3 +2165,32 @@ Default CLI requires an explicit choice:
 Next hardware run should begin with `--inspect-only` to confirm the
 descriptor without changing any characteristic. Do not repeat the earlier
 Bleak/BlueZ connection experiments.
+
+
+## 2026-11-20 — e2 CCCD physically identified, nonstandard 1-byte ATT read `0B 01`
+
+The user ran the first direct BLE B7 read probe. LE Public connection:
+**665.0 ms**, with unchanged service map and e1/e2 handles.
+ATT Find Information confirmed `0x000A => UUID 0x2902` (actual CCCD).
+ATT Read `0x0A` on handle `0x000A` returned `0B 01` (one byte of
+value `01`). The script expected a standard two-byte CCCD and
+aborted. No CCCD writes or B7 frames were transmitted.
+
+Bluetooth Core specification defines CCCD as two octets; do not
+assume the meaning of nonstandard `01` or auto-write standard
+`01 00`.
+
+Implemented `tools/g3v2-le-keylinker-b7-v2.py`:
+- `--inspect-only` still performs only read-only discovery and CCCD
+  value read;
+- `--b7` checks actual handles/properties and confirms CCCD value is
+  exactly `01` (observed) or `01 00` (standard notify-on) before
+  sending **only one** KeyLinker application-level read request `B7`
+  by a single transport ATT Write Request to e1, without writing the
+  CCCD. If no notify arrives, do not retry automatically.
+- new `--address` option avoids interactive MAC entry (the user's
+  MAC is never hardcoded into the public repository).
+
+The original one-byte descriptor response and no-CCCD-write test
+are now the relevant next step; avoid repeating previous discovery,
+probe v1, or BlueZ BR/EDR attempts.

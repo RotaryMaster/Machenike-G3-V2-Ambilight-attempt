@@ -2785,3 +2785,63 @@ never starts the EXE or touches the controller.
 Results of actual byte-wise 1.48/1.59 comparison
 pending user-side execution, because only the new ZIP
 was available as an uploaded binary in this turn.
+
+
+
+## 2026-11-21 — Real cross-version ciphertext stats (user's console output)
+
+Using `compare-g3v2-cross-version-fots.py` to parse
+the *correct* v1.48 and v1.59 controller updaters
+confirmed the same G3V2 HWID and KEY record,
+but the encrypted program difference is **near-random**,
+not a direct XOR-based firmware recovery.
+
+XCOD length 361472 → 365568 (+4096).
+Same-position equality 2002/361472 (0.5538%),
+XOR H=7.99908. There is one exact 512-byte
+ciphertext match at relative XCOD +0x800.
+Its 32 contiguous 16-byte blocks constitute
+**all** 16-byte aligned same-position matches;
+outside that 512-byte island,
+1490/360960 bytes match (0.4128%),
+close to random expectation 0.390625%.
+No other exact 512B shifted matches within
+the 32KiB range investigated by this script.
+
+XRES length 3072 on both. 2074/3072 equal
+(67.5130%), XOR entropy 3.29729 due to
+unchanged ciphertext. Four 512-byte blocks
+are identical in a single span XRES
+relative +0x200 through +0x9FF, plus a
+24-byte structural matching prefix.
+Other XRES bytes changed, with random-looking
+differences. Do not infer plaintext entropy
+from the XOR of identical ciphertext.
+
+CONFIG 957/1024 equal, as expected for plaintext
+settings in the section; not evidence of decryption.
+
+The XCOD observation is less favorable to
+straightforward same-keystream comparison than
+the EasySMX X20 reference, where consecutive
+versions preserved >99% of ciphertext. This
+does NOT disprove identical keystream: source
+reordering, compressed plaintext, or per-build
+key derivation also fit some of the evidence.
+The four identical XRES blocks support exact
+ciphertext reuse for unchanged resources,
+but not recovery of the secret for *changed*
+resources or the program.
+
+We must now distinguish **ciphertext identity**
+from **recovery of original code**. Neither
+the v1.48 ↔ v1.59 XOR nor XRES overlap
+is an executable dump, deciphered plaintext
+or a portable per-model encryption key.
+
+Next high-value target: a third same-HWID
+firmware (especially version nearer 1.59)
+to test whether code overlap follows version
+distance and whether identical XRES blocks
+persist; or a same-HWID plaintext reference.
+No controller or immutable OS modification.

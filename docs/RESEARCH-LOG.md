@@ -2059,3 +2059,30 @@ installed daemon. Query `menu le -> list/show`, main `info`, and the
 read-only `bearer <device>`; avoid pairing, controller writes or OS service
 reconfiguration until results are interpreted. Local address is intentionally
 omitted from public docs.
+
+
+## 2026-11-20 — LE1 absent; PreferredBearer not exposed by bluetoothctl query
+
+Interactive `bluetoothctl` session:
+- `scan le`: `G3V2 APP` rediscovered.
+- `menu le` → `list`: empty.
+- `menu le` → `show <controller>`: "LE bearer not found on ...".
+- `back` → `info <controller>`: public address, unpaired and disconnected,
+  `AdvertisingFlags: 02`.
+- `bearer <controller>`: no output.
+- Scan then cleanly stopped and session exited.
+
+Checked BlueZ `client/main.c`: read-only `bearer` queries the optional
+`PreferredBearer` property and prints nothing if unavailable. The LE menu
+operations require an existing `org.bluez.Bearer.LE1` proxy; the daemon is
+not publishing one for this device. No connection or configuration mutation
+occurred during this round.
+
+Avoid repeating scans, trying `menu le connect`, or changing
+`PreferredBearer` without observing the property. Investigate direct,
+explicit-LE L2CAP ATT clients as a bounded one-time connection test. BlueZ
+`tools/btgatt-client.c` supports `--type public`, and Python >=3.14
+supports `(bdaddr, psm, cid, bdaddr_type)` for L2CAP sockets. Check tool
+availability before implementation. Refrain from global BR/EDR shutdown:
+it requires cycling adapter power, can disrupt unrelated devices and is
+unnecessary at this stage.

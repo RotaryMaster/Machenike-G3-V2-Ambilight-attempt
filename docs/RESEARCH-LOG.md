@@ -2106,3 +2106,29 @@ MAC prompt and no user-level ATT/GATT payloads, pairing or settings writes.
 Next step is a single bounded execution, then evaluate the connection result
 or errno (including possible CID ownership/privilege issues). No new
 BlueZ/daemon/kernel modifications are warranted.
+
+
+## 2026-11-20 — G3V2 direct LE Public L2CAP/ATT connection: SUCCESS (462.9 ms)
+
+A real execution of `tools/g3v2-le-att-connect-readonly.py` returned:
+
+```text
+SUCESSO: conexão L2CAP/ATT estabelecida em 462.9 ms
+Destino: CID=4, tipo=1 (LE Public=1)
+```
+
+The socket was closed immediately and no ATT PDU was sent or received.
+The `BR/EDR Page Timeout` observed in earlier Bleak/BlueZ path was
+therefore a transport-selection/interface problem in that tested path,
+not proof that the device is unreachable by Bluetooth LE. Root reason for
+BlueZ's misclassification remains a hypothesis (advertising flags 0x02
+with public address), not a fully proven root cause.
+
+For the first **read-only** real GATT interrogation, added
+`tools/g3v2-le-gatt-discover-readonly.py` with one direct LE Public
+connection and guarded ATT discovery `0x10` (primary services) followed
+by `0x08` (characteristic declarations inside service d7f010e0, when found).
+No attribute value reads/writes, notification subscriptions, or application
+KeyLinker commands. The request types follow Bluetooth SIG ATT/GATT service
+discovery and BlueZ's reference approach. Local syntax and UUID-decoding
+tests passed, but the device responses have **not yet been measured**.

@@ -133,6 +133,7 @@ def query(sock: socket.socket, tx_handle: int, notify_handle: int,
     print("TX APK wire  :", wire.hex(" ").upper(), flush=True)
     early: list[bytes] = []
     t0 = time.monotonic()
+    sock.settimeout(timeout)
     write_request(sock, tx_handle, wire, early)
     print("ATT Write Response: OK; aguardando e2", flush=True)
     _, decoded = await_matching_notify(sock, notify_handle, serial, early, timeout)

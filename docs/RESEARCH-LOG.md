@@ -2422,3 +2422,29 @@ until that targeted source output is inspected.
 
 Charging-dock light reset observation remains an unquantified clue:
 do not overinterpret earlier quick-power-cycle 0x37 persistence.
+
+
+## 2026-11-21 — Actual Android 0x37 and 0x25 call sites extracted (read-only)
+
+The user's source xref audit scanned 142 app-package Java sources
+from the JADX cache. These are direct `e.A()` calls:
+
+| Opcode | Construction call | APK caller |
+|---|---|---|
+| 0x37 (decimal 55) | `e.A().l0(int[],i)` | `util/b1.java:1449,1460,2445,2454` |
+| 0x25 (decimal 37) | `e.A().X(byte[],i)` | `util/f.java:107; util/b1.java:2055` |
+| 0x25 (decimal 37) | `e.A().h0(int)` | `util/b1.java:2012` |
+| 0xB7 (read) | `e.A().q(int)` | `util/b1.java:1791` |
+
+The two observed 0x37 construction loops split arrays in 15-byte
+fragments, consistent with protocol framing. The 0x25 callers appear
+in a distinct data arrangement with three-byte grouped arrays; do
+not infer LED streaming or volatile updates. Several loose-name
+matches elsewhere in the APK are false positives due to obfuscation.
+The meaning of both 0x37 calling contexts and 0x25 is unresolved.
+
+Next user-side read-only command: show bounded sections
+`b1.java:1395-1480,2390-2470,1970-2070` and
+`f.java:55-120` to identify enclosing method names, payload
+construction, and whether any write path is distinct from persistent
+configuration. Avoid repetitive BLE/USB hardware probes.

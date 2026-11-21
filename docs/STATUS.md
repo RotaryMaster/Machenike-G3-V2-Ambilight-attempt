@@ -3351,3 +3351,43 @@ release-provided SHA-256 if available.
 
 The APK code itself has **not yet been decompiled or compared to the USB
 codec**. Do not mark any Bluetooth application-level protocol as proven.
+
+
+### 2026-11-20 — Android APK JADX decompilation usable; exact BLE codec class located (not yet extracted)
+
+User reran `tools/inspect-g3v2-keylinker-apk-codec.py` with
+`--fetch-portable-java --fetch-portable-jadx`. The script obtained
+the official Temurin 21.0.13+2 JRE (SHA-256 validated) and JADX 1.5.7
+portably into `~/.cache/machenike-keylinker-analysis/`, without OS
+package changes. The reference APK's SHA256 is
+`09408b714d319461e6a29293d2170d2e7a6e4bcd60438998cd2e6c2f100ebdee`;
+it includes `classes.dex` (8,002,728 bytes).
+
+JADX **exit code 3**: incomplete decompilation/possible warnings, but
+**4,314 Java files were produced**. Focused search found obfuscated
+`com/pulsenet/inputset/util/b.java`, which establishes the actual
+KeyLinker Android GATT dispatch path:
+- `BluetoothGattCallback.onCharacteristicChanged` takes the
+  notification's raw bytes, decodes them with
+  `com.pulsenet.inputset.util.e.A().g(getValue())`, delivers the
+  result to the application listener, and removes its in-flight record
+  using decoded byte index 2.
+- Writes to the exact G3V2-compatible KeyLinker GATT characteristic
+  `d7f010e1-660d-46e9-96c3-19c4148bdab5` call
+  `characteristic.setValue(com.pulsenet.inputset.util.e.A().h(bArr))`,
+  then `BluetoothGatt.writeCharacteristic`.
+- Service discovery searches for `d7f010e2` in KeyLinker service
+  `d7f010e0` and calls `K(true, characteristic)`;
+  `K` registers local notifications and uses standard
+  `BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE` via the
+  verified 0x2902 CCCD.
+
+**Most actionable new fact:** `com/pulsenet/inputset/util/e.java`'s
+obfuscated `h()` (outgoing transform) and `g()` (incoming
+transform) are the **exact Android APK codepaths** to inspect next.
+Previous automated ranking did not list that file because it was
+looking for unobfuscated identifiers `encrypt/decode`, not `g/h`.
+This is NOT proof of any codec divergence until those method bodies
+are read and test-vector compared with the known MixDrive USB cipher.
+No new BLE frame has been transmitted. Continue static inspection
+first; do not re-run identical B7 tests.

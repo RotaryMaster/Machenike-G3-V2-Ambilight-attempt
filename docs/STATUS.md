@@ -3535,3 +3535,38 @@ Related x20ctl X20 Pro code uses repeated 0x37 lighting-record writes in
 a persistent BLE session, but that proves neither a distinct volatile
 opcode nor G3V2 flash endurance. Its behavior must not be generalized to
 this device.
+
+
+### 2026-11-21 — Android lighting call-site audit: 0x37 confirmed, 0x25 still unidentified
+
+The user ran `tools/audit-keylinker-android-light-callers.py` against
+142 `com/pulsenet/inputset` Java sources in the local JADX cache.
+
+**Direct singleton `e.A()` cross-references**, distinguished from false
+positives on unrelated obfuscated methods:
+
+- `e.A().l0(int[],i)` -> native **0x37** lighting writer:
+  `util/b1.java` lines **1449, 1460, 2445, 2454**.
+  They appear in **two separate loops**, each partitioning its
+  data into up-to-15-byte chunks before calling
+  `b.P().w(...)` for BLE transport. The two routines' semantic
+  differences are **not yet known**; inspect their enclosing methods,
+  full payload assembly, and callers before assuming a realtime path.
+- `e.A().X(byte[],i)` -> **0x25** (**decimal 37**, NOT hex 0x37):
+  `util/f.java` line **107** (building a collected representation)
+  and `util/b1.java` line **2055** (actual transport dispatch).
+  Both have preceding 3-byte copying logic; exact purpose unproven.
+- `e.A().h0(int)` -> **0x25**: `util/b1.java` line **2012**,
+  within an adjacent transport sequence, purpose unproven.
+- `e.A().q(i)` -> **0xB7** read: `util/b1.java` line **1791**.
+
+The loose matcher reported many unrelated `.q()`/`.l0()` method
+names from UI/other object types. **Do not interpret them as
+KeyLinker opcodes**; the direct `e.A()` hits above are the
+meaningful verified cross-references.
+
+**Current conclusion:** no RAM-only preview or realtime LED opcode
+has been demonstrated by this search. `0x25` is not a justified
+Ambilight candidate until its payload role is established. Continue
+with a targeted offline extraction of `b1.java` and `f.java`
+surrounding these calls. No BLE hardware or 0x37 writing required.

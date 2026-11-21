@@ -3720,3 +3720,49 @@ if B7 differs, record exact contents. Avoid setting an arbitrary
 several-hour threshold. Compare with power-off *without* dock
 only if the result warrants it. A full battery reading alone does
 not prove the charging transition was the trigger.
+
+
+### 2026-11-21 — User video: joystick-reactive RGB effect suggests internal realtime LED engine
+
+User provided a 28.482-second VP9 WebM screen recording (not added
+to the repository). In the video, one of the G3 V2 built-in lighting
+effects visibly changes the illuminated joystick-ring colors as the
+sticks are moved (~2–14 s); another effect shows a chase/circulating
+light (~16–27 s). The recording includes a PC with an Xbox-controller
+input/test page, so **host independence was not directly tested**.
+
+Important interpretation:
+- A **stored effect program/mode** and **realtime LED output** can
+  coexist. The firmware may store a fixed algorithm/table in program
+  flash and use live Hall-stick axes to compute changing RGB values in
+  MCU RAM without per-frame nonvolatile writes.
+- This is strongly suggested by the user-video response and the
+  already-observed physical Fn+D-pad-Right mode changes **without any
+  B7 payload change**. Manuals corroborate Fn+Right selects modes.
+  But no packet capture or receiver-disconnected video yet rules out
+  host participation conclusively.
+- A "dynamic" color transition does **not mean each frame was
+  transmitted via USB/BLE**, and does **not imply 0x37 is safe for
+  streaming**.
+- For Ambilight, investigate the firmware's internal effect-render
+  function, LED/PWM/WS2812 driver, stick-position/mode dispatcher and
+  whether an *external volatile RGB input* exists. Native joystick
+  animation by itself does not expose a host-accessible realtime
+  pixel interface.
+- A simple reversible hardware discriminator is to activate the
+  joystick-reactive lighting mode, unplug only the 2.4 GHz receiver
+  (or otherwise disconnect gameplay host), then move the sticks
+  while the controller stays powered. If reaction continues
+  disconnected, host-per-frame RGB updates are ruled out for this
+  built-in effect. If it stops, sleep/disconnect policy is an
+  alternative explanation; not proof that a host streamed RGB.
+  Do not use any new 0x37 writes.
+- Optional separate static/read-only analysis: observe whether B7
+  RGB logical bytes remain static when the joystick changes visible
+  RGB. Prior Fn+Right observation already showed mode can change
+  independently of B7, so this is not mandatory or urgent.
+
+The G3V2 v1.48 FOT files have an XCOD firmware container; code
+extraction/architecture remains a separate capability question.
+Do not claim that program firmware can already be modified or
+that volatile RGB writes have been identified.

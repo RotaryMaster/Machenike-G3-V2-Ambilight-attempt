@@ -141,6 +141,51 @@ def query(sock: socket.socket, tx_handle: int, notify_handle: int,
     return decoded
 
 
+def parse_one_frame_reply(plain: bytes) -> bytes:
+    """Recover one complete logical record from response opcode 0x19."""
+    if len(plain) < 6 or plain[0] != 0x19 or plain[1] != len(plain):
+        raise RuntimeError("Resposta KeyLinker inválida para leitura lógica")
+    if android.crc8(plain[:-1]) != plain[-1]:
+        raise RuntimeError("Resposta KeyLinker com CRC inválido")
+    declared = plain[4]
+    payload = plain[5:-1]
+    if len(payload) != declared:
+        raise RuntimeError(
+            f"Resposta contém {len(payload)} bytes lógicos, declara {declared}; "
+            "uma continuação poderá ser necessária, não haverá solicitação automática"
+        )
+    return payload
+
+
+def show_identity(plain: bytes) -> None:
+    record = parse_one_frame_reply(plain)
+    if len(record) != 7:
+        print("Identidade com tamanho inesperado:", record.hex(" ").upper(), flush=True)
+        return
+    vid = record[:2].hex().upper()
+    pid = record[2:4].hex().upper()
+    version = f"{record[4]:X}.{record[5]:02X}"
+    print(f"IDENTIDADE REAL: ID lógico {vid}:{pid}, firmware {version}, "
+          f"flags 0x{record[6]:02X}", flush=True)
+
+
+def show_lamplight(plain: bytes) -> None:
+    body = parse_one_frame_reply(plain)
+    print("B7 lógico:", body.hex(" ").upper(), flush=True)
+    if len(body) != 6:
+        print("B7 tem comprimento diferente de 6; sem decodificação de cor.", flush=True)
+        return
+    r, g, b, packed_lo, packed_hi, brightness = body
+    packed = packed_lo | (packed_hi << 8)
+    speed = packed & 0x7FFF
+    breath_switch = (packed >> 15) & 1
+    print(f"ILUMINAÇÃO B7: RGB=({r}, {g}, {b}), "
+          f"breathSpeed={speed}, breathSwitch={breath_switch}, "
+          f"brightness={brightness}", flush=True)
+    print("NOTA: modo visual por FN+Right não é completamente representado no B7.",
+          flush=True)
+
+
 def main() -> int:
     cli = argparse.ArgumentParser(description=__doc__)
     cli.add_argument("--address", required=True)
@@ -217,6 +262,7 @@ def main() -> int:
             return 4
         print(f"SUCESSO: resposta Android KeyLinker após 0x91: "
               f"{reply.hex(' ').upper()}", flush=True)
+        show_identity(reply)
 
         if args.mode == "identity-only":
             print("Concluído em modo identidade; nenhuma leitura B7 enviada.")
@@ -230,8 +276,8 @@ def main() -> int:
             print("B7 SEM NOTIFICAÇÃO: " + str(exc), flush=True)
             print("0x91 funcionou, mas B7 requer investigação do corpo/estado.")
             return 5
-        print(f"SUCESSO: resposta B7 (ainda requer análise da carga útil): "
-              f"{lamp.hex(' ').upper()}", flush=True)
+        print(f"SUCESSO: resposta B7: {lamp.hex(' ').upper()}", flush=True)
+        show_lamplight(lamp)
         return 0
 
 

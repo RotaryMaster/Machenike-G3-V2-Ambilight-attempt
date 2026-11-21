@@ -117,7 +117,7 @@ def read_cccd(sock: socket.socket, handle: int) -> bytes:
     if len(value) == 1:
         print(
             "  AVISO: firmware retornou CCCD de 1 byte; padrão prevê 2. "
-            "Não haverá escrita neste descritor.",
+            "Não é possível inferir o estado real das notificações só desta leitura.",
             flush=True,
         )
     return value

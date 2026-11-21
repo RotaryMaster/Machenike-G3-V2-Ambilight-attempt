@@ -3033,3 +3033,32 @@ L2CAP socket address tuple. If suitable tooling exists, attempt **one**
 bounded LE ATT socket connection with no KeyLinker writes, without pairing,
 disabling BR/EDR globally, or editing the immutable OS base. No device MAC
 is published.
+
+
+### Direct Linux LE L2CAP/ATT probe is available; not yet run on hardware
+
+The user's Bazzite installation reported:
+- `python3` version **3.15.2**;
+- `socket.AF_BLUETOOTH=31`, `socket.BTPROTO_L2CAP=0`,
+  `socket.BDADDR_LE_PUBLIC=1`;
+- no `btgatt-client` or `gatttool` in `PATH`;
+- `rpm -q bluez bluez-deprecated` did not find those RPM packages,
+  despite a working BlueZ daemon/`bluetoothctl`. **This does not prove
+  BlueZ is absent** (Bazzite may provide it through a different package
+  management/layout route).
+
+Python 3.14+ officially supports the L2CAP destination tuple
+`(bdaddr, psm, cid, bdaddr_type)`, enabling direct, address-typed LE
+connection attempts. The BlueZ reference client `btgatt-client` opens
+`SOCK_SEQPACKET/BTPROTO_L2CAP` with ATT fixed `CID=4`,
+`BDADDR_LE_PUBLIC` for a public-address BLE device.
+
+Added `tools/g3v2-le-att-connect-readonly.py`: asks for MAC interactively
+(never hardcodes or writes the address to GitHub), binds an ATT CID=4 socket,
+attempts **one** direct LE Public connect with a 12s default timeout,
+prints success or errno, then closes. **No ATT/GATT request data, no
+KeyLinker packet, no pairing request, no write to controller settings**.
+
+This tool is a new transport-path test, not a proven solution; **actual
+socket permission, kernel behavior and G3V2 LE connectability still require
+the user's single live run**. Do not call the result confirmed until captured.

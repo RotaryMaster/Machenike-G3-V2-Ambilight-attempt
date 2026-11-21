@@ -4036,3 +4036,85 @@ especially since this ZIP has separate controller
 and receiver updaters. Do not confuse the receiver
 image with the gamepad firmware or claim their version
 fields match without parsing.
+
+
+
+### 2026-11-21 — ACTUAL v1.48 ↔ v1.59 FOT differential executed: mixed section behavior, plaintext NOT recovered
+
+User ran `tools/compare-g3v2-cross-version-fots.py` against:
+- official v1.48 FOT SHA256 `0ad5d080c6451d9a26a28e32f77ce73789f163ce8cad12c035ff4314b10fb085`;
+- G3V2 v1.59 (controller) FOT SHA256 `ebb611eb8d4d730e991fa1f8027d653152515c4e47903c07537a6d7fadd4e849`.
+
+The same exact 16-byte G3V2 HWID and static KEY ID
+`00000001eae32e09` were confirmed by direct file parsing.
+No execution, flashes, gamepad access, or output binaries.
+
+**XCOD**:
+- v1.48: 361472 bytes, v1.59: 365568 (+4096).
+- On common section-relative offsets, only **2002/361472
+  equal bytes (0.5538%)**, XOR entropy **7.99908**.
+- **Exactly one 512-byte unchanged ciphertext run**:
+  offset **+0x800** within whole XCOD section, 512 bytes;
+  no exact matching 4096-byte blocks; the 32 matching
+  aligned 16-byte blocks are contained in this one
+  512-byte run.
+- Apart from this run, **1490/360960** bytes coincide
+  (~0.4128%), near the 1/256 = 0.390625% random
+  equality baseline. Thus the original 0.5538%
+  should **not** be interpreted as 0.55% actual
+  plaintext code preserved.
+- No exact aligned 512-byte blocks were found at
+  shifted positions within ±32 KiB (using the
+  comparator's bounded shift scan). This does not
+  rule out arbitrarily shifted matches or alternative
+  alignment.
+- XCOD payload excluding the 16-byte header also
+  shows near-uniform XOR (7.99910 bits/byte).
+  The result is NOT the sparse, easy same-keystream
+  delta pattern from the separate X20 v1.18/v1.21
+  research example. It cannot on its own
+  distinguish section re-encryption/rekeying,
+  reordered/compressed plaintext, or wholesale
+  compilation changes.
+
+**XRES**:
+- Both total sections 3072 bytes.
+- **2074/3072 (67.513%)** equal; XOR entropy **3.29729**
+  reflects many zero differences caused by unchanged
+  ciphertext, **NOT low-entropy plaintext**.
+- Exact **2048-byte unchanged ciphertext span at
+  XRES relative +0x200..+0x9FF**, four consecutive
+  512-byte blocks.
+- Other matching bytes include first 24 bytes of
+  the XRES section (structural header); the other
+  2 single-byte coincidences are not meaningful.
+  Of the XRES_DATA alone, the first 8 bytes
+  after the 16-byte section header are equal,
+  plus that same 2048-byte unchanged span.
+- Remaining bytes differ, mostly in the first
+  512 and last 512 of the XRES section.
+  This is compatible with reuse of encrypted
+  unchanged assets, but by itself cannot prove
+  identical keystream for changed XRES pages.
+
+**CONFIG**: 957/1024 equal (93.457%),
+unchanged last 768 bytes. This is explicit
+plaintext config metadata; do **not** count it
+as cryptographic keystream evidence.
+
+**Key research decision:** no decrypted firmware,
+no key or usable keystream recovered.
+Stop treating the existence of 1.48 and 1.59
+as equivalent to a broken cipher.
+The next high-value artifact is an
+**intermediate same-HWID G3V2 revision**
+(e.g., 1.58 or another historical image) that
+may have more similar XCOD; or a known-plaintext
+image of the same exact HWID. Prefer archived
+official installers and OEM/researcher support.
+Do not rerun generalized cipher brute force
+or broad source searches with the same queries.
+
+A new or closer revision may still fail to
+give plaintext if its entire code stream differs.
+All analysis remains offline and read-only.

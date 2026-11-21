@@ -2546,3 +2546,39 @@ If the event occurs again, inspect the LED state immediately,
 avoid button hotkeys that alter lighting, then perform **one
 read-only B7 query** using the already verified Android BLE
 path. Never use repeated 0x37 writes just to reproduce.
+
+
+## 2026-11-21 — Video demonstration of joystick-reactive RGB animation
+
+The user uploaded a short (~28.5 sec) captured tutorial clip of a
+Machenike G3 V2. In the clip, the second lighting effect responds
+with changed colors as the sticks move (roughly 2–14 seconds).
+A later, third effect presents circular/chasing illumination
+(roughly 16–27 seconds). The tutorial displays a host controller
+tester simultaneously; therefore the video alone does **not**
+prove operation while disconnected.
+
+This adds a new strong firmware hypothesis: a stored RGB effect
+selector/program plus an internal runtime loop reading the Hall
+joystick input and driving the LED rings. That architecture is
+fully compatible with continuous color changes with **no 0x37
+host transactions per color frame**, and without any per-frame
+flash writes. The independently established local Fn+D-pad-Right
+mode cycling and the fact that Fn+Right changes visible effect
+without changing B7 RGB fields support separation of the
+effect engine from the six-byte LampLight record.
+
+No claims that RAM-only LED commands are remotely accessible:
+built-in effect execution and external programmable Ambilight
+are distinct properties. Recommended reversible test is
+disabling/disconnecting host link while the gamepad remains
+powered and moving the sticks; stop before sleep confounds
+results. If effects still react, internal execution is proven;
+if not, distinguish sleep/power behavior before attributing
+lighting changes to host traffic. No 0x37 BLE/USB writing.
+
+External manual cross-check:
+`https://manuals.plus/ae/1005010417633958` lists
+Fn+D-pad Right as cycling local lighting modes and Fn+D-pad
+Left as brightness adjustment. The upload/media itself and
+per-device identity are kept outside the public repo.

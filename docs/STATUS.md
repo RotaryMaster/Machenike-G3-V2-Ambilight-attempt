@@ -3906,3 +3906,41 @@ availability or archive record, without executing a downloaded
 updater. Only a genuine complete FOT with exact
 `a1ca51da724cb6103658c05d7d4e2267` and
 **different** XCOD content would advance our decryption goal.
+
+
+
+### 2026-11-21 — User Wayback audit returned no usable metadata; independent Common Crawl track prepared
+
+User executed `tools/audit-g3v2-wayback.py --max-per-page 3`.
+For each of `machenike.com/shoubing/download`,
+`www.machenike.com/shoubing/download`,
+`global.machenike.com/shoubing/download`, and
+`global.machenike.com/download`:
+- CDX returned `CDX: empty response`;
+- Wayback availability-API fallback found `Selected: 0` captures.
+The script concluded no **accessible archive metadata**, NOT that Wayback
+had never captured those pages. No archived URL or binary was recovered.
+
+Independent source check:
+- Internet Archive availability API is reported broken/returning empty
+  `archived_snapshots` by a 2026-04-18 external developer report
+  (`https://github.com/browser-use/browser-harness/blob/main/agent-workspace/domain-skills/wayback-machine/scraping.md`).
+  Treat this as a plausible explanation for the fallback failure,
+  not proof of Machenike archival absence.
+- The independent Common Crawl index `https://index.commoncrawl.org/`
+  publicly lists historical 2024–2026 crawl collections.
+- Direct per-URL Common Crawl archive queries were blocked by the
+  assistant's web-retrieval tool, so **no Machenike Common Crawl capture
+  has yet been verified**.
+
+Added `tools/audit-g3v2-commoncrawl.py`, a bounded GET-only alternative:
+representative 2024–2026 crawl indices, exact `/shoubing/`
+prefix patterns, print archived URL captures and optionally fetch a
+small number of historical HTML WARC records via HTTP byte range
+to identify download links. The tool never downloads/executes
+updater binaries and does not touch the G3 V2.
+
+The user should run this **independent archive search once**
+before further historical archive work. If empty/blocked, stop
+automated archive cycling and use archived vendor installer collections,
+manufacturer support, or directly available RE artifacts instead.

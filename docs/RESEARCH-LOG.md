@@ -2523,3 +2523,26 @@ BLE read of B7; compare exact bytes to baseline. Only afterward
 consider a long off-without-dock control case. Do not use 0x37
 writes, reset firmware, or assume a particular number of hours
 is necessary. Visible effect can vary independently of B7.
+
+
+## 2026-11-21 — Important qualification of earlier dock experiment
+
+User corrected the retrospective observation: the controller had
+reached **100% charge** and **all illumination was OFF when
+restarted** following several hours on the dock. There has been
+**no controlled dock test yet**. Earlier statements that *both
+the remembered color and mode were erased* are not hardware-validated:
+when LEDs are all off neither the underlying RGB record nor
+effect selection is visible, and no B7 record was read during that
+earlier event.
+
+This may represent a charging/full-battery LED-off policy,
+a restored default mode, volatile state loss, or a changed RGB
+record; the cause is **undetermined**. Retain the independent
+current pre-experiment baseline solid green,
+B7 = `15 F6 05 00 00 FF` (RGB 21/246/5, brightness FF).
+
+If the event occurs again, inspect the LED state immediately,
+avoid button hotkeys that alter lighting, then perform **one
+read-only B7 query** using the already verified Android BLE
+path. Never use repeated 0x37 writes just to reproduce.

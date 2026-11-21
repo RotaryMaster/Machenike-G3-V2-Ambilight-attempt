@@ -2707,3 +2707,29 @@ availability or archive record, without executing a downloaded
 updater. Only a genuine complete FOT with exact
 `a1ca51da724cb6103658c05d7d4e2267` and
 **different** XCOD content would advance our decryption goal.
+
+
+
+## 2026-11-21 — Wayback CDX and availability fallback both failed to surface Machenike URLs
+
+Actual test from user's Bazzite returned
+`CDX: empty response` and `Selected: 0` for all
+four known/plausible Machenike controller-download pages.
+This does **not** certify that Wayback has never archived
+the site. No old URL was recovered; do not repeat the same
+requests as a "new" test.
+
+Confirmed Common Crawl maintains separate 2024 and 2025
+crawl indices (`https://index.commoncrawl.org/collinfo.json`).
+Assistant's web tool could open the crawl index catalog,
+but couldn't access URL-specific archive queries; this is
+a tool/network limitation, not an empty-result finding.
+
+Committed new independent archive-only script
+`tools/audit-g3v2-commoncrawl.py`.
+It queries a few representative CDXJ indices for
+`machenike.com/shoubing/*` and variants, and
+optionally fetches historical HTML only via ranged WARC
+requests, searching for `ZXD2267`, G3V2 and potential
+installer URLs. It has not been run on the user's network.
+No device or OS modifications are needed.

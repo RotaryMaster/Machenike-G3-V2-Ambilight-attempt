@@ -2582,3 +2582,44 @@ External manual cross-check:
 Fn+D-pad Right as cycling local lighting modes and Fn+D-pad
 Left as brightness adjustment. The upload/media itself and
 per-device identity are kept outside the public repo.
+
+
+## 2026-11-21 — Decryption of G3V2 FOT selected as next major project track
+
+User explicitly chose the **firmware-package decryption** option.
+
+Reviewed and rejected already exhausted variants:
+- two same-HWID G3V2 v1.48 FOTs have identical
+  XCOD/XRES content and differ only in duplicated header
+  metadata: no plaintext-difference oracle;
+- no host-side decryptor in the official updater: F0
+  transfers the embedded ciphertext bytes as-is;
+- high entropy, obfuscated XOR-0x80 section names and
+  simple crypto probes are not a new result.
+
+New public comparison (verified links):
+`https://github.com/LopeKinz/Manba-One-V2-Firmware-tools`
+reports X20 v1.18/1.21 same-HWID reused section stream;
+`https://github.com/LopeKinz/Manba-One-V2-Firmware-tools/issues/2`
+reports extensive failed cipher sweeps and missing public
+same-ID test images; this supports a differential strategy
+only when a **genuinely different code version with
+the exact G3V2 HWID** can be obtained.
+`https://gamepadla.com/machenike-g3-v2.html`
+records v1.25 in January 2025 but the old FOT is
+not yet found and HWID equivalence is unverified.
+
+Prepared `docs/FOT-RECOVERY-PLAN.md` as canonical
+grounded/no-repetition research plan.
+
+The next zero-hardware experiment is the existing
+`tools/probe-firmware-history-api.py` against eight
+conservative GET routes for product id 8, firmware id 11;
+the script has no logged executed result yet. If no old
+version surfaces, do not brute-force the vendor archive.
+A historical pair is not itself plaintext; if
+`C_i=P_i XOR K` with reused K, then
+`C1 XOR C2=P1 XOR P2`, which may reveal only
+differences and requires known plaintext for decryption.
+No binary, MAC or unique personal device identity
+uploaded to the research repo.

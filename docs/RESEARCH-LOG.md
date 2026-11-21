@@ -2194,3 +2194,34 @@ Implemented `tools/g3v2-le-keylinker-b7-v2.py`:
 The original one-byte descriptor response and no-CCCD-write test
 are now the relevant next step; avoid repeating previous discovery,
 probe v1, or BlueZ BR/EDR attempts.
+
+
+## 2026-11-20 — B7 submitted once via BLE e1; ATT ACK but no e2 notification
+
+Measured direct LE Public connection 398.6 ms, then:
+- e1 value handle \`0x0007\` is Write;
+- e2 value handle \`0x0009\` is Notify;
+- actual CCCD handle \`0x000A\` (0x2902) reads back
+  \`0B 01\`, i.e. a nonstandard one-byte \`01\` value;
+- sent **one** native KeyLinker \`B7\` read frame:
+  \`B7 06 00 29 00 A4\` -> \`CC B3 40 70 99 15\`;
+- received the transport-level ATT Write Response from e1;
+- received **no e2 Handle Value Notification** within timeout.
+No subscribe/CCCD write was made and no other KeyLinker command
+was transmitted.
+
+This proves the handle is writable and the ATT write was processed,
+**not** that the KeyLinker parser accepted or responded to B7.
+The initial single-byte CCCD \`01\` should not be interpreted as
+an established subscription.
+
+Added \`tools/g3v2-le-b7-subscribe-v3.py\` to distinguish the
+subscription hypothesis from a possible required session bootstrap.
+The tool checks real UUIDs/handles, restricts the observed initial
+CCCD to \`01\`/\`01 00\`, writes canonical \`01 00\` only on its
+verified CCCD as a connection-scoped notification subscription, then
+only upon successful ACK and positive readback sends a **single B7**
+read frame to e1. It never sends 0x37/0x3B/OTA/SCSI/pairing
+commands or automatic read retries. It closes the socket and does
+not request a persistent setting change. The user has not run this
+new targeted experiment yet.

@@ -523,3 +523,72 @@ After a verified first read, `E67C/E68C` are `1/1`. If `E670=7` and the next two
 ```
 
 The `E670=7` premise is strongly corroborated by real `0x37` write headers but is being kept explicitly conditional until the session/DLL initialization path is closed.
+
+
+## 2026-11-20 — Android BLE codec is NOT Windows MixDrive USB codec
+
+**Confirmed directly from the user's reference Android APK decompilation**:
+`base.apk` SHA256 `09408b714d319461e6a29293d2170d2e7a6e4bcd60438998cd2e6c2f100ebdee`,
+`com/pulsenet/inputset/util/e.java` (JADX line numbers refer to the local
+4,314-file decompilation):
+
+- `h(byte[])` lines 384–409 is outgoing BLE frame transform.
+- `g(byte[])` lines 356–378 is incoming BLE notification decoder.
+- `k(int[])` lines 444–449 computes CRC from 256-entry lookup table, matching
+  the previously recovered reflected CRC-8 polynomial `0xEB`.
+- `K()` lines 92–99 increments the app's host serial counter:
+  `01, 82, 03, 84, ...` (hex), unlike the first USB/MixDrive read
+  session state byte `00`.
+- `E()` lines 65–67 produces a random byte via Android `Random.nextInt(256)`,
+  not the Windows MSVC CRT `rand()` initial sequence.
+- `L()` line 179 creates the read-only identity opcode `0x91` frame with
+  no query payload.
+- `q(int)` line 551 creates a read-only `0xB7` frame with one index byte,
+  e.g. `q(0)` for index zero.
+
+The reference APK's actual BLE dispatch is
+`com/pulsenet/inputset/util/b.java`:
+`e.A().h(bArr)` goes to GATT `d7f010e1` in
+`BluetoothGatt.writeCharacteristic` (around line 804);
+`e.A().g(characteristic.getValue())` is invoked for
+`d7f010e2` notifications (around line 251).
+The application registers e2 notifications through the CCCD using
+`ENABLE_NOTIFICATION_VALUE` (around lines 555–566 and 591–596).
+
+This Android BLE codec has different substitutions/tables from the
+native Windows MixDrive `KeyLinkerlib.dll` codec. **Do not reuse
+`g3v2-warmup-readonly.py.encode()` to transmit Android BLE packets.**
+
+Static deterministic vectors for the *same* logical data:
+
+| Plaintext | Verified USB/MixDrive wire | Android APK BLE wire |
+|---|---|---|
+| `B7 06 00 29 00 A4` | `CC B3 40 70 99 15` | `71 A2 A2 90 2C 8E` |
+| `91 05 01 29 FB` | not tested over USB | `48 A0 A5 90 21` |
+| `B7 06 82 29 00 96` | not tested over USB | `EF 20 24 90 A2 BC` |
+
+The first row is a codec comparison using identical plaintext; it is
+**not a recommended Android request**, because the APK's first sequence
+value is `01`, not `00`. The subsequent identity-then-B7 row shows
+serial `82` after the identity used serial `01`, for fixed illustrative
+nonce `29`. Real APK nonces are random.
+
+An independent X20 Pro project's Android-derived implementation
+(`AmjadAAYD/x20ctl` `x20ctl/protocol.py`) contains the same Android
+transform, but the decisive evidence here is the locally decompiled
+KeyLinker APK itself; X20 Pro compatibility is not assumed.
+
+New pure Python implementation in
+`tools/g3v2-android-keylinker-codec.py` has deterministic CRC,
+encode/decode and host serial self-tests. A guarded hardware experiment
+`tools/g3v2-le-android-identity-b7.py` makes one Android `0x91`
+identity query and, **only if a valid CRC- and serial-matched
+notification is received**, one `0xB7` read query. It uses a single
+direct LE Public ATT connection and can enable the connection-scoped
+e2 CCCD. It does not send lighting writer `0x37` or any firmware
+writes. This experiment is **not yet proven successful on hardware**.
+
+Never conflate ATT Write Response with an application KeyLinker reply.
+The previous USB-coded `B7` frames wrote to e1 successfully in ATT
+but got no e2 response; that negative result cannot be interpreted
+as proof that *valid Android-coded* requests are ignored.

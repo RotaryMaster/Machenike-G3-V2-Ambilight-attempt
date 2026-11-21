@@ -3570,3 +3570,67 @@ has been demonstrated by this search. `0x25` is not a justified
 Ambilight candidate until its payload role is established. Continue
 with a targeted offline extraction of `b1.java` and `f.java`
 surrounding these calls. No BLE hardware or 0x37 writing required.
+
+
+### 2026-11-21 — Android G3V2 lighting writer formats reconciled; 0x25 is Turbo
+
+The user supplied the **full target sections** from the locally
+decompiled KeyLinker APK (`com/pulsenet/inputset/util/b1.java`,
+`util/f.java`) after the previous call-site audit. These now settle
+the two `0x37` Android caller paths:
+
+- `b1.A1(List)`, around lines **1427–1465**, takes
+  `HostMenuBean.LightingDataBean` entries, emits a leading logical
+  length = number of entries × 6 and then exactly
+  `lighting_r, lighting_g, lighting_b, lighting_data4,
+  lighting_data5, lighting_light` per entry.
+  The result is sent in slices of up to 15 integers via
+  `e.A().l0(chunk, index)`, underlying command **0x37**.
+- `b1.z1(ArrayList×4)`, around lines **2396–2459**, gathers up to four
+  six-element lighting inputs (via helper `k`), converts each
+  record's original positions 3/4/5 into
+  `speed_low, packed_high, brightness` and prepends the length.
+  Its local bit packing is:
+  `speed_low = speed & 0xFF`;
+  `packed_high = ((speed >> 8) & 0x0F) | (breath_flag ? 0x80 : 0)`.
+  The app uses a 12-bit string of speed in this path.
+  It then sends the same **0x37** fragments, up to 15 bytes at
+  a time. The earlier Windows native
+  `LampLightStruct` reconstruction agrees on the 6-byte wire
+  record: `R G B packed_low packed_high brightness`.
+  These are *two input/serialization paths to the same command*,
+  not evidence of volatile vs persistent lighting transports.
+
+- `b1.f1(...)`, around lines **1976–2070**, is a **bulk configuration**
+  dispatch: starts with `e.Y()` (0x17),
+  `e.Z()`/ `e.V()` (0x18), then `e.h0()` (0x25)
+  and groups of up to 5 × 3-byte elements via `e.X()`
+  (0x25), followed by more other configuration command
+  families. `util/f.java` similarly packs 3-byte records
+  for 0x25. This does **not** resemble the 6-byte LampLight
+  format or per-frame RGB updates.
+
+**New external family corroboration:** The reverse-engineered
+KeyLinker command table in
+`AmjadAAYD/x20ctl/docs/01-protocol.md` explicitly names
+**0x25 = `CODE_TOOBLE_MODE` (Turbo mode)**; “TOOBLE”
+is the manufacturer's Turbo spelling. This strongly
+corroborates the Android 3-byte grouped bulk-config context.
+This exact opcode meaning is validated by the family app's
+reverse-engineering, not by a new isolated G3V2 hardware test.
+`0x25` is **not** a justified LED/ambilight candidate.
+
+**Resulting status:** The inspected Android APK contains a
+confirmed RGB writer `0x37`; no separate RAM-only/preview RGB
+writer has been identified in the inspected app paths.
+Absence in the APK is *not proof* the firmware lacks such a
+command. The next bottleneck is firmware-side persistence and
+alternate LED control, not Bluetooth connection/codec/CCCD.
+
+The timing and physical charging-dock behavior are unresolved:
+the user observed a light-setting loss after being powered off
+on the charging dock for some time, yet a single isolated `0x37`
+marker survived a quick power-cycle. Since visible breathing mode
+is not fully represented in six-byte B7, a controlled comparison
+must log both **B7 RGB bytes** and **visible effect** before and
+after dock, without a new high-rate write.

@@ -4154,3 +4154,24 @@ Full structured G3V2-safe note: [TROUBLESHOOTING-REFERENCES.md](TROUBLESHOOTING-
 Reddit author reports G5 Pro USB/Bluetooth working but 2.4 GHz failure and triggers LT/RT held at 1.00 after calibration; recovery by installing matching official Chinese **G5 Pro** tri-mode controller and receiver firmwares separately. This is user anecdote, **not** confirmation of the same failure or safe repair for G3 V2.
 
 Relevant cross-check: our downloaded official G3 V2 package already has two distinct executables for controller vs receiver. If G3 V2 ever fails, inspect both components' IDs/versions/communications read-only before considering any firmware action. **Never flash G5 Pro binaries or execute G5 Pro recovery hotkeys on a G3 V2.** No existing G3 V2 hardware issue is asserted.
+
+
+### 2026-11-21 — New silicon vendor trail: ZC32RF1M / ZhiXu Technology
+
+The user supplied EEVblog discussion:
+https://www.eevblog.com/forum/microcontrollers/which-brand-is-this-microcontroller-logo-with-2-x/
+
+**EEVblog source unavailable to automated inspection**, so the thread's logo identity is **UNVERIFIED**. No assumption that the "two X" logo matches the chip in our device.
+
+An independent 2021 FCC internal-photo exhibit for another controller **explicitly names ZC32RF1M manufacturer ZHIXU TECHNOLOGY**:
+https://device.report/m/f762c4fd93632c35cdd85bdeba1214b50f66fd8613c60fa1a26f4b02254368fa
+
+ZhiXu's **official** site confirms it develops gamepad chips and boards, provides technical support and mentions SDKs:
+https://www.smart-one.cn/page?p=about_company
+https://www.smart-one.cn/service-support
+https://www.smart-one.cn/contact
+Public contact: info@smart-one.cn. No publicly available ZC32RF1M datasheet/SDK or FOT decrypt routine was found in this investigation.
+
+Separate controller patent names **ZC32RF1M LQFP48** (NOT the G3V2's QFN40): https://patents.google.com/patent/CN112439189A/en. Do NOT transfer package pinouts or attempt physical hardware probe based on this source.
+
+Complete evidence and targeted questions for ZhiXu support documented in [ZC32RF1M-MANUFACTURER-LEADS.md](ZC32RF1M-MANUFACTURER-LEADS.md). This is a **non-destructive, static-documentation next step** that could clarify flash endurance, CPU architecture, debug/bootloader and encryption; it does not yet enable firmware decryption or make high-rate 0x37 writing safe.

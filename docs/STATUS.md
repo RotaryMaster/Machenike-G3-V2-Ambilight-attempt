@@ -3944,3 +3944,95 @@ The user should run this **independent archive search once**
 before further historical archive work. If empty/blocked, stop
 automated archive cycling and use archived vendor installer collections,
 manufacturer support, or directly available RE artifacts instead.
+
+
+
+### 2026-11-21 — BREAKTHROUGH: new genuine same-HWID G3 V2 v1.59 image from user's Chinese OEM ZIP
+
+User found `https://www.machenike.com/driver/download/?id=190`
+and supplied downloaded `MKG_FW_G3V2.zip`.
+We inspected the **uploaded bytes directly**, without executing
+any executable or contacting the G3V2. The vendor download-page
+URL is confirmed to be Machenike's downloads site; the exact
+v1.59 offering on that page was not independently readable
+in the web-rendered page content, but the supplied binary's
+internal FOT metadata unambiguously confirms the G3V2.
+
+ZIP SHA256:
+`54a98a5e568989275f3b6264c518341609240e70b85a511de4b09266a5e5d9c5`
+(zip size 2,403,883 bytes).
+
+Contains:
+- `MKG_FW_G3V2.exe` — **controller updater**,
+  2,267,040 bytes, SHA256
+  `d511557ff30542b1513ca645ebd8631a9287757d160225687e2bc0c8cf0f66d9`;
+- `MKG_FW_G3V2.Receiver.exe` — **receiver updater**,
+  2,267,048 bytes, SHA256
+  `aa6c5e16d2297e32a9b5765040e63ed18a1bef6cb03c473589e575d7d5cff41c`;
+  no `FOT\\0` string detected in that executable and its
+  firmware format was not analyzed;
+- two Chinese UTF-8 instructional TXT files, one with
+  bilingual controller instructions. They tell the user
+  to power off, hold left stick (LS) and attach via USB
+  before running updater. **DO NOT perform these instructions
+  for our read-only FOT analysis.**
+
+Exact controller FOT:
+- begins in `MKG_FW_G3V2.exe` at file offset `0x1712F0`;
+- complete padded FOT size **0x5B400 = 373,760 bytes**;
+- SHA256 `ebb611eb8d4d730e991fa1f8027d653152515c4e47903c07537a6d7fadd4e849`;
+- hardware ID = **`A1CA51DA724CB6103658C05D7D4E2267`**,
+  BYTE-IDENTICAL to our v1.48 official updater;
+- version field `0x9F` = decimal 159 = **v1.59**.
+- valid FOT metadata: DATA start `0x200`, DATA length
+  `0x5A000`, directory duplicate start `0x5A200`,
+  config start `0x5A400`. Header first 0x200 bytes
+  **identical** to mirror at FOT +`0x5A200`.
+- XOR-0x80 XCOD tag at `0x200`,
+  XRES tag at `0x59600`;
+- full XCOD section `0x200..0x59600` length
+  **365,568 bytes** (v1.48: 361,472 bytes),
+  SHA256 `65b9ed83fdcead0628ccdf4b25ba20ad8dd753c3df5ae9a73f4cc64416b04148`;
+- XCOD payload excluding first 16-byte section header,
+  SHA256 `fea8cb07ed98b32276aff31494260b7f84745c81881eef336fac1e7076b8f3cb`;
+- full XRES section `0x59600..0x5A200`,
+  length **3,072 bytes** (same length as v1.48),
+  SHA256 `13f6dbea6dc1347f3a7927ef25815fe74c8568acec68f1bb61f5ed400f428bcb`;
+- v1.48 full XCOD/XRES hashes, from prior verified
+  comparison, respectively
+  `3ddaec3bb4d3723d4d1c55392473e6830872674ce3c33f6ab401b857844821fe`
+  and
+  `173740c39fce50700eea71a2616afbf445feabb0217ec4bc6c3ab57919377bb9`;
+- **Both sections differ by hash from v1.48**; XCOD
+  length is greater by **4,096 bytes (4 KiB)**.
+- 8-byte KEY record remains the same family constant
+  `00000001eae32e09` — this is NOT a recovered
+  decryption key.
+- XCOD entropy ~**7.99946 bits/byte**, consistent with
+  encrypted or otherwise transformed data.
+- The second FOT magic in the EXE at `0x1CB4F0`
+  equals the FOT directory's **duplicated header**, NOT
+  a second independent firmware image. Do not carve
+  a second 373,760-byte image starting there.
+
+**This fulfills the missing same-HWID, genuinely
+different-content encrypted firmware requirement!**
+It does not yet prove the section-relative XOR keystream
+is reused; raw ciphertext overlap statistics across
+v1.48/1.59 must be computed before claiming that.
+We have not recovered plaintext or a cryptographic key.
+
+The user-provided ZIP stays in offline analysis,
+**not committed to GitHub**. We committed the
+new safe CLI `tools/compare-g3v2-cross-version-fots.py`
+which accepts ZIP/EXE/FOT, handles changed XCOD sizes,
+validates the FOT header/directory mirror, and compares
+ciphertext aligned by section rather than whole file.
+Run against the user's already-stored original v1.48
+updater and local v1.59 ZIP; no hardware needed.
+
+**Do NOT update/downgrade hardware** just to compare,
+especially since this ZIP has separate controller
+and receiver updaters. Do not confuse the receiver
+image with the gamepad firmware or claim their version
+fields match without parsing.

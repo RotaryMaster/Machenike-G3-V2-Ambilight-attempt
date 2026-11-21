@@ -28,3 +28,18 @@ Arquivos recebidos diretamente do usuário e analisados **sem executá-los**. O 
 ## Diretriz operacional
 
 Ambos os arquivos foram apenas **inspecionados** neste trabalho. Não houve acesso ao controle, atualização de firmware, gravação RGB ou alteração na base imutável do Bazzite. A documentação técnica deve tratar a existência de uma transcrição contendo `--dry-run` junto de TXs como **ambiguidade de colagem**, não bug comprovado. Não publicar o script v2 de escrita no diretório executável de ferramentas sem decisão explícita; já não há necessidade de medições repetitivas. O problema de desgaste do `0x37` permanece não resolvido.
+
+## Testes executados OFFLINE em 21/11/2026 — simulação de fluxo
+
+A inspeção estática foi complementada com uma execução **inteiramente simulada** dos próprios caminhos de função dos dois arquivos Python recebidos. A execução isola o código fornecido de seus módulos de dispositivo, substitui operações HID/BLE por objetos falsos e utiliza apenas buffers RGB em memória (sem tocar em `/dev/hidraw`, adaptador Bluetooth ou `G3V2`).
+
+Resultados:
+- `python3 -m py_compile`: **PASS** nos dois arquivos fornecidos.
+- `g3v2-light-write-timing-v2.py --dry-run --reads 3`, com `p/g` falsos: **PASS**, 6 leituras B7 simuladas e **0 escritas 0x37**; nenhum snapshot salvo.
+- Caminho completo padrão da mesma ferramenta, novamente com `p/g` falsos: **PASS**, **17 comandos 0x37 simulados**, 24 leituras B7 simuladas, 1 snapshot fictício, verificação final `B7 == original`.
+- `g3v2-le-connect-diag-v1.py --address` com `socket` falso: **PASS**, 1 conexão simulada, socket fechado, **nenhuma operação de envio de dados**; MAC fictício mascarado na saída.
+- Esses são testes de isolamento/regressão de software, **não** testes reais de resposta do dispositivo, wear-leveling, integridade de NVM, estado visual ou resultado de flashing.
+
+**Conclusão atualizada:** a dúvida sobre o `--dry-run` fica **resolvida para o código fornecido**. O log anterior da conversa exportada continha uma saída de execução com escritas sem demonstração de pertencer ao mesmo comando `--dry-run`. A hipótese de bug no `--dry-run` não foi reproduzida.
+
+A execução completa real do script continua **desaconselhada**: não demonstra desgaste seguro e não é necessário repetir as gravações já feitas. O arquivo da bateria de testes local, se compartilhado, é auxiliar e não deve executar o G3V2.

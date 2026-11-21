@@ -211,3 +211,26 @@ availability or archive record, without executing a downloaded
 updater. Only a genuine complete FOT with exact
 `a1ca51da724cb6103658c05d7d4e2267` and
 **different** XCOD content would advance our decryption goal.
+
+
+
+## Archive research update — 2026-11-21
+
+The user's Wayback script execution produced `Selected: 0`
+and `CDX: empty response` for all four official-path variants;
+the archive index is **not accessible/returned no records**,
+not proven empty. Do not repeat these same requests.
+The Wayback availability API is independently reported
+to produce false-empty results in 2026.
+
+New independent approach: Common Crawl's public 2024–2026
+monthly index archives. Added
+`tools/audit-g3v2-commoncrawl.py` to perform a bounded
+historical URL/HTML check with GET-only requests and
+no firmware binary downloads. Historical capture not
+yet verified. If archive search yields a link, first
+validate that it actually points to the G3V2 model and
+an updater containing the exact 16-byte HWID and
+different XCOD section hash. If no archive data is
+accessible, transition to OEM/researcher offline
+packages rather than repeatedly probing history APIs.

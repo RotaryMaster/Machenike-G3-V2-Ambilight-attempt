@@ -3391,3 +3391,59 @@ This is NOT proof of any codec divergence until those method bodies
 are read and test-vector compared with the known MixDrive USB cipher.
 No new BLE frame has been transmitted. Continue static inspection
 first; do not re-run identical B7 tests.
+
+
+### 2026-11-20 — CONFIRMED Android BLE vs Windows USB KeyLinker codec mismatch; v4 ready
+
+**Root-level protocol error in the earlier BLE probes confirmed offline:**
+The user provided the complete decompiled
+`com/pulsenet/inputset/util/e.java` from APK SHA256
+`09408b714d319461e6a29293d2170d2e7a6e4bcd60438998cd2e6c2f100ebdee`.
+The BLE writer in `b.java` first transforms the outgoing
+KeyLinker bytes with `e.A().h(bArr)`, and the e2 notification is
+decoded with `e.A().g(getValue())`.
+The actual method bodies `h` (lines 384–409) and `g`
+(lines 356–378) use **different XOR/substitution keys and arithmetic**
+from the proven MixDrive/Windows USB `KeyLinkerlib.dll` implementation.
+
+The Android APK also uses `e.K()` serial sequence
+`01, 82, 03, 84...` (not the USB cold session `00`),
+and `e.E()` random `nextInt(256)` (not CRT `rand()`).
+`e.L()` builds a read-only identity opcode `0x91` with empty body;
+`e.q(0)` builds a read-only lighting opcode `0xB7` with selector zero.
+CRC table is consistent with reflected CRC8 0xEB.
+
+**Deterministic offline illustration** (nonce fixed to `29`):
+- Same logical B7 frame `B7 06 00 29 00 A4`:
+  USB/MixDrive -> `CC B3 40 70 99 15`,
+  Android KeyLinker -> `71 A2 A2 90 2C 8E`.
+- Android identity frame `91 05 01 29 FB`
+  -> `48 A0 A5 90 21`.
+- Android B7 *after identity* frame `B7 06 82 29 00 96`
+  -> `EF 20 24 90 A2 BC`.
+
+Therefore, the previous BLE `B7` attempts sent the
+**wrong USB-encoded packet bytes and serial** and cannot be used
+to conclude the G3V2 BLE application parser rejects a correctly
+encoded KeyLinker read. This is a definite host-side defect;
+successful communication with the correct Android format is
+**not yet demonstrated** on hardware.
+
+Created:
+- `tools/g3v2-android-keylinker-codec.py` (commit
+  `a7ad96e`), a pure Python Android e.h/e.g CRC codec and serial
+  generator with offline vectors.
+- `tools/g3v2-le-android-identity-b7.py` (commit
+  `9544e24`), an explicitly LE Public ATT probe that verifies
+  actual service/e1/e2/CCCD, subscribes once with standard
+  CCCD `01 00`, sends only Android-coded identity `0x91` once,
+  validates e2 notification CRC and **matching serial** (opcode
+  may be response `0x19`), then sends exactly one Android-coded
+  read `0xB7` only after identity succeeds. No retries, no
+  light/OTA config writes. This probe has **not yet been run**.
+
+Current priorities: run Python offline selftest and syntax check,
+then a single v4 direct BLE identity/B7 test. If identity still
+times out, investigate Android model-specific initial transport
+handshake rather than reflexively repeating B7 or reconfiguring
+BlueZ. Keep the BLE MAC in local commands, out of public docs.

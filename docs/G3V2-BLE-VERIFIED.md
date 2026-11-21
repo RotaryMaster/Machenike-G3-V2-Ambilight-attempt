@@ -182,3 +182,17 @@ the visible lighting mode can change while the B7 RGB bytes
 remain unchanged, any controlled dock experiment must record
 **both B7 logical data and visual mode** before and after,
 and should not issue unnecessary 0x37 lighting writes.
+
+
+### Charging dock status clarification (2026-11-21)
+
+The previous dock-related event was **not measured with B7**. The user
+subsequently specified that the gamepad was **100% charged** and its
+LEDs were **fully OFF** when it was restarted after several hours
+in its dock. That is an observed *visual LED-off state*, **not
+proof** that both color and effect values were erased. There has
+been no controlled repeated experiment. The current solid-green
+baseline remains `15 F6 05 00 00 FF`.
+Do not infer a firmware policy of "turn off LEDs on full charge"
+without comparing with a prolonged off-dock case or reading
+the B7 record after a reproduced event.

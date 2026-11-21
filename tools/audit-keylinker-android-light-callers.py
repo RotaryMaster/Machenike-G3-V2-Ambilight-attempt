@@ -3,7 +3,8 @@
 
 Consumes *previously* JADX-decompiled Java sources under the user's cache.
 Prints call sites for Android KeyLinker e.l0 (0x37 lighting write), e.X / e.h0
-(0x25, purpose not proven), and e.q (B7 lighting read) without executing
+(0x25, CODE_TOOBLE_MODE / Turbo in KeyLinker family), and e.q (B7 read)
+without executing
 any Android code or touching the BLE/USB controller.
 
 Never modifies the APK, user sources or the immutable Bazzite base.
@@ -16,8 +17,12 @@ from pathlib import Path
 import re
 import sys
 
-METHODS = {"l0": "0x37 write", "X": "0x25 unknown", "h0": "0x25 unknown",
-           "q": "0xB7 read"}
+METHODS = {
+    "l0": "0x37 LampLight write",
+    "X": "0x25 CODE_TOOBLE_MODE (Turbo, protocol-family identification)",
+    "h0": "0x25 CODE_TOOBLE_MODE (Turbo, protocol-family identification)",
+    "q": "0xB7 LampLight read",
+}
 DIRECT = re.compile(
     r"\b(?:com\.pulsenet\.inputset\.util\.)?e\s*\.\s*A\s*\(\s*\)\s*\.\s*"
     r"(?P<method>l0|X|h0|q)\s*\(",
@@ -110,9 +115,10 @@ def main() -> int:
                 print(f"  ... {len(hits)-printed} ocorrências omitidas pelo limite")
     print("\n=== INTERPRETAÇÃO ===")
     print("0x37 já é uma escrita de configuração comprovada; NÃO usar em loop Ambilight.")
-    print("0x25 tem finalidade NÃO COMPROVADA; NÃO enviar ao controle neste teste.")
-    print("Se houver chamadas l0()/X() em classes relevantes, examinar seus")
-    print("métodos completos e as condições de chamada antes de propor hardware.")
+    print("0x25 é CODE_TOOBLE_MODE (Turbo), conforme docs x20ctl da família KeyLinker;")
+    print("a atribuição é coerente com o APK, sem validação física separada no G3V2.")
+    print("0x37 é o único escritor RGB confirmado neste APK; caminho RAM-only não demonstrado.")
+    print("Não enviar 0x25 nem 0x37 em loop ao controle.")
     return 0
 
 

@@ -2869,3 +2869,15 @@ User supplied `g3v2-light-write-timing-v2.py` (SHA256 `1785cad636599330d417300a7
 Both sources passed `py_compile`. Isolated execution of the real `main()` functions with in-memory fake persistence/HID/socket objects showed: dry-run 0 writes and 6 synthetic B7 reads, full default flow 17 synthetic writes and a restored simulated final color, and BLE one fake L2CAP connection, no data sending. Imported helper code's main guards prevent write execution merely upon import. No device was accessed.
 
 Revised the earlier caution about an ambiguous `--dry-run`/0x37 log juxtaposition in the exported PDF: this is **not** evidence that the flag is broken, and the supplied code did not reproduce the issue. Complete physical v2 test should not be rerun; none of the software-only findings establishes Flash safety or a volatile RGB command. Full detail in `docs/G3V2-SCRIPT-AUDIT-2026-11-21.md`.
+
+
+### 2026-11-21 — Future troubleshooting reference: G5 Pro receiver/controller firmware recovery
+
+At user request, archived external Reddit report for reference if the G3 V2 later develops symptoms after calibration, lost 2.4 GHz, or permanently pressed triggers:
+https://www.reddit.com/r/Controller/comments/1v0dmci/solved_machenike_g5_pro_triggers_permanently/
+
+Full structured G3V2-safe note: [TROUBLESHOOTING-REFERENCES.md](TROUBLESHOOTING-REFERENCES.md).
+
+Reddit author reports G5 Pro USB/Bluetooth working but 2.4 GHz failure and triggers LT/RT held at 1.00 after calibration; recovery by installing matching official Chinese **G5 Pro** tri-mode controller and receiver firmwares separately. This is user anecdote, **not** confirmation of the same failure or safe repair for G3 V2.
+
+Relevant cross-check: our downloaded official G3 V2 package already has two distinct executables for controller vs receiver. If G3 V2 ever fails, inspect both components' IDs/versions/communications read-only before considering any firmware action. **Never flash G5 Pro binaries or execute G5 Pro recovery hotkeys on a G3 V2.** No existing G3 V2 hardware issue is asserted.

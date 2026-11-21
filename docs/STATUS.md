@@ -1,5 +1,8 @@
 # Current status and roadmap
 
+> **STATUS ATUAL (2026-11-20): BLE KeyLinker G3V2 CONFIRMADO.** Conexão LE Public direta, notificações e2, identidade 1006:2011 / firmware 1.48 e leitura B7 de seis bytes validadas fisicamente. Ver **[resumo BLE confirmado](G3V2-BLE-VERIFIED.md)**. Testes antigos de falha BLE são históricos. O comando de escrita 0x37 ainda NÃO está liberado para Ambilight contínuo; persistência/flash não resolvida.
+
+
 Last consolidated: 2026-11-20.
 
 ## What is already confirmed
@@ -3447,3 +3450,54 @@ then a single v4 direct BLE identity/B7 test. If identity still
 times out, investigate Android model-specific initial transport
 handshake rather than reflexively repeating B7 or reconfiguring
 BlueZ. Keep the BLE MAC in local commands, out of public docs.
+
+
+### 2026-11-20 — SUCCESS: full Android KeyLinker BLE read path on real G3V2
+
+**Supersedes all earlier BLE "no reply" conclusions:** the APK-derived
+codec, serial generation and 0x91-first request sequence worked.
+
+Observed with `tools/g3v2-le-android-identity-b7.py` on Bazzite:
+- direct LE Public GATT connect `505.1 ms`;
+- characteristic handles e1 `0x0007`, e2 `0x0009`, CCCD `0x000A`;
+- CCCD Read Response still single-byte `0B 01`; standard `01 00`
+  subscribe Write Response was successful and real e2 notifications
+  arrived after that;
+- identity 0x91, host serial 01:
+  - TX plain `91 05 01 CB 33`;
+  - TX Android-coded `02 30 4A F2 C6`;
+  - RX Android-coded `C8 A0 BD 88 22 F5 C0 14 A5 37 C0 E1 16`;
+  - RX decoded `19 0D 01 31 07 10 06 20 11 01 48 46 B8`;
+  - CRC/serial validated, 23.0 ms query RTT;
+  - 7-byte logical identity `10 06 20 11 01 48 46`:
+    logical VID:PID `1006:2011`, firmware `1.48`, flags `46`;
+- read-only LampLight B7, host serial 82:
+  - TX plain `B7 06 82 FA 00 E7`;
+  - TX Android-coded `1C 71 F7 C1 93 CD`;
+  - RX Android-coded `32 FB 77 41 15 B3 F3 F1 FE 40 BD 46`;
+  - RX decoded `19 0C 82 7A 06 00 FF FF 00 00 FF F9`;
+  - CRC/serial validated, 22.0 ms query RTT;
+  - logical LampLight `00 FF FF 00 00 FF`:
+    RGB=(0,255,255), packed breath/switch=0, brightness=255.
+    **Identical to prior physical G3V2 USB B7 baseline.**
+
+This is **not merely an ATT write acknowledgement**: actual native
+KeyLinker `0x19` response notifications arrived from e2, decoded
+with valid CRC and request-matching serial. Previous B7 silence was
+caused at least by host-side use of the wrong USB codec/serial in
+the Android BLE context; the exact contribution of each mismatch
+was not isolated.
+
+The successful 22–23 ms query RTTs establish read-query feasibility
+for this session; they do NOT establish continuous update throughput,
+LED frame rate, 2.4 GHz coexistence, or BLE write latency.
+
+Canonical concise reference: `docs/G3V2-BLE-VERIFIED.md`. Hardware
+status: Bluetooth **read path complete**. Lighting mutation/volatility
+research remains open; never stream 0x37 without flash safety evidence.
+The user's earlier charging-dock "forgets lighting" observation
+remains a separate, unresolved persistence clue.
+
+Updated `tools/g3v2-le-android-identity-b7.py` (commit `0fd686d`)
+so future output will unpack the identity and six-byte LampLight
+record correctly; **no repeat run is needed** for validation.

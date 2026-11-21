@@ -3766,3 +3766,46 @@ The G3V2 v1.48 FOT files have an XCOD firmware container; code
 extraction/architecture remains a separate capability question.
 Do not claim that program firmware can already be modified or
 that volatile RGB writes have been identified.
+
+
+### 2026-11-21 — FOT decrypt track explicitly prioritized at user's request
+
+User decided to pursue recovering executable code from the encrypted
+G3V2 FOT, rather than hardware memory dump or volatile-LED write
+experiments. Detailed strategy: `docs/FOT-RECOVERY-PLAN.md`.
+
+Fresh public-source comparison:
+- `LopeKinz/Manba-One-V2-Firmware-tools` (ZXD2055) reports
+  same-HWID X20 v1.18/v1.21 section-relative keystream-reuse
+  signatures; its hardware-ID-different devices do not share
+  ciphertext keystreams. This is family corroboration, not a
+  ready G3V2 decryptor.
+- `LopeKinz/Manba-One-V2-Firmware-tools/issues/2` (created
+  2026-10-08) independently reports unsuccessful deterministic
+  AES/SM4/ChaCha20/RC4/etc sweeps and notes missing public
+  X20 same-ID pair. Do not duplicate generic cipher sweeps.
+- Gamepadla reports physical G3 V2 firmware `1.25`
+  in tests on 2025-01-28. This is a potential historical
+  version lead only; same HWID and availability of updater
+  remain unverified.
+- The two G3V2 v1.48 FOTs **do not form a cryptanalytic
+  differential pair**: XCOD and XRES are byte-identical,
+  despite differing header-specific identity metadata.
+- A second DIFFERENT-CODE FOT with exact
+  `a1ca51da724cb6103658c05d7d4e2267` is the
+  first meaningful firmware comparison target.
+- The official API latest endpoint serves only v1.48.
+  A small, existing *GET-only* history route script
+  `tools/probe-firmware-history-api.py` was previously
+  prepared but its live results have **not** been logged.
+  Run that once before further archive hunting.
+- The current `tools/compare-g3v2-same-hwid-fots.py`
+  requires equal layouts/sizes. If a historical image
+  is located, adapt the comparison to relative XCOD/XRES
+  section offsets instead of interpreting layout shifts
+  as changed ciphertext.
+
+No new physical-controller interaction, OTA transition,
+SCSI, firmware changes, or unsafe rewrite was performed.
+Public search did not independently locate a download
+of G3V2 1.25/another different-code image.

@@ -3303,7 +3303,7 @@ comparison is performed (prefer only normal controls, no repeated
 flash contents.
 
 
-### APK 3.73 availability confirmed locally; BLE codec verification queued
+### Android KeyLinker base.apk located locally; APK codec verification queued
 
 The user located the Android KeyLinker reference APK at
 `keylinker-referencia/base.apk` in the local `machenike-control` project.
@@ -3311,8 +3311,8 @@ The several `split_config.*.apk` files are localization/density APK
 splits; **start with `base.apk`** because app Java/Kotlin DEX normally
 resides there. Ignore unrelated Android app APKs.
 
-The actual G3V2-compatible Android KeyLinker `CodeHelper.encrypt`
-implementation has **not yet been inspected**. The contrasting X20 Pro
+The local APK's exact package/version and actual G3V2-compatible
+`CodeHelper.encrypt` implementation have **not yet been verified**. The contrasting X20 Pro
 Android-derived codec is evidence of a possible BLE/USB codec split,
 not proof of the correct G3V2 BLE bytes.
 

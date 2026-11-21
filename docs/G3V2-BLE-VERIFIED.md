@@ -152,3 +152,33 @@ and B7 LampLight read and genuine controller notifications.
 
 **Privacy:** no per-device Bluetooth MAC is embedded in this public
 document or in application source. Supply address only at runtime.
+
+
+## 2026-11-21: Lighting-write paths in the Android APK
+
+After the BLE read proof, additional static JADX code confirms
+two serializers feeding the same native `0x37` lighting writer:
+
+- `util/b1.java::A1(List)` serializes `LightingDataBean`
+  fields as `[R,G,B,data4,data5,brightness]`.
+- `util/b1.java::z1(...)` converts UI parameters into the
+  `[R,G,B,speed_lo,packed_hi,brightness]` six-byte layout,
+  where `packed_hi` includes the breath flag at bit 7.
+- Both use `e.A().l0(...)` and 15-byte fragments for opcode
+  `0x37`; neither establishes a volatile LED-preview path.
+
+The separately seen opcode `0x25`, emitted by
+`e.A().h0`/`e.A().X` with three-byte grouped records,
+is `CODE_TOOBLE_MODE` (Turbo) according to the
+independent KeyLinker protocol reference
+`https://github.com/AmjadAAYD/x20ctl/blob/main/docs/01-protocol.md`.
+This correlates with `b1.f1(...)`'s bulk settings transfer.
+It is not a candidate for realtime RGB updates.
+
+The next distinct open research question is **where and how the
+G3V2 firmware stores or overrides lighting state**, especially
+after the user's charging-dock shutdown observation. Because
+the visible lighting mode can change while the B7 RGB bytes
+remain unchanged, any controlled dock experiment must record
+**both B7 logical data and visual mode** before and after,
+and should not issue unnecessary 0x37 lighting writes.

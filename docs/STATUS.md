@@ -2888,3 +2888,30 @@ Observed in a live `tools/g3v2-ble-probe-v3.py --enumerate-only` run:
 **Resolved/closed hypothesis:** keeping BlueZ discovery active does **not** by itself fix the G3 V2 connection. Do not run another general scan/timeout retry as the next experiment.
 
 **Remaining diagnostic question:** does Linux issue HCI LE Create Connection, and what controller HCI status / BlueZ management outcome follows? A bounded `btmon` capture during exactly one read-only v3 enumeration attempt is the next step. Decode error/status codes before proposing pairing, kernel changes, or further BLE behavior. Raw btmon files may contain device addresses; keep them local and redact before posting or committing.
+
+
+### HCI capture: MGMT Connect Failed on BR/EDR address type
+
+A bounded live `btmon` capture around one v3 `--enumerate-only` attempt yielded a
+more specific failure than the Bleak `TimeoutError`:
+
+```text
+@ MGMT Event: Connect Failed (0x000d)
+    BR/EDR Address: [redacted]
+    Status: Connect Failed (0x04)
+```
+
+The BlueZ MGMT protocol defines `Connect Failed (0x04)` as a management-layer status,
+**not** the Bluetooth HCI `0x04 Page Timeout` reason. Importantly, the event labels
+the address type `BR/EDR` (management address type 0), whereas the intended KeyLinker
+configuration transport is BLE (LE Public=1, LE Random=2).
+
+This is a new, unverified **wrong-bearer hypothesis**: the connect request may have
+selected classic BR/EDR despite seeing `G3V2 APP` via BLE advertising. Do not assume
+the MGMT event alone establishes exactly which HCI connection command was issued.
+
+The earlier extraction regex selected the MGMT failure event but did **not** show the
+preceding HCI commands or the lower-layer HCI status. **Next step: inspect the already
+saved local `/tmp/g3v2-hci-raw.txt` for HCI `Create Connection` vs
+`LE [Extended] Create Connection`, Command Status, Connection Complete and related
+Bluetoothd messages, without repeating any live Bluetooth probe or making system changes.**

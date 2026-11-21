@@ -2496,3 +2496,30 @@ The Android app's `0x37` paths do not demonstrate
 high-frequency/wear-safe operation. A controlled, no-new-write
 baseline/dock/B7 + visible-effect observation may help separate
 mode reset from RGB register persistence.
+
+
+## 2026-11-21 — Green solid B7 baseline; user's dock observation specifies both color and mode
+
+Clarification from user: a manually powered-down G3V2 placed on its
+charging dock for **several hours (unmeasured)** eventually seemed to
+forget **both the color and the effect/mode**. The earlier event was
+not accompanied by before/after protocol logs and does not establish
+flash erasure or prove the dock caused the change independently of
+power-off duration.
+
+Current read-only Android BLE capture with visible **solid green**:
+- LE connection 474.9 ms;
+- 0x91 identity confirms logical ID 1006:2011, firmware 1.48;
+- B7 decoded response `19 0C 82 AA 06 15 F6 05 00 00 FF 7D`;
+- six logical LampLight bytes `15 F6 05 00 00 FF` =
+  RGB(21,246,5), packed field 0x0000, brightness 255;
+- B7 roundtrip 21.9ms with valid response CRC and serial 0x82.
+
+This six-byte observation and the user's visual note form a new
+**pre-dock baseline**. If the user chooses to repeat an *extended*
+off+dock event, first record visible LED color/effect immediately
+after removing from dock and powering up, then do a single verified
+BLE read of B7; compare exact bytes to baseline. Only afterward
+consider a long off-without-dock control case. Do not use 0x37
+writes, reset firmware, or assume a particular number of hours
+is necessary. Visible effect can vary independently of B7.

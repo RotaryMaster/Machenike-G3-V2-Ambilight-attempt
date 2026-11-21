@@ -2733,3 +2733,55 @@ optionally fetches historical HTML only via ranged WARC
 requests, searching for `ZXD2267`, G3V2 and potential
 installer URLs. It has not been run on the user's network.
 No device or OS modifications are needed.
+
+
+
+## 2026-11-21 — v1.59 exact G3V2 HWID: distinct XCOD/XRES recovered offline!
+
+The user discovered Machenike Chinese official download page
+`https://www.machenike.com/driver/download/?id=190`
+and uploaded `MKG_FW_G3V2.zip` (2,403,883 bytes,
+SHA256 `54a98a5e568989275f3b6264c518341609240e70b85a511de4b09266a5e5d9c5`).
+
+Contents inspected without executing:
+- `MKG_FW_G3V2.exe` (controller), SHA256
+  `d511557ff30542b1513ca645ebd8631a9287757d160225687e2bc0c8cf0f66d9`;
+- `MKG_FW_G3V2.Receiver.exe` (separate receiver update),
+  SHA256 `aa6c5e16d2297e32a9b5765040e63ed18a1bef6cb03c473589e575d7d5cff41c`;
+- Chinese text instructions; no firmware execution.
+
+Complete **controller** FOT at updater EXE `+0x1712F0`,
+size `0x5B400`, SHA256
+`ebb611eb8d4d730e991fa1f8027d653152515c4e47903c07537a6d7fadd4e849`.
+Header's hardware ID at `0x70..0x7F`
+`a1ca51da724cb6103658c05d7d4e2267`
+matches v1.48 exactly. Version `0x9F`=159.
+Header is repeated at FOT offset `0x5A200`,
+hence apparent second FOT signature is only
+the directory duplicate. XCOD at `0x200`,
+XRES at `0x59600`. Size and hash comparison:
+- XCOD 1.48 length 361,472,
+  SHA256 `3ddaec3bb4d3723d4d1c55392473e6830872674ce3c33f6ab401b857844821fe`;
+- XCOD 1.59 length **365,568 (+4,096)**,
+  SHA256 `65b9ed83fdcead0628ccdf4b25ba20ad8dd753c3df5ae9a73f4cc64416b04148`;
+- XRES 1.48 length 3,072,
+  SHA256 `173740c39fce50700eea71a2616afbf445feabb0217ec4bc6c3ab57919377bb9`;
+- XRES 1.59 length 3,072,
+  SHA256 `13f6dbea6dc1347f3a7927ef25815fe74c8568acec68f1bb61f5ed400f428bcb`.
+KEY field `00000001eae32e09` unchanged.
+1.59 XCOD entropy ~7.99946; still opaque ciphertext.
+
+Unlike the two earlier 1.48 FOTs, 1.59 is a genuinely
+distinct encrypted firmware image with exact same HWID.
+A cryptographic comparison is now justified, but
+**different ciphertext hash alone is not proof of
+keystream reuse**, and `C1 XOR C2` is not plaintext.
+
+Committed new strict offline cross-version comparator
+`tools/compare-g3v2-cross-version-fots.py` because
+old comparator rejected different section lengths/layouts.
+It accepts local v1.48 EXE and user's v1.59 ZIP,
+never starts the EXE or touches the controller.
+Results of actual byte-wise 1.48/1.59 comparison
+pending user-side execution, because only the new ZIP
+was available as an uploaded binary in this turn.

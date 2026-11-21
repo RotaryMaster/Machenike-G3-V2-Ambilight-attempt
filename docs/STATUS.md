@@ -3327,3 +3327,27 @@ Bluetooth, never modifies the immutable OS base, never uploads the APK
 and does not commit extracted copyrighted app code to the public repo.
 Wait for the actual output to decide whether to change KeyLinker wire
 encoding; **do not send unverified alternate frames**.
+
+### APK audit environment blocker resolved in script (Temurin portable; not yet executed)
+
+The user's first offline run of `tools/inspect-g3v2-keylinker-apk-codec.py` confirmed:
+- local `keylinker-referencia/base.apk`;
+- SHA256 `09408b714d319461e6a29293d2170d2e7a6e4bcd60438998cd2e6c2f100ebdee`;
+- `classes.dex` size 8,002,728 bytes;
+- embedded strings `d7f010e0`, `d7f010e1`, `d7f010e2`,
+  `KeyLinker`, `encrypt`, `BluetoothGatt`.
+
+The tool stopped **before decompilation** because no `java` executable
+was available on PATH. Do not interpret this as missing BLE logic in the APK.
+
+Updated the script to support `--fetch-portable-java` as well as
+`--fetch-portable-jadx` (commit `27c1027`): it can obtain an official
+Temurin 21 Linux x64 JRE via Eclipse Adoptium's assets API, verify the
+reported SHA-256, and extract into the user's home cache, setting
+`JAVA_HOME`/`PATH` for JADX only. No rpm-ostree, system base changes,
+pairing or Bluetooth calls. This Java bootstrap is **not yet user-tested**.
+The JADX release ZIP is also downloaded into cache, verified by GitHub
+release-provided SHA-256 if available.
+
+The APK code itself has **not yet been decompiled or compared to the USB
+codec**. Do not mark any Bluetooth application-level protocol as proven.

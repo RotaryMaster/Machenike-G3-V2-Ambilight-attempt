@@ -4133,3 +4133,12 @@ The user supplied a full PDF transcript containing further completed G3V2 experi
 - The G3V2 firmware XCOD remains encrypted, independent of these lighting observations. No wear-safe high-rate RGB writer has been demonstrated.
 
 This updates the experimental state, NOT the known no-streaming safety policy.
+
+
+### 2026-11-21 — Imported v2 scripts: offline static + behavioral simulation complete
+
+The user's previously missing `g3v2-light-write-timing-v2.py` and `g3v2-le-connect-diag-v1.py` sources were provided and inspected, along with the repository versions of the persistence and warmup helper modules. See `docs/G3V2-SCRIPT-AUDIT-2026-11-21.md`.
+
+The prior **unreviewed script safety warning** is now **resolved for the supplied source**: the `--dry-run` branch is correctly guarded. Tests with all HID calls mocked showed **0 0x37 writes and 6 synthetic B7 reads** in `--dry-run --reads 3`. Full write-path simulation produced 17 *synthetic* 0x37 operations, 24 B7 reads and restored the original six-byte lamp state. BLE diagnostics with a fake socket connected and closed once, and issued no packets. Both sources passed Python syntax compilation.
+
+This validates *software control flow only*. It does not prove safety of physical writes to flash, complete restoration of effect mode, or a volatile RGB register. The user had already performed the physical timing v2 test; **do not repeat it**. The previously published claim that v2 had not been audited and should not be trusted is superseded. The need for a true RAM-only lighting method remains unresolved.

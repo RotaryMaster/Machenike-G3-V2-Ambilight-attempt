@@ -3686,3 +3686,37 @@ No statement is made that this experiment has yet happened.
 Keep realtime/high-frequency 0x37 writes disabled until persistence
 and wear-safety are understood. The current BLE MAC should not be
 committed to public documentation.
+
+
+### 2026-11-21 — Correction: fully charged, LEDs OFF on restart after hours on dock
+
+**New user clarification of the earlier, uncontrolled event:**
+The controller was **100% charged** when the user restarted it
+after a few hours in the charging dock, and **the LEDs were entirely
+off**. The planned prospective experiment has **not** yet happened.
+
+The previous description "both the RGB color and visual effect were
+forgotten" recorded the user's *impression*, not two independent
+measurements. With all LEDs off, neither the stored RGB values nor
+the stored/effective mode can be visually determined. There was
+**no B7 read immediately after the earlier event**, so the true
+state of the six-byte LampLight record is **unknown**.
+Do not claim a proven reset, clearing of RGB, loss of both
+settings, NVM erase, or a proven full-charge auto-off feature.
+
+Competing hypotheses remain:
+(a) illumination disabled at charge completion or dock event;
+(b) firmware reloaded a default LED-off mode on startup;
+(c) long power-off cleared volatile state; (d) the B7 RGB
+record actually changed. No causal distinction has been made.
+
+For a future controlled repetition, preserve the current
+**solid-green B7 baseline `15 F6 05 00 00 FF`**; after the
+dock/restart event, **observe the initial LED-off state without
+pressing lighting hotkeys, changing settings, or making a 0x37 write**.
+Then run one read-only Android BLE B7 query. If B7 is unchanged
+while LEDs are off, RGB persistence can coexist with an off mode;
+if B7 differs, record exact contents. Avoid setting an arbitrary
+several-hour threshold. Compare with power-off *without* dock
+only if the result warrants it. A full battery reading alone does
+not prove the charging transition was the trigger.

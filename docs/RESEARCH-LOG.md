@@ -2623,3 +2623,43 @@ A historical pair is not itself plaintext; if
 differences and requires known plaintext for decryption.
 No binary, MAC or unique personal device identity
 uploaded to the research repo.
+
+
+
+## 2026-11-21 — Eight historical-firmware GET probes yielded uniform 405
+
+User's actual console capture:
+- `/firmware/11`
+- `/firmware?id=11`
+- `/firmware?product_id=8`
+- `/firmware/list?product_id=8`
+- `/firmware/history?product_id=8`
+- `/firmware/by-product-id?product_id=8`
+- `/firmware/by-product?product_id=8`
+- `/firmware/all?product_id=8`
+
+All returned HTTP **405 Method Not Allowed** and JSON
+`{"message":"405 Method Not Allowed"}`. This
+exhausts that **specific guessed GET list**; it does
+not exhaust the vendor's unknown API or prove its
+historical data is absent. Do not reinterpret 405 as
+affirmative evidence of a valid POST endpoint or try
+mutating HTTP methods without an actual contract.
+
+Separate public research: targeted English/Chinese
+searches plus GitHub code search found **no downloadable
+different-version ZXD2267 FOT** verified at this time.
+The G3 V2 manual points to a legacy Machenike download
+path, but its present availability is not confirmed.
+
+Correction of version certainty: Gamepadla labels the
+Jan 2025 number `1.25` as **XInput Firmware**;
+whether it maps 1:1 to the ZXD2267 firmware update
+header's `1.48` is unknown. Search for the HWID
+rather than rely on that apparent version number.
+
+Next step: contact OEM support or a researcher who
+has an older genuine G3V2 updater, then validate
+HWID `a1ca51da724cb6103658c05d7d4e2267`
+using existing `scan-g3v2-local-fot-corpus.py`.
+No device read/write or firmware update performed.

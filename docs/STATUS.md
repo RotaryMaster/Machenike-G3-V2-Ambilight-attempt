@@ -3809,3 +3809,56 @@ No new physical-controller interaction, OTA transition,
 SCSI, firmware changes, or unsafe rewrite was performed.
 Public search did not independently locate a download
 of G3V2 1.25/another different-code image.
+
+
+
+### 2026-11-21 — Historical G3V2 MixDrive API probe completed: all eight guessed GETs returned 405
+
+The user ran `tools/probe-firmware-history-api.py --product-id 8 --firmware-id 11`.
+All eight routes returned HTTP `405 Method Not Allowed` with
+application/json body `{"message":"405 Method Not Allowed"}`:
+`/firmware/11`, `/firmware?id=11`,
+`/firmware?product_id=8`,
+`/firmware/list?product_id=8`,
+`/firmware/history?product_id=8`,
+`/firmware/by-product-id?product_id=8`,
+`/firmware/by-product?product_id=8`, and
+`/firmware/all?product_id=8`.
+
+**Interpretation:** those exact GET requests did not expose a
+historical firmware list. The homogeneous 405s do **not**
+establish that history does not exist, that the endpoints
+exist with POST-only semantics, or that guessed alternative
+methods should be tried. The already-recovered official
+`/firmware/by-product-info` GET continues to be the only
+verified catalog route, serving v1.48. Do not rerun the eight
+GET routes without fresh evidence of a real documented API.
+
+Targeted public-web searches and GitHub code search for
+`ZXD2267`, `JRH_G3V2`, older G3V2 firmware versions
+and Chinese equivalents found no verified earlier
+`ZXD2267` installer/FOT. The old
+`https://global.machenike.com/shoubing/download`
+address mentioned in a G3V2 manual is not currently
+reachable via our web access; this is not proof no archive
+exists.
+
+**Important version-domain caution:** Gamepadla's Jan 2025
+G3 V2 `1.25` is explicitly labeled **XInput Firmware**.
+Our updater FOT `1.48` is the vendor's ZXD2267
+firmware-package version. They might refer to related
+versions but their equality/domain is **unverified**.
+Do not claim a firmware package version 1.25 is known
+to have existed solely from Gamepadla metadata.
+
+**Next acquisition path:** find a genuine older
+ZXD2267/G3V2 updater from manufacturer/retail support
+archives or an independent researcher's collection;
+verify its embedded `FOT` hardware ID and actual
+XCOD hash **before** concluding it is distinct.
+If support is contacted, ask for historical *offline
+installer for analysis only*, not for instructions
+to downgrade the physical controller.
+
+Neither the USB/BLE controller nor the Bazzite base
+was accessed or modified by this historical API probe.

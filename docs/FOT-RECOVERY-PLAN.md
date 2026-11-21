@@ -234,3 +234,12 @@ an updater containing the exact 16-byte HWID and
 different XCOD section hash. If no archive data is
 accessible, transition to OEM/researcher offline
 packages rather than repeatedly probing history APIs.
+
+
+## BREAKTHROUGH — 2026-11-21
+
+The missing distinct same-HWID G3V2 firmware was supplied by the user as an official Chinese Machenike download: `MKG_FW_G3V2.zip`, link `https://www.machenike.com/driver/download/?id=190`.
+
+Inside the **controller** executable `MKG_FW_G3V2.exe`, a valid 373,760-byte FOT v1.59 (version 159) with exact HWID `a1ca51da724cb6103658c05d7d4e2267` was carved and validated read-only. XCOD length is 365,568 bytes (+4,096 relative to 1.48) and its hash differs; XRES also differs by hash. Complete details in `docs/STATUS.md` and `docs/RESEARCH-LOG.md`. Distinct firmware acquired; old goal of searching v1.25 archives is now deprioritized.
+
+**Next step:** offline compare old 1.48 updater and new 1.59 ZIP via `tools/compare-g3v2-cross-version-fots.py` (supports different code section sizes). Evaluate section-relative identical ciphertext runs, shifts and XOR entropy. The result may validate/refute reuse signatures, not automatically yield plaintext. Keep binaries local; do not install or run either updater or change the controller.

@@ -243,3 +243,34 @@ The missing distinct same-HWID G3V2 firmware was supplied by the user as an offi
 Inside the **controller** executable `MKG_FW_G3V2.exe`, a valid 373,760-byte FOT v1.59 (version 159) with exact HWID `a1ca51da724cb6103658c05d7d4e2267` was carved and validated read-only. XCOD length is 365,568 bytes (+4,096 relative to 1.48) and its hash differs; XRES also differs by hash. Complete details in `docs/STATUS.md` and `docs/RESEARCH-LOG.md`. Distinct firmware acquired; old goal of searching v1.25 archives is now deprioritized.
 
 **Next step:** offline compare old 1.48 updater and new 1.59 ZIP via `tools/compare-g3v2-cross-version-fots.py` (supports different code section sizes). Evaluate section-relative identical ciphertext runs, shifts and XOR entropy. The result may validate/refute reuse signatures, not automatically yield plaintext. Keep binaries local; do not install or run either updater or change the controller.
+
+
+
+## Analysis decision after first 1.48 ↔ 1.59 run (2026-11-21)
+
+Actual difference is NOT the X20-style sparse delta:
+XCOD changes almost completely (XOR H=7.99908),
+apart from a single 512-byte identical block
+at XCOD section relative +0x800.
+Outside that block, only 0.4128% of bytes
+coincide, close to independent random streams.
+XRES retains an exact 2048-byte island
+(+0x200..+0x9FF) but its two other 512-byte
+pages differ. CONFIG remains 93.46% identical.
+
+Therefore, two versions with the same HWID
+are **insufficient** to extract a usable program
+or full keystream here. Exact shared ciphertext
+island(s) may indicate unchanged encrypted
+data but do not reveal underlying plaintext.
+No cryptographic key is confirmed.
+
+Before any advanced crypto experiment,
+look for a *third, nearer revision* from the
+same official G3V2/ZxD2267 family
+(e.g. 1.58, if a real package can be located),
+or known plaintext independent of the
+encrypted pair. Do not assume a revision
+number exists merely because 1.59 does.
+Do not keep guessing unsupported archive/API
+routes or restart earlier broad cipher scans.

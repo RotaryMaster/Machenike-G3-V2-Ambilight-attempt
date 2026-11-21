@@ -3301,3 +3301,29 @@ No cause or timing established. Avoid claims about flash writes per
 comparison is performed (prefer only normal controls, no repeated
 0x37 writes). Document the observed behavior, not a proven reset of
 flash contents.
+
+
+### APK 3.73 availability confirmed locally; BLE codec verification queued
+
+The user located the Android KeyLinker reference APK at
+`keylinker-referencia/base.apk` in the local `machenike-control` project.
+The several `split_config.*.apk` files are localization/density APK
+splits; **start with `base.apk`** because app Java/Kotlin DEX normally
+resides there. Ignore unrelated Android app APKs.
+
+The actual G3V2-compatible Android KeyLinker `CodeHelper.encrypt`
+implementation has **not yet been inspected**. The contrasting X20 Pro
+Android-derived codec is evidence of a possible BLE/USB codec split,
+not proof of the correct G3V2 BLE bytes.
+
+Published `tools/inspect-g3v2-keylinker-apk-codec.py` (commit
+`8c245da`): an **offline-only** helper to hash/list DEX within
+the local APK, reuse installed JADX, and print focused decompiled
+Java sections for `CodeHelper`, `encrypt`/`decode`, app session
+serial logic, service UUIDs e0/e1/e2, and GATT notification/writes.
+It can optionally fetch the official portable JADX release to the
+user's cache when absent (`--fetch-portable-jadx`). It never opens
+Bluetooth, never modifies the immutable OS base, never uploads the APK
+and does not commit extracted copyrighted app code to the public repo.
+Wait for the actual output to decide whether to change KeyLinker wire
+encoding; **do not send unverified alternate frames**.

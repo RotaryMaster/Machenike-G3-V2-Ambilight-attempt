@@ -2132,3 +2132,36 @@ No attribute value reads/writes, notification subscriptions, or application
 KeyLinker commands. The request types follow Bluetooth SIG ATT/GATT service
 discovery and BlueZ's reference approach. Local syntax and UUID-decoding
 tests passed, but the device responses have **not yet been measured**.
+
+
+## 2026-11-20 — Direct G3V2 GATT discovery confirms e0/e1/e2 on physical controller
+
+Received physical output for `tools/g3v2-le-gatt-discover-readonly.py`
+after a direct LE Public connection in 459.9 ms:
+
+| Attribute | Range or value handle | Value |
+|---|---|---|
+| KeyLinker primary service | 0x0005–0x000A | d7f010e0-660d-46e9-96c3-19c4148bdab5 |
+| Additional primary service | 0x000B–0x0012 | 0xFF12 |
+| KeyLinker Write characteristic | decl 0x0006, value 0x0007 | d7f010e1-660d-46e9-96c3-19c4148bdab5, properties 0x08 |
+| KeyLinker Notify characteristic | decl 0x0008, value 0x0009 | d7f010e2-660d-46e9-96c3-19c4148bdab5, properties 0x10 |
+
+The expected GATT profile is now proven, but descriptor `0x000A`
+is **not** yet identified (likely, but not proven CCCD `0x2902`).
+The two raw discovery requests changed no attributes. The exact meaning
+of `0xFF12` remains undetermined.
+
+Added a next-stage script, `tools/g3v2-le-keylinker-b7-readonly.py`.
+Default CLI requires an explicit choice:
+- `--inspect-only` discovers the CCCD with ATT Find Information 0x04,
+  reads it with ATT Read 0x0A, and makes **no ATT writes**.
+- `--b7` first validates all handles/UUIDs, then writes the connection
+  subscription CCCD and submits one G3V2 native `B7` **read request**
+  to e1, waits for the e2 notification, validates CRC, and restores the
+  CCCD. The ATT writes used for subscription/query must not be
+  conflated with persistent lighting opcodes. No 0x37, 0x3B, OTA, or SCSI
+  code exists in the script. No actual read-response test yet performed.
+
+Next hardware run should begin with `--inspect-only` to confirm the
+descriptor without changing any characteristic. Do not repeat the earlier
+Bleak/BlueZ connection experiments.

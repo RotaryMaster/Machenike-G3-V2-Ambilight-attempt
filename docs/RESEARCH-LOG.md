@@ -2845,3 +2845,18 @@ to test whether code overlap follows version
 distance and whether identical XRES blocks
 persist; or a same-HWID plaintext reference.
 No controller or immutable OS modification.
+
+
+## 2026-11-21 — Consolidated user PDF of further LED/B7 and timing results
+
+Reviewed a user-exported 88-page Claude discussion and recorded already executed tests in `docs/AMBILIGHT-TESTES-2026-11-21.md`. We distinguish raw user logs, observed visual behavior, and assistant hypotheses; none of the older studies is being rerun.
+
+**Color versus visual mode:** after green was applied in KeyLinker, extended charging-dock time left LEDs visually off, yet three BLE B7 reads yielded identical `15 F6 05 00 00 FF`, before FN+Right activated rainbow. This establishes preserved registered color despite LED-off, NOT demonstrated NVM/flash storage, and corrects earlier mistaken speculation that the dock set green automatically.
+
+**Apply from rainbow:** KeyLinker user applied purple; observed solid purple afterwards; BLE returned `80 00 FF 00 00 FF`. Color apply can supersede a running local effect.
+
+**New timing experiment:** v2 compared eight equal-color and eight changing-color 0x37 writes, with one equal warm-up. All output was restored to original white. ACK medians 5.88ms vs 6.88ms, permutation p≈0.830 for mean delta; following B7 medians 5.02ms vs 8.02ms with p≈0.076. One equal-color ACK outlier took 31.89ms. No statistically persuasive flash-commit evidence, and USB polling/scheduling likely limits interpretation. Do not retry more writes.
+
+**Safety/provenance:** PDF shows a v2 `--dry-run` command near output containing writes, and the v2 script isn't committed in the repository. Without source, cannot say if that flag was unsafe or if the user pasted another full execution. Flag v2 as *not safe to invoke unreviewed*.
+
+Firmware v1.48/v1.59 offline decryption track unchanged; no plaintext recovered. No MACs, personal information, or proprietary PDF added to repository.

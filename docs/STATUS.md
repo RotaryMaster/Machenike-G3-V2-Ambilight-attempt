@@ -3634,3 +3634,55 @@ marker survived a quick power-cycle. Since visible breathing mode
 is not fully represented in six-byte B7, a controlled comparison
 must log both **B7 RGB bytes** and **visible effect** before and
 after dock, without a new high-rate write.
+
+
+### 2026-11-21 — New physical LED baseline: solid green, dock-off loss affects color AND mode
+
+The user clarified the earlier charging-dock observation: after **manually
+turning the gamepad off and leaving it on the dock for several hours**
+(precise duration not measured), **both the last LED color and visible
+mode/effect** were forgotten. This was user-visible behavior; there is
+NO B7 log from immediately before/after that earlier dock session. Do
+not claim that the B7 register itself was read and proven cleared in
+that earlier event. The cause remains unverified (long power-off versus
+charging/dock state versus profile reload).
+
+**Current live baseline (green solid, user visually observed):**
+- direct LE Public connection: **474.9 ms**;
+- KeyLinker identity response: `19 0D 01 52 07 10 06 20 11 01 48 46 3D`;
+  logical VID:PID `1006:2011`, firmware **1.48**, matching serial
+  and validated CRC; identity query RTT **23.0 ms**;
+- B7 read response: `19 0C 82 AA 06 15 F6 05 00 00 FF 7D`;
+  CRC valid, serial 0x82, B7 query RTT **21.9 ms**;
+- extracted LampLight logical six-byte record
+  **`15 F6 05 00 00 FF`**:
+  RGB **(21,246,5)**, packed breath field 0x0000, brightness 255;
+- visible effect: **solid green** (observed, cannot be inferred solely
+  from the packed breath field because FN+Right has previously changed
+  visible mode without changing B7).
+
+**Next controlled physical test** (do not mutate lighting or repeat
+codec/GATT discovery as a research objective):
+1. Treat the above live B7 read + visible solid green as the
+   pre-dock baseline. Do not send 0x37 or set a new RGB marker.
+2. Manually power off, put on dock for a *recorded* period (initially
+   several hours, as in the observed event). Note dock indicator and
+   whether it appears to turn back on.
+3. Remove from dock before assessing; power on normally, record the
+   **visible color/effect first** before running any command.
+4. Send one read-only identity + B7 query with the verified
+   `g3v2-le-android-identity-b7.py` script; compare six bytes with
+   `15 F6 05 00 00 FF`. The only ATT configuration write is the
+   connection-scoped CCCD 0x2902 subscription.
+5. If both color and visible mode changed, record the actual
+   B7 bytes separately instead of automatically attributing the
+   change to persistent flash. If B7 remains equal but the visual
+   mode changes, the missing state is outside the 6-byte LampLight.
+6. A later *off-without-dock* comparison can discriminate charging
+   behavior from extended power-off without introducing new 0x37
+   writes. Exact threshold-time search is not needed initially.
+
+No statement is made that this experiment has yet happened.
+Keep realtime/high-frequency 0x37 writes disabled until persistence
+and wear-safety are understood. The current BLE MAC should not be
+committed to public documentation.

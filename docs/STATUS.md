@@ -3862,3 +3862,47 @@ to downgrade the physical controller.
 
 Neither the USB/BLE controller nor the Bazzite base
 was accessed or modified by this historical API probe.
+
+
+
+## 2026-11-21 — Wayback Machine leads for historical G3V2 installer URLs
+
+The user proposed looking up older G3V2 firmware links in Internet
+Archive Wayback snapshots. This is a worthwhile **URL recovery**
+strategy even when the EXE itself was not archived.
+
+Original download-page paths grounded by distinct contemporaneous
+G3 V2 manuals:
+- Chinese: `https://machenike.com/shoubing/download`;
+- Global: `https://global.machenike.com/shoubing/download`.
+Source manuals:
+`https://device.report/m/c90e1ba13aa83314feb8a35fe43d881669dfadb51d66f044282a428fcf3f7ebf.pdf`;
+`https://manuals.plus/m/3641d84ab7ee9e4549bdab839ca39be0dd01922ed353b8dbbd989c023cd15979`.
+
+**Verification status:** Internet Archive index and replay URLs
+were inaccessible from this assistant's web-retrieval environment,
+including CDX and the public availability endpoint. Therefore
+**no actual capture or historical download link was confirmed**.
+Targeted public search-engine queries for archived
+`ZXD2267` / `JRH_G3V2` links also yielded no credible match.
+Do not say Wayback has a historical v1.25 package, or that
+there are zero snapshots: both remain unknown.
+
+Added `tools/audit-g3v2-wayback.py`:
+- bounded Wayback CDX GET on four known plausible Machenike
+  controller-download page variants, 2023–2026;
+- availability API fallback for selected years;
+- fetches only archived HTML/text (no binaries), lists
+  potential firmware, installer and download links;
+- read-only network operation, no controller access,
+  no Bazzite base changes;
+- intended execution in the user's Linux Bazzite network
+  environment when Wayback is reachable.
+  Report CDX errors explicitly if the archive is blocked
+  from there too.
+
+If the tool extracts original URL(s), separately check their
+availability or archive record, without executing a downloaded
+updater. Only a genuine complete FOT with exact
+`a1ca51da724cb6103658c05d7d4e2267` and
+**different** XCOD content would advance our decryption goal.

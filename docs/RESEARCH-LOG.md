@@ -2261,3 +2261,20 @@ state expiration, a charging-profile override, or another firmware
 reload; it does **not** yet prove any flash behavior or lifespan.
 A clean, single-setting observation comparing power-off with and without
 dock (and removing from dock before evaluation) will be needed later.
+
+
+## 2026-11-20 — Located Android KeyLinker APK, preparing offline codec diff
+
+User's read-only local file search identified
+`keylinker-referencia/base.apk` alongside Android configuration split
+APKs. The direct GATT connection already works; further `B7` retries
+using the Windows USB codec are paused until codec verification.
+
+Committed `tools/inspect-g3v2-keylinker-apk-codec.py` to examine
+the app DEX (not the unrelated TouchManager/game APKs). The tool
+reports APK SHA256, detects APK DEX files, uses installed JADX or an
+explicitly opted-in official portable user-cache download, then prints
+the relevant CodeHelper/GATT Java sections. All decompiled app files
+remain outside GitHub under user cache. Android APK `encrypt` has not
+yet been extracted nor compared against USB `KeyLinkerlib.dll` or
+X20 Pro; no new controller query should be sent until this is resolved.

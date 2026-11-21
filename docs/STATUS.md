@@ -3062,3 +3062,43 @@ KeyLinker packet, no pairing request, no write to controller settings**.
 This tool is a new transport-path test, not a proven solution; **actual
 socket permission, kernel behavior and G3V2 LE connectability still require
 the user's single live run**. Do not call the result confirmed until captured.
+
+
+### DIRECT LE connection validated on real G3 V2: 462.9 ms (2026-11-20)
+
+**Major confirmed milestone:** The user ran `tools/g3v2-le-att-connect-readonly.py`
+on Bazzite KDE (Python 3.15.2) and successfully connected to the live
+`G3V2 APP` via a direct Linux L2CAP fixed ATT channel:
+
+```text
+SUCESSO: conexão L2CAP/ATT estabelecida em 462.9 ms
+Destino: CID=4, tipo=1 (LE Public=1)
+Nenhuma chamada send/sendall, recv ou alteração GATT realizada.
+```
+
+This confirms **the device accepts an actual LE Public link from the laptop
+without BLE pairing**. It overturns any claim that the device cannot connect
+over LE on Bazzite; the repeated Bleak/`bluetoothctl` failures were specific
+to those BlueZ automatic-bearer/interface paths, while direct, explicitly
+typed LE ATT sockets work.
+
+What is **not yet proven**: access to the remote GATT attribute database,
+the location/properties of KeyLinker e0/e1/e2 services/characteristics,
+successful KeyLinker read responses, safe high-rate LED streaming, flash
+endurance, or sustained 2.4 GHz/BLE coexistence. The direct LE test performed
+no ATT application data exchange.
+
+**Next tool added:** `tools/g3v2-le-gatt-discover-readonly.py`. It reuses
+the proven `SOCK_SEQPACKET/BTPROTO_L2CAP`, LE Public, CID=4 connection and
+sends exclusively ATT read-only discovery requests:
+- `0x10` Read By Group Type for primary services (`0x2800`);
+- `0x08` Read By Type for characteristic declarations (`0x2803`), **only**
+  within a discovered KeyLinker service `d7f010e0`.
+The tool decodes standard and Bluetooth little-octet-order 128-bit UUIDs,
+prints attribute handles and characteristic properties; it never writes an
+attribute value, enables notify, sends any KeyLinker `0x37` or `0x3B`,
+pairs/bonds, or retries a failed connection. It prompts for the device
+address at runtime; no personal Bluetooth address is committed.
+
+Script syntax and UUID/response-record smoke tests were completed locally.
+**No real GATT service discovery has yet been executed**; await user's output.

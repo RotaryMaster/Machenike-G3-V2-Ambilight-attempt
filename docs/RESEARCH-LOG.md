@@ -2399,3 +2399,26 @@ The successful reads do not resolve whether `0x37` writes commit
 flash or are safe for continuous ambilight. Record this milestone
 in `docs/G3V2-BLE-VERIFIED.md` and protect against confusion
 with the earlier unsuccessful probes. No repeat is required.
+
+
+## 2026-11-21 — Static-only Android app command call-site audit prepared
+
+BLE identity/lighting reads are solved. The remaining critical path
+is an LED update command safe for recurrent Ambilight changes, not
+another transport/CRC test.
+
+Decompiled `com/pulsenet/inputset/util/e.java` has clear opcodes:
+- `l0(int[],int)` emits 0x37 (decimal 55), G3V2 lighting config writer;
+- `X(byte[],int)` emits 0x25 (decimal 37), **unidentified**;
+- `h0(int)` emits 0x25 (decimal 37), **unidentified**;
+- `q(int)` emits B7 lighting reads.
+
+The distinction between decimal 37 and hexadecimal 0x37 matters.
+No assumption that 0x25 is a real-time RGB command is permitted.
+Created `tools/audit-keylinker-android-light-callers.py` for a
+read-only search of APK-derived Java call sites and nearby transport
+dispatch in the user's local JADX cache. No further BLE experiments
+until that targeted source output is inspected.
+
+Charging-dock light reset observation remains an unquantified clue:
+do not overinterpret earlier quick-power-cycle 0x37 persistence.

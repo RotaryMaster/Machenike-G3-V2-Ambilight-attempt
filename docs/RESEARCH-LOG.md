@@ -2225,3 +2225,39 @@ read frame to e1. It never sends 0x37/0x3B/OTA/SCSI/pairing
 commands or automatic read retries. It closes the socket and does
 not request a persistent setting change. The user has not run this
 new targeted experiment yet.
+
+
+## 2026-11-20 — Explicit CCCD subscription did not yield B7 notifications; codec mismatch discovered
+
+The user ran `g3v2-le-b7-subscribe-v3.py` on the real controller:
+- LE connection 639.3ms; GATT KeyLinker handles unchanged;
+- CCCD 0x000A ATT Read Response `0B 01` before and after writing the standard
+  two-byte subscribe value `01 00`; ATT Write Response was successful;
+- one `B7` native read query encoded by the *Windows MixDrive USB codec*
+  was sent to GATT e1 and received an ATT Write Response;
+- no GATT e2 notification appeared within the timeout.
+
+The descriptor may have a one-byte custom representation and the APP
+protocol parser may differ. Neither the explicit subscribe nor the ATT
+write ACK prove that the gamepad accepted or processed the KeyLinker
+command. Stop replaying the same B7 wire frame.
+
+A static source comparison with `AmjadAAYD/x20ctl`
+(`x20ctl/protocol.py`, recovered from a **different controller's Android
+KeyLinker app**) uncovered a previously missed codec mismatch:
+same native plaintext `B7 06 00 29 00 A4` yields
+`CC B3 40 70 99 15` with the known-G3V2 USB MixDrive codec, but
+`71 A2 A2 90 2C 8E` with the Android-derived X20 Pro KeyLinker codec.
+The same opcode, service UUID, and CRC do **not** imply identical frame
+encryption. Inspect the actual G3V2-compatible Android KeyLinker APK 3.73
+and its `CodeHelper.encrypt` plus GATT send/notification registration
+offline **before sending any alternative BLE packet**.
+
+Separately, the user reports that manually powering off the G3 V2 and
+leaving it in the charging dock for an unmeasured duration makes its most
+recent lighting configuration apparently disappear. This qualifies the
+earlier rapid-power-cycle persistence observation. It could be volatile
+state expiration, a charging-profile override, or another firmware
+reload; it does **not** yet prove any flash behavior or lifespan.
+A clean, single-setting observation comparing power-off with and without
+dock (and removing from dock before evaluation) will be needed later.

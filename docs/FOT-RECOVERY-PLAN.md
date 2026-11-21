@@ -132,3 +132,38 @@ alterações ao firmware do G3V2.
 Não publicar MACs, identificadores de série pessoais,
 caminhos privados, conteúdo binário proprietário sem
 autorização ou outros dados únicos da unidade.
+
+
+
+## Latest status: historical API and public archive search — 2026-11-21
+
+The user executed `probe-firmware-history-api.py` against
+all eight proposed GET paths with product id 8/firmware
+id 11. **All eight returned HTTP 405 + JSON Method Not
+Allowed.** We have learned that these GETs do not
+provide the history. This does **not** prove historical
+records are absent or that any guessed POST variant
+is a supported safe API. The current latest-only
+by-product-info GET remains the one verified route.
+Do **not** repeat this API probe or change its verbs
+without an actual server/client contract.
+
+Targeted archive/GitHub/Chinese/English keyword searches
+for the exact updater family `ZXD2267`,
+`JRH_G3V2`, and older G3 V2 firmware found no
+verified alternative FOT file. No evidence of a
+publicly available decryption key.
+
+Note: the older `1.25` from Gamepadla is listed as
+**XInput Firmware** on a 2025-01-28 hardware test.
+It is **not yet proven** to be a ZXD2267 updater
+version in the same field as FOT v1.48.
+
+The next independent way to acquire a genuinely
+different image is an official archived installer
+or an older G3V2 package shared with permission by
+the manufacturer's support or independent firmware
+researchers. On receipt: validate SHA256, find an
+embedded FOT, verify 16-byte HWID, version field and
+XCOD/XRES section hashes before any comparison.
+Keep any proprietary binary local; do not flash it.

@@ -2448,3 +2448,51 @@ Next user-side read-only command: show bounded sections
 `f.java:55-120` to identify enclosing method names, payload
 construction, and whether any write path is distinct from persistent
 configuration. Avoid repetitive BLE/USB hardware probes.
+
+
+## 2026-11-21 — Two Android 0x37 serializers, 0x25 identified as Turbo mode
+
+User supplied direct decompiled Java method bodies:
+
+**`b1.A1(List)` (1427–1465):**
+The app prepends `6 * lighting entries`, appends
+`lighting_r/g/b/data4/data5/light` from
+`HostMenuBean.LightingDataBean` and partitions into
+15-byte fragments through `e.A().l0` (**0x37**).
+
+**`b1.z1(List×4)` (2396–2459):**
+Four 6-element lighting inputs are normalized by helper
+`k`, then per-record indexes 3/4/5 are remapped:
+`[r,g,b,flag,brightness,speed]` →
+`[r,g,b, speed & 0xFF,
+ (speed >> 8 & 0x0F) | (flag ? 0x80 : 0),
+ brightness]`. The source explicitly formats speed to
+12 bits and emits the same 15-byte `0x37` chunks.
+The exact effects of helper `k` upstream still require
+inspection before declaring all UI inputs semantically final,
+but the downstream wire format is clear and agrees with the
+known native USB LampLight record.
+
+**`b1.f1(...)` (1976–2070):**
+Bulk configuration path starts with modes `0x17`, `0x18`,
+then sends `0x25` metadata with `h0` and grouped three-byte
+records with `X`; later follows other command families.
+In `util/f.java`, `X` is also used to build an offline
+representation of 3-byte grouped records.
+This is clearly **not** a dedicated single RGB/lamp writer.
+
+Family corroboration from
+`https://github.com/AmjadAAYD/x20ctl/blob/main/docs/01-protocol.md`:
+opcode `0x25` = `CODE_TOOBLE_MODE` (Turbo).
+Thus `0x25` is removed from the active hypothesis list for
+volatile LED updates, though the G3V2 has not separately
+been sent this command as a hardware verification (nor should
+it be for Ambilight).
+
+Next objective: inspect firmware for distinct volatile LED
+output updates or NVM save scheduling; do not keep mining
+the same Android call sites or do repetitive BLE read tests.
+The Android app's `0x37` paths do not demonstrate
+high-frequency/wear-safe operation. A controlled, no-new-write
+baseline/dock/B7 + visible-effect observation may help separate
+mode reset from RGB register persistence.

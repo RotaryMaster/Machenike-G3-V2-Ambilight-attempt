@@ -2030,3 +2030,32 @@ Next minimally invasive test: use BlueZ's LE-specific bluetoothctl submenu
 Only if unsupported, inspect the optional experimental dual-mode `PreferredBearer`
 interface; do not change immutable OS base, pair, reset hardware, or transmit
 KeyLinker configuration writes. No additional HCI capture needed yet.
+
+
+## 2026-11-20 — bluetoothctl LE connect blocked by missing org.bluez.Bearer.LE1
+
+Using `bluetoothctl scan le` the user found `G3V2 APP` in the active
+discovery list, then entered `menu le` and ran `connect <controller>`.
+BlueZ replied `org.bluez.Bearer.LE1 is not available on <controller>`.
+
+Checked upstream BlueZ client source: the LE menu's connect handler first
+looks for the `org.bluez.Bearer.LE1` interface proxy and prints this error
+without invoking `Connect` when missing. **No LE connection attempt was
+made by this command**, so do not treat it as LE RF failure.
+
+Correlated an additional independent clue:
+- BlueZ previously printed `AdvertisingFlags: 02` and address type
+  `public` for this controller;
+- upstream `adapter.c` infers BR/EDR capability for an LE public address
+  whose advertising flags lack `EIR_BREDR_UNSUP` (`0x04`);
+- this provides a concrete mechanism explaining the HCI classic
+  `Create Connection` and `Page Timeout` already captured;
+- BlueZ commit 9965f36 (July 2026) fixed the analogous case for LE
+  **random** addresses, not all LE public addresses.
+
+Remaining uncertainty: whether this G3V2 firmware truly supports BR/EDR
+and which of BlueZ's optional bearer APIs/properties are available on the
+installed daemon. Query `menu le -> list/show`, main `info`, and the
+read-only `bearer <device>`; avoid pairing, controller writes or OS service
+reconfiguration until results are interpreted. Local address is intentionally
+omitted from public docs.

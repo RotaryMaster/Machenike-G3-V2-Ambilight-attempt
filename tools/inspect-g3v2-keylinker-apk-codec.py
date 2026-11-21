@@ -12,12 +12,15 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import json
 import os
+import platform
 from pathlib import Path
 import re
 import shutil
 import stat
 import subprocess
+import tarfile
 import sys
 import urllib.request
 import zipfile
@@ -33,6 +36,105 @@ PATTERNS = (
     (re.compile(r"\b(?:getHostLighting|HOST_LIGHTING|getSerial|writeCharacteristic|onCharacteristicChanged|setCharacteristicNotification|writeDescriptor)\b", re.I), 15),
     (re.compile(r"BluetoothGatt|BluetoothGattCharacteristic|0x2902", re.I), 3),
 )
+
+
+
+def java_on_host() -> Path | None:
+    """Use existing Java from PATH or an already cached portable JRE."""
+    which = shutil.which("java")
+    if which:
+        return Path(which)
+    for candidate in sorted((CACHE / "jre").glob("*/bin/java")):
+        if candidate.is_file():
+            return candidate
+    return None
+
+
+def download_limited(url: str, dst: Path, limit: int) -> None:
+    if not url.startswith(("https://github.com/", "https://api.adoptium.net/")):
+        raise RuntimeError("URL não confiável para artefato")
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    partial = dst.with_suffix(dst.suffix + ".partial")
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": "machenike-keylinker-offline-audit"})
+        with urllib.request.urlopen(req, timeout=120) as stream, partial.open("wb") as out:
+            n = 0
+            while chunk := stream.read(1024 * 1024):
+                n += len(chunk)
+                if n > limit:
+                    raise RuntimeError("Download excedeu tamanho máximo")
+                out.write(chunk)
+        partial.replace(dst)
+    finally:
+        partial.unlink(missing_ok=True)
+
+
+def sha256_file(src: Path) -> str:
+    digest = hashlib.sha256()
+    with src.open("rb") as fh:
+        for chunk in iter(lambda: fh.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def prepare_java(fetch: bool) -> Path | None:
+    java = java_on_host()
+    if java:
+        return java
+    if not fetch:
+        return None
+    if platform.system() != "Linux" or platform.machine() not in ("x86_64", "amd64"):
+        raise RuntimeError("JRE portátil automático suporta apenas Linux x86_64")
+    # Adoptium's official API supplies the release archive URL and exact SHA256.
+    api = ("https://api.adoptium.net/v3/assets/latest/21/hotspot"
+           "?architecture=x64&image_type=jre&os=linux&vendor=eclipse")
+    request = urllib.request.Request(
+        api, headers={"User-Agent": "machenike-keylinker-offline-audit", "Accept": "application/json"}
+    )
+    with urllib.request.urlopen(request, timeout=35) as resp:
+        assets = json.load(resp)
+    packages = [
+        obj.get("binary", {}).get("package", {})
+        for obj in assets if obj.get("binary", {}).get("image_type") == "jre"
+    ]
+    if not packages:
+        raise RuntimeError("API oficial Adoptium não retornou pacote Linux JRE")
+    pkg = packages[0]
+    url = pkg.get("link", "")
+    checksum = pkg.get("checksum", "").lower()
+    name = pkg.get("name", "")
+    if not (
+        url.startswith("https://github.com/adoptium/")
+        and name.endswith(".tar.gz")
+        and re.fullmatch(r"[0-9a-f]{64}", checksum)
+    ):
+        raise RuntimeError("Metadados ou SHA256 do JRE inesperados")
+    jre_dir = CACHE / "jre"
+    archive = jre_dir / name
+    print(f"Obtendo Temurin 21 JRE portátil ({name}) ...", flush=True)
+    if not archive.is_file() or sha256_file(archive) != checksum:
+        download_limited(url, archive, 125 * 1024 * 1024)
+    if sha256_file(archive) != checksum:
+        archive.unlink(missing_ok=True)
+        raise RuntimeError("SHA256 do Temurin JRE difere do release oficial")
+    jre_dir.mkdir(parents=True, exist_ok=True)
+    with tarfile.open(archive, "r:gz") as tar:
+        members = tar.getmembers()
+        if sum(m.size for m in members if m.isfile()) > 400 * 1024 * 1024:
+            raise RuntimeError("Tamanho extraído do JRE excede limite")
+        # Python 3.15: data filter prevents path traversal/unsafe symlinks.
+        tar.extractall(path=jre_dir, filter="data")
+    java = java_on_host()
+    if java is None:
+        raise RuntimeError("JRE extraído, mas bin/java não foi encontrado")
+    print("JRE verificado e extraído em cache:", java, flush=True)
+    return java
+
+
+def enable_java(java: Path) -> None:
+    java_home = java.parent.parent
+    os.environ["JAVA_HOME"] = str(java_home)
+    os.environ["PATH"] = str(java.parent) + os.pathsep + os.environ.get("PATH", "")
 
 
 def get_version_jadx() -> Path | None:
@@ -63,13 +165,8 @@ def retrieve_jadx() -> Path:
     binary = target / "bin" / "jadx"
     if binary.is_file():
         return binary
-    if not shutil.which("java"):
-        raise RuntimeError("Java não encontrado. Não é possível executar JADX sem JRE; "
-                           "nenhuma instalação foi feita.")
-
     headers = {"User-Agent": "machenike-offline-apk-inspection", "Accept": "application/vnd.github+json"}
     endpoint = "https://api.github.com/repos/skylot/jadx/releases/latest"
-    import json
     with urllib.request.urlopen(urllib.request.Request(endpoint, headers=headers), timeout=35) as resp:
         release = json.load(resp)
     assets = release.get("assets", [])
@@ -119,7 +216,7 @@ def retrieve_jadx() -> Path:
 
 
 def apk_info(apk: Path) -> str:
-    sha = hashlib.sha256(apk.read_bytes()).hexdigest()
+    sha = sha256_file(apk)
     print("APK:", apk)
     print("SHA256:", sha)
     with zipfile.ZipFile(apk) as zf:
@@ -200,7 +297,9 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--apk", type=Path, required=True)
     ap.add_argument("--fetch-portable-jadx", action="store_true",
-                    help="se JADX estiver ausente, baixar release oficial só no cache do usuário")
+                    help="se JADX ausente, baixar release oficial só no cache do usuário")
+    ap.add_argument("--fetch-portable-java", action="store_true",
+                    help="se Java ausente, baixar Temurin JRE oficial só no cache do usuário")
     args = ap.parse_args()
     apk = args.apk.expanduser().resolve()
     if not apk.is_file():
@@ -213,6 +312,16 @@ def main() -> int:
         source_review(sources)
         return 0
 
+    try:
+        java = prepare_java(args.fetch_portable_java)
+    except Exception as exc:
+        print("JRE portátil não pôde ser preparado:", exc)
+        return 3
+    if java is None:
+        print("Java não encontrado. Use --fetch-portable-java para obter Temurin 21 em cache.")
+        return 3
+    enable_java(java)
+    print("Java selecionado:", java, flush=True)
     jadx = get_version_jadx()
     if not jadx and args.fetch_portable_jadx:
         try:
@@ -223,9 +332,6 @@ def main() -> int:
     if not jadx:
         print("\nJADX não localizado. Execute novamente com --fetch-portable-jadx.")
         print("Nenhum pacote do sistema será modificado, e o APK permanece local.")
-        return 3
-    if not shutil.which("java"):
-        print("Java não está no PATH. JADX CLI exige JRE.")
         return 3
 
     out = sources.parent

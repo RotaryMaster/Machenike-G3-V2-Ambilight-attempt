@@ -108,7 +108,7 @@ def retrieve_jadx() -> Path:
                 raise RuntimeError(f"Entrada inválida no ZIP JADX: {z.filename}")
             if z.file_size > APK_MAX_ENTRY:
                 raise RuntimeError("Entrada do ZIP JADX excedeu limite")
-            if (z.external_attr >> 16) & stat.S_IFMT((z.external_attr >> 16)) == stat.S_IFLNK:
+            if stat.S_IFMT(z.external_attr >> 16) == stat.S_IFLNK:
                 raise RuntimeError("ZIP JADX contém link simbólico; abortando")
         zf.extractall(target)
     if not binary.is_file():

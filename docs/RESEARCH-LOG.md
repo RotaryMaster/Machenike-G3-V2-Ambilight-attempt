@@ -2008,3 +2008,25 @@ in the first filtered output. Do not conclude which bearer was attempted without
 reading those events from the existing raw capture. Read-only offline log analysis is
 the next experiment; further live retries are not justified yet. Address values and
 unredacted btmon files stay local.
+
+
+## 2026-11-20 — HCI capture definitively shows a classic BR/EDR connect attempt
+
+The user inspected the previously recorded `btmon` log and recovered the
+command preceding the management error:
+
+- 23:15:55.172894: `HCI Command: Create Connection (0x01|0x0005)` — BR/EDR.
+- 23:15:55.175138: `Command Status: Success (0x00)` — host controller accepted command.
+- 23:16:00.295198: `HCI Event: Connect Complete (0x03)` — `Page Timeout (0x04)`.
+- 23:16:00.295226: MGMT `Connect Failed` for `BR/EDR Address`.
+
+The 0x04 in HCI is **Page Timeout**; the 0x04 in MGMT is **Connect Failed**.
+This confirms the observed connection attempted the **wrong bearer** for the
+KeyLinker BLE GATT peripheral. It does not yet explain *why* BlueZ chose BR/EDR,
+nor demonstrate whether an LE connection would succeed.
+
+Next minimally invasive test: use BlueZ's LE-specific bluetoothctl submenu
+(`menu le` / `connect <address>` while the device has a fresh LE advertising report).
+Only if unsupported, inspect the optional experimental dual-mode `PreferredBearer`
+interface; do not change immutable OS base, pair, reset hardware, or transmit
+KeyLinker configuration writes. No additional HCI capture needed yet.

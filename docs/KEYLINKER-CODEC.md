@@ -592,3 +592,28 @@ Never conflate ATT Write Response with an application KeyLinker reply.
 The previous USB-coded `B7` frames wrote to e1 successfully in ATT
 but got no e2 response; that negative result cannot be interpreted
 as proof that *valid Android-coded* requests are ignored.
+
+
+### Physical Android BLE validation — 2026-11-20
+
+The APK-derived `e.h/e.g` codec has now been proven with real
+G3V2 `d7f010e1/e2` traffic (not merely test vectors):
+
+- `0x91` identity request (serial 01) encoded
+  `91 05 01 CB 33` to `02 30 4A F2 C6`.
+  Actual e2 response `C8 A0 BD 88 22 F5 C0 14 A5 37 C0 E1 16`
+  decoded to `19 0D 01 31 07 10 06 20 11 01 48 46 B8`
+  with valid CRC/serial; identity `1006:2011`, firmware `1.48`.
+- `0xB7` LampLight read (serial 82) encoded
+  `B7 06 82 FA 00 E7` to `1C 71 F7 C1 93 CD`.
+  Actual e2 response `32 FB 77 41 15 B3 F3 F1 FE 40 BD 46`
+  decoded to `19 0C 82 7A 06 00 FF FF 00 00 FF F9`
+  with valid CRC/serial.
+  Logical lighting: `00 FF FF 00 00 FF` (six bytes),
+  same as previously read over USB. RTTs: **23.0ms / 22.0ms**.
+
+The direct-LE Bazzite path is now **confirmed operational for reads**.
+Previous identical-read attempts with MixDrive native USB encoding
+were not valid Android application packets and should not be repeated.
+Do not infer realtime writable LED safety or flash endurance.
+See `docs/G3V2-BLE-VERIFIED.md`.

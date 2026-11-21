@@ -2860,3 +2860,12 @@ Reviewed a user-exported 88-page Claude discussion and recorded already executed
 **Safety/provenance:** PDF shows a v2 `--dry-run` command near output containing writes, and the v2 script isn't committed in the repository. Without source, cannot say if that flag was unsafe or if the user pasted another full execution. Flag v2 as *not safe to invoke unreviewed*.
 
 Firmware v1.48/v1.59 offline decryption track unchanged; no plaintext recovered. No MACs, personal information, or proprietary PDF added to repository.
+
+
+## 2026-11-21 — Offline regression against actual uploaded v2 and BLE diagnostic Python
+
+User supplied `g3v2-light-write-timing-v2.py` (SHA256 `1785cad636599330d417300a7a977e64f63a1ce1e1f5c76708d06f0b30f3568b`) and `g3v2-le-connect-diag-v1.py` (SHA256 `7859fe28692a000041e08da9ed6021cebcb78c37840acfb1323a006b66a5dd35`).
+
+Both sources passed `py_compile`. Isolated execution of the real `main()` functions with in-memory fake persistence/HID/socket objects showed: dry-run 0 writes and 6 synthetic B7 reads, full default flow 17 synthetic writes and a restored simulated final color, and BLE one fake L2CAP connection, no data sending. Imported helper code's main guards prevent write execution merely upon import. No device was accessed.
+
+Revised the earlier caution about an ambiguous `--dry-run`/0x37 log juxtaposition in the exported PDF: this is **not** evidence that the flag is broken, and the supplied code did not reproduce the issue. Complete physical v2 test should not be rerun; none of the software-only findings establishes Flash safety or a volatile RGB command. Full detail in `docs/G3V2-SCRIPT-AUDIT-2026-11-21.md`.

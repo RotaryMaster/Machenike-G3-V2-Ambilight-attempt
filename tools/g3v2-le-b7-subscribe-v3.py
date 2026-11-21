@@ -7,8 +7,10 @@ discovery. Writes ONLY two ATT attributes:
   * e1 Write characteristic: exactly one encoded native B7 READ query.
 
 No 0x37, 0x3B, OTA, SCSI, pairing, retries, bulk warm-up, or saved MAC.
-The CCCD applies to this connection according to Bluetooth GATT; socket close
-ends it. We read it before/after subscription and refuse ambiguous values.
+Only accepts initial CCCD 01 (observed) or 01 00, then requests the same
+notification-on bit pattern in canonical two-byte form 01 00; no disable or
+persistent change is requested. CCCD applies to the current GATT client;
+closing the socket ends the connection. Refuses ambiguous initial values.
 ATT Write Request success is NOT an application-layer KeyLinker ACK.
 """
 from __future__ import annotations
@@ -25,7 +27,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent
 MAC = re.compile(r"(?:[0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}\Z")
 CCCD_NOTIFY_ON = b"\x01\x00"
-KNOWN_BEFORE = (b"\x00", b"\x01", b"\x00\x00", b"\x01\x00")
+KNOWN_BEFORE = (b"\x01", b"\x01\x00")
 KNOWN_AFTER = (b"\x01", b"\x01\x00")
 
 
@@ -104,7 +106,7 @@ def run() -> int:
         print("\n=== CCCD antes da assinatura ===")
         before = base.read_cccd(sock, cccd_handle)
         if before not in KNOWN_BEFORE:
-            print("CCCD tem formato/valor desconhecido. Abortando sem nenhuma escrita.")
+            print("CCCD inicial não tem o valor observado 01/01 00. Abortando sem escrita.")
             return 3
 
         print("\nHabilitando e2 com CCCD 01 00, uma única vez...")

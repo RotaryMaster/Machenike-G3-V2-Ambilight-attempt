@@ -3149,3 +3149,46 @@ subscription descriptor and to e1 carrying a **read-only query**). This is
 *not* an application-level lighting writer (no `0x37`), nor OTA/SCSI.
 It is guarded to only one B7 request and no repeats; no writes occur in
 `--inspect-only`. Neither mode has yet been executed on hardware.
+
+
+### G3V2 actual CCCD identified, but returns nonstandard 1-byte value (B7 not sent)
+
+The first live execution of `tools/g3v2-le-keylinker-b7-readonly.py --b7`
+connected via direct LE Public in **665.0 ms** and re-confirmed both
+KeyLinker characteristics:
+- `e1` ATT value handle `0x0007` (write property `0x08`);
+- `e2` ATT value handle `0x0009` (notify property `0x10`).
+
+**New physical finding:** ATT Find Information explicitly identifies
+descriptor handle **`0x000A` as UUID `0x2902` (CCCD)**. This is
+not inferred from its handle number.
+
+ATT Read Request for that descriptor returned **`0B 01`**: a valid
+ATT Read Response opcode (`0B`) with **one byte of value `01`**.
+The Bluetooth Core GATT CCCD definition specifies a **two-octet**
+value, so the device's returned value is nonstandard/truncated. The
+original script stopped before sending any ATT Write Request or
+application KeyLinker B7 query. No CCCD configuration, lighting,
+firmware, pairing, OTA or SCSI operation was performed.
+
+Do not interpret `01` as proof the notify subscription is active:
+although bit 0 corresponds to notification configuration in a normal
+two-byte CCCD, this nonstandard response's actual semantics are
+still unverified. Do not blindly send `01 00` to the CCCD.
+
+**Follow-up script:** `tools/g3v2-le-keylinker-b7-v2.py` commit
+`d491755`. It tolerates precisely one- or two-byte CCCD read values
+and logs the anomaly. For `--b7`, only when the value is exactly
+`01` or `01 00`, it makes **one** guarded ATT Write Request to the
+verified `e1` value handle containing a CRC-checked, encoded
+KeyLinker *read opcode* `B7`; it waits for an `e2` notification
+without any CCCD writes, retries or session-initialization sequence.
+The CCCD is never modified. If no notification arrives, it reports
+the timeout without changing the subscription. No physical B7
+response has been measured yet.
+
+New CLI option `--address` allows the user to provide the known
+controller MAC explicitly on the command line; keep that MAC off
+public GitHub files and documentation. Earlier B7 probe is retained
+for reproducibility but should not be rerun without understanding
+the one-byte CCCD behavior.

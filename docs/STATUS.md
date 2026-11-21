@@ -3501,3 +3501,37 @@ remains a separate, unresolved persistence clue.
 Updated `tools/g3v2-le-android-identity-b7.py` (commit `0fd686d`)
 so future output will unpack the identity and six-byte LampLight
 record correctly; **no repeat run is needed** for validation.
+
+
+### 2026-11-21 — Next engineering task: trace Android lighting call sites (read-only)
+
+The hardware now provides direct LE GATT KeyLinker read responses
+(identity 0x91; LampLight B7). The Bluetooth connection/codec path is
+**closed as a research blocker**. Do not repeat link discovery or B7
+tests without a distinct unresolved hypothesis.
+
+**Ambilight blocker remains**: continuously writing native lighting
+opcode 0x37 is not known to be volatile/wear-safe. One power cycle
+retained a 0x37 marker, but the user later observed configuration loss
+after an unmeasured shutdown+charging-dock interval. This is an unresolved
+persistence-mechanism question, not evidence either for or against flash
+writes on each change. Do NOT stream 0x37 at frame rate.
+
+The Android APK e.java methods supply concrete static targets:
+- `e.l0(int[], int)`: request opcode decimal 55 = 0x37 (configuration lighting write);
+- `e.X(byte[], int)`: request opcode decimal 37 = 0x25 (**unknown purpose**, not proven LED preview);
+- `e.h0(int)`: request opcode decimal 37 = 0x25 (**unknown purpose**);
+- `e.q(int)`: request opcode decimal 183 = 0xB7 (lighting read).
+
+Published `tools/audit-keylinker-android-light-callers.py` to
+cross-reference direct `e.A().l0/X/h0/q` calls in the user's **existing
+JADX cache** and flag obfuscated indirect candidates, with limited
+surrounding code. It sends no BLE/USB traffic and makes no source edits.
+The actual call sites have **not yet been collected**. Only after
+finding the call chains and any potentially distinct ephemeral command
+should a guarded hardware experiment be designed.
+
+Related x20ctl X20 Pro code uses repeated 0x37 lighting-record writes in
+a persistent BLE session, but that proves neither a distinct volatile
+opcode nor G3V2 flash endurance. Its behavior must not be generalized to
+this device.

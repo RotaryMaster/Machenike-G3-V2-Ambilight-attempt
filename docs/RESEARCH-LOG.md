@@ -2278,3 +2278,20 @@ the relevant CodeHelper/GATT Java sections. All decompiled app files
 remain outside GitHub under user cache. Android APK `encrypt` has not
 yet been extracted nor compared against USB `KeyLinkerlib.dll` or
 X20 Pro; no new controller query should be sent until this is resolved.
+
+## 2026-11-20 — APK DEX is present; Java not found; portable JRE path added
+
+Offline APK scan:
+`keylinker-referencia/base.apk`,
+SHA256 `09408b714d319461e6a29293d2170d2e7a6e4bcd60438998cd2e6c2f100ebdee`,
+`classes.dex` 8,002,728 bytes; expected GATT UUID strings, KeyLinker,
+encrypt and BluetoothGatt found.
+
+JADX decompilation did **not run**: `java` was not found in PATH.
+Updated `tools/inspect-g3v2-keylinker-apk-codec.py` to use an
+optional verified portable Eclipse Temurin 21 JRE via Adoptium API
+(`--fetch-portable-java`) alongside opt-in official portable JADX
+(`--fetch-portable-jadx`). Both are user-cache-only operations;
+the immutable Bazzite OS and physical gamepad remain untouched.
+Next action: run the updated script once, inspect Java/GATT class output,
+then compare exact app encryption. No new controller tests yet.

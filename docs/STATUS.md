@@ -4175,3 +4175,8 @@ Public contact: info@smart-one.cn. No publicly available ZC32RF1M datasheet/SDK 
 Separate controller patent names **ZC32RF1M LQFP48** (NOT the G3V2's QFN40): https://patents.google.com/patent/CN112439189A/en. Do NOT transfer package pinouts or attempt physical hardware probe based on this source.
 
 Complete evidence and targeted questions for ZhiXu support documented in [ZC32RF1M-MANUFACTURER-LEADS.md](ZC32RF1M-MANUFACTURER-LEADS.md). This is a **non-destructive, static-documentation next step** that could clarify flash endurance, CPU architecture, debug/bootloader and encryption; it does not yet enable firmware decryption or make high-rate 0x37 writing safe.
+
+
+## 2026-11-24 — RGB-01/02/03: two LampLight records accepted
+
+Static CIL confirms LoadLightAsync sets LightCount from returned lampLightNumber; MixDrive writers replicate one LampLightStruct across all selected slots. Native receive at 0x180005160 computes logical length / 6, checks divisibility, and stores count at offset 0x60. Live G3V2 1.48 USB RGB-03: baseline B7 `FF FF FF 00 00 FF` (6 bytes); one 0x37 frame `37 12 83 F1 0C FF 00 00 00 00 40 00 00 FF 00 00 40 1C`; outer ACK flags 01 payload `31 AD`; subsequent B7 returned exactly `FF 00 00 00 00 40 00 00 FF 00 00 40` (12 bytes). No 0x3B, OTA or SCSI. This proves immediate logical acceptance/readback of two distinct records, NOT physical independent ring rendering or power-cycle persistence of the expanded record. Visual confirmation pending; do not repeat write or use old restore helper which refuses a 12-byte baseline. Original snapshot retained locally. No high-frequency writes authorized.

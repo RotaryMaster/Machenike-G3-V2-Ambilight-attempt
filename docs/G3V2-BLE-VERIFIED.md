@@ -196,3 +196,8 @@ baseline remains `15 F6 05 00 00 FF`.
 Do not infer a firmware policy of "turn off LEDs on full charge"
 without comparing with a prolonged off-dock case or reading
 the B7 record after a reproduced event.
+
+
+## 2026-11-24 — Machenike Control v0.2 wireless observation
+
+User log shows ZhiXu receiver enumerated as 045e:028e, one vendor-specific XInput interface bound to xpad, interrupt IN 0x81 and OUT 0x01, max packet 32 bytes. Earlier enumeration showed Receiver Update 1a34:f517 on the same physical port; no configuration HID interface in normal XInput mode. With receiver present, BLE G3V2 APP discovery and direct LE connection succeeded (467.6 ms), identity 1006:2011 firmware 1.48 (22.9 ms), B7 read FF FF FF 00 00 FF (21.9 ms). GTK4 and Adw available on Bazzite. This confirms BLE access with receiver present, not yet simultaneous active game input, direct receiver lighting writes, or BLE lighting writes. No 0x37 or firmware mutation in this test. Next: verify active game input during BLE access and isolate one manual RGB change with backup/readback; no streaming or automatic persistent writes. No device MAC retained.

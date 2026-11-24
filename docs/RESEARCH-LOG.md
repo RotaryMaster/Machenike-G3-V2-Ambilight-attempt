@@ -2949,3 +2949,8 @@ User log shows ZhiXu receiver enumerated as 045e:028e, one vendor-specific XInpu
 ## 2026-11-24 — v0.3 Alpha: first physical BLE RGB write
 
 User explicitly confirmed that the controller LEDs turned green after the v0.3 Alpha manual BLE RGB test. This establishes physical RGB change via BLE on G3V2 firmware 1.48, following the previously validated identity/B7 transport and hybrid receiver setup. Exact TX/ACK/B7 post-write logs, restoration result, and active input behavior during the write itself have not yet been supplied. Do not infer volatile operation, safe streaming, brightness control, breathing control, or independent ring control. Next: verify restoration and capture transaction log, then test one parameter at a time. No per-device MAC recorded.
+
+
+## 2026-11-24 — v0.3 RGB readback and restoration
+
+Independent BLE B7 read after manual green application returned `00 FF 00 00 00 FF`, valid CRC and matching serial; identity 1006:2011 firmware 1.48, BLE connect 377.3 ms, identity 23.0 ms, B7 22.9 ms. User confirms visual restoration to white at maximum brightness and green also at maximum brightness. Restoration B7/ACK transaction log not provided. Earlier ENOSYS was reported but its origin has not been isolated; later operation succeeded. No evidence yet of physical brightness response, breathing speed response, volatile writes or safe streaming. Next test individual brightness and breathing parameters with explicit manual writes and backup. No MAC recorded.

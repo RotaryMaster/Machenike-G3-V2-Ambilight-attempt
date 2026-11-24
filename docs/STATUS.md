@@ -4184,3 +4184,7 @@ Static CIL confirms LoadLightAsync sets LightCount from returned lampLightNumber
 ### RGB-03 visual follow-up — 2026-11-24
 
 User reports physical illumination is red only after the verified 12-byte red/blue LampLight write. The second blue record is present in immediate B7 readback but not visibly rendered in the tested mode. Independent physical channel control is NOT demonstrated. Next bounded experiment: manually cycle native FN+Right effects with the existing two-record object, without further host writes, and look for use of both custom colors (distinguish from stock rainbow). No expanded-record persistence claim.
+
+### RGB-04 — native effects visual check
+
+User observed no discernible new custom red/blue behavior while checking native effects with the expanded LampLight configuration. This is a negative visual observation, not proof that every internal effect ignores the second record. Next proposed bounded test is reversing the two records once and checking B7 and physical solid-mode output; preserve the original six-byte snapshot. No continuous writes.

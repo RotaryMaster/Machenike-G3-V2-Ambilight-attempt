@@ -218,3 +218,8 @@ Independent BLE B7 read after manual green application returned `00 FF 00 00 00 
 ## v0.4.1 — physical brightness validation
 
 User confirmed visible reduction of LED intensity after the manual brightness operation. Exact requested level and post-write B7 are not supplied. Brightness control is physically supported; response curve and independent brightness levels remain unmeasured. Next: native breathing and speed validation. User requires automatic BLE discovery, connection, read and apply in one action; no periodic polling. Earlier MAC and support-path failures were addressed by local patches and launcher reuse.
+
+
+## v0.5 Alpha — automatic apply and native breathing physical validation
+
+User reports automatic BLE discovery/apply works but is slow; brightness adjustment without restoration, native breathing, solid mode and original restoration all work. Speed changes were not visually perceptible. B7 confirms RGB F6 61 51, brightness 40 then FF, breathing packed 8000, 8BB8 (3000), 83E8 (1000), 81F4 (500), 80C8 (200), 8032 (50), solid 0001 and final restored FF FF FF 00 00 FF. All observed writes had matching serial response 19 08 81 ... 02 DF AA and subsequent B7 readback. Identity/B7 query roundtrips approximately 21–44 ms; full discovery and connection timing not logged. Speed storage confirmed, physical speed control not confirmed. Avoid further arbitrary speed sweeps and continuous persistent writes. Optimize cached verified address and discovery only on demand; measure full stage timing before claiming latency improvement. No MAC retained.

@@ -213,3 +213,8 @@ User explicitly confirmed that the controller LEDs turned green after the v0.3 A
 ## 2026-11-24 — v0.3 RGB readback and restoration
 
 Independent BLE B7 read after manual green application returned `00 FF 00 00 00 FF`, valid CRC and matching serial; identity 1006:2011 firmware 1.48, BLE connect 377.3 ms, identity 23.0 ms, B7 22.9 ms. User confirms visual restoration to white at maximum brightness and green also at maximum brightness. Restoration B7/ACK transaction log not provided. Earlier ENOSYS was reported but its origin has not been isolated; later operation succeeded. No evidence yet of physical brightness response, breathing speed response, volatile writes or safe streaming. Next test individual brightness and breathing parameters with explicit manual writes and backup. No MAC recorded.
+
+
+## v0.4.1 — physical brightness validation
+
+User confirmed visible reduction of LED intensity after the manual brightness operation. Exact requested level and post-write B7 are not supplied. Brightness control is physically supported; response curve and independent brightness levels remain unmeasured. Next: native breathing and speed validation. User requires automatic BLE discovery, connection, read and apply in one action; no periodic polling. Earlier MAC and support-path failures were addressed by local patches and launcher reuse.

@@ -2979,3 +2979,8 @@ User confirms all requested tests passed: KDE launcher reopening, cached color a
 ## v0.7 — Steam library acceptance
 
 User reports six of seven functional tests passed: GUI, installed game discovery, additional disks, loading suggested settings, saving suggested profiles and previous functionality. Suggested colors did not make sense to user. Actual game list and palette examples not supplied. Next: improve offline palette relevance with curated AppID-based themes where available and ranked chromatic alternatives; preserve user overrides, avoid runtime analysis and automatic hardware writes. Automatic game activation remains pending.
+
+
+## v0.8 — intermittent BLE rediscovery latency
+
+User reports v0.8 running and occasional slow color changes. Four verified B7 writes took 0.764, 0.997, 0.721 and 5.271 s. Fourth operation logged cached address then discovery 4.013 s, connection 0.278 s and GATT 0.260 s. Exact reason for falling back to discovery not logged. Three direct operations average 0.8273 s. All four B7 confirmations matched requested RGB. Proposed bounded pre-write direct retry and early discovery termination, with explicit failure logging; no automatic retry after uncertain write, no persistent connection or polling. Palette satisfaction not explicitly confirmed.

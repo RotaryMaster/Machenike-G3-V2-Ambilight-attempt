@@ -4262,3 +4262,8 @@ User reports v0.8 running and occasional slow color changes. Four verified B7 wr
 ## v0.8.1 — direct connection acceptance
 
 Four physical RGB writes confirmed by B7: FF AA 22, 7B 96 38, CD AB 8F, FF 18 28; brightness BF preserved. Total times 0.827, 0.881, 0.897, 0.899 s (mean 0.876 s). All used cached address, no rediscovery or direct connection failure observed. Direct path validated; new retry and early discovery paths remain untested on hardware. Keep v0.8.1 as candidate baseline for v0.9 read-only running-game detection. No automatic RGB writes until persistence safety and explicit opt-in policy are addressed.
+
+
+## v0.10 — automatic profile acceptance
+
+User reports all seven checklist tests passed: manual apply without authorization, saving Origins profile, enabling automation, automatic apply on game start, stable lighting during play, restoration on exit, disabling automation and manual operation. This is user-reported physical validation for one game; no raw trace or CPU/RAM measurements supplied. Preserve v0.10 as rollback baseline. Next: audit idle and active monitor resource consumption, lifecycle and recovery, KDE/Gamescope coverage. Persistent write endurance remains unknown; avoid continuous reactive writes.

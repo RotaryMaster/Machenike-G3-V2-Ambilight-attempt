@@ -2984,3 +2984,8 @@ User reports six of seven functional tests passed: GUI, installed game discovery
 ## v0.8 — intermittent BLE rediscovery latency
 
 User reports v0.8 running and occasional slow color changes. Four verified B7 writes took 0.764, 0.997, 0.721 and 5.271 s. Fourth operation logged cached address then discovery 4.013 s, connection 0.278 s and GATT 0.260 s. Exact reason for falling back to discovery not logged. Three direct operations average 0.8273 s. All four B7 confirmations matched requested RGB. Proposed bounded pre-write direct retry and early discovery termination, with explicit failure logging; no automatic retry after uncertain write, no persistent connection or polling. Palette satisfaction not explicitly confirmed.
+
+
+## v0.8.1 — direct connection acceptance
+
+Four physical RGB writes confirmed by B7: FF AA 22, 7B 96 38, CD AB 8F, FF 18 28; brightness BF preserved. Total times 0.827, 0.881, 0.897, 0.899 s (mean 0.876 s). All used cached address, no rediscovery or direct connection failure observed. Direct path validated; new retry and early discovery paths remain untested on hardware. Keep v0.8.1 as candidate baseline for v0.9 read-only running-game detection. No automatic RGB writes until persistence safety and explicit opt-in policy are addressed.

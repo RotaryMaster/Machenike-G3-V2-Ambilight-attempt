@@ -223,3 +223,8 @@ User confirmed visible reduction of LED intensity after the manual brightness op
 ## v0.5 Alpha — automatic apply and native breathing physical validation
 
 User reports automatic BLE discovery/apply works but is slow; brightness adjustment without restoration, native breathing, solid mode and original restoration all work. Speed changes were not visually perceptible. B7 confirms RGB F6 61 51, brightness 40 then FF, breathing packed 8000, 8BB8 (3000), 83E8 (1000), 81F4 (500), 80C8 (200), 8032 (50), solid 0001 and final restored FF FF FF 00 00 FF. All observed writes had matching serial response 19 08 81 ... 02 DF AA and subsequent B7 readback. Identity/B7 query roundtrips approximately 21–44 ms; full discovery and connection timing not logged. Speed storage confirmed, physical speed control not confirmed. Avoid further arbitrary speed sweeps and continuous persistent writes. Optimize cached verified address and discovery only on demand; measure full stage timing before claiming latency improvement. No MAC retained.
+
+
+## v0.6 — cached BLE latency validation
+
+Physical user test: first apply 4.904 s including discovery 4.015 s, BLE connection 0.577 s, GATT/subscription 0.204 s; second cached apply 0.975 s including connection 0.667 s and GATT/subscription 0.204 s. B7 verified both colors (86 5E 3C and E0 1B 24) at brightness FF. No need to change the validated protocol. Cache survival across application restart and profile persistence still pending. User requests convenient reopening; add KDE launcher. No MAC retained.

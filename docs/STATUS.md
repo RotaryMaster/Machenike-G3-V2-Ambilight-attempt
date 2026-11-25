@@ -4247,3 +4247,8 @@ Physical user test: first apply 4.904 s including discovery 4.015 s, BLE connect
 ## v0.6 — restart and profile acceptance
 
 User confirms all requested tests passed: KDE launcher reopening, cached color application below one second after reopening, saving a custom profile and profile persistence after restart. Discovery perceived faster. No new quantitative timing log supplied. Treat v0.6 as functional rollback baseline, not a published release. Next: measure idle resource consumption and design event-driven game profiles with no GPU capture or continuous persistent RGB writes; verify persistence safety before enabling automatic writes.
+
+
+## v0.7 — Steam library acceptance
+
+User reports six of seven functional tests passed: GUI, installed game discovery, additional disks, loading suggested settings, saving suggested profiles and previous functionality. Suggested colors did not make sense to user. Actual game list and palette examples not supplied. Next: improve offline palette relevance with curated AppID-based themes where available and ranked chromatic alternatives; preserve user overrides, avoid runtime analysis and automatic hardware writes. Automatic game activation remains pending.

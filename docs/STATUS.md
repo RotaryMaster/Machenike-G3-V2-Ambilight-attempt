@@ -4242,3 +4242,8 @@ User reports automatic BLE discovery/apply works but is slow; brightness adjustm
 ## v0.6 — cached BLE latency validation
 
 Physical user test: first apply 4.904 s including discovery 4.015 s, BLE connection 0.577 s, GATT/subscription 0.204 s; second cached apply 0.975 s including connection 0.667 s and GATT/subscription 0.204 s. B7 verified both colors (86 5E 3C and E0 1B 24) at brightness FF. No need to change the validated protocol. Cache survival across application restart and profile persistence still pending. User requests convenient reopening; add KDE launcher. No MAC retained.
+
+
+## v0.6 — restart and profile acceptance
+
+User confirms all requested tests passed: KDE launcher reopening, cached color application below one second after reopening, saving a custom profile and profile persistence after restart. Discovery perceived faster. No new quantitative timing log supplied. Treat v0.6 as functional rollback baseline, not a published release. Next: measure idle resource consumption and design event-driven game profiles with no GPU capture or continuous persistent RGB writes; verify persistence safety before enabling automatic writes.

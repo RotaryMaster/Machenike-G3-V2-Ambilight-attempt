@@ -2994,3 +2994,8 @@ Four physical RGB writes confirmed by B7: FF AA 22, 7B 96 38, CD AB 8F, FF 18 28
 ## v0.10 — automatic profile acceptance
 
 User reports all seven checklist tests passed: manual apply without authorization, saving Origins profile, enabling automation, automatic apply on game start, stable lighting during play, restoration on exit, disabling automation and manual operation. This is user-reported physical validation for one game; no raw trace or CPU/RAM measurements supplied. Preserve v0.10 as rollback baseline. Next: audit idle and active monitor resource consumption, lifecycle and recovery, KDE/Gamescope coverage. Persistent write endurance remains unknown; avoid continuous reactive writes.
+
+
+## v0.11A — resource baseline
+
+User reports four 30.01 s measurements of PID 157857 on 16 logical CPUs, 11 threads: GUI open 0.0667% one-core CPU / 0.0042% total CPU, RSS 124.12 to 124.21 MiB; automation enabled 0.0000% reported CPU, RSS 125.04 MiB; game loading incomplete and AC Origins open-world tests both 0.0000% reported CPU and RSS 125.04 MiB. Main process only; excludes BlueZ, compositor and subprocesses. Zero is measurement resolution, not proof of no activity. No long-duration leak or GPU measurement. Next: independent single-owner automation service and whole-process-tree accounting; verify monitor actually active, game transitions and restoration; no duplicate writers. Preserve v0.11A baseline.

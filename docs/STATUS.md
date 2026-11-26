@@ -4287,3 +4287,8 @@ User clarified that none of the four v0.11A resource tests resulted in a color b
 ## v0.11A.1 — automatic application confirmed
 
 User clarified the original lack of color change was due to not opening the manual game monitor. Full audit confirms auto_apply for Origins AppID 582160, one recorded 0x37 attempt, ok=true and B7 ffaa2200008c, total 3.33 s. Original f661510000ff and target ffaa2200008c preserved in one pending automatic session backup; pending is expected while game active. No additional writes in the 45 previously observed samples. Restoration for this particular session not yet logged. v0.11A.1 automatic application confirmed; proceed with v0.11B independent single-owner service, automatic startup and persistent global enable preference default on per user request. Remove manual monitor initiation from normal workflow. Preserve recovery backup and avoid duplicate writers.
+
+
+## v0.11B — independent service physical application and resource baseline
+
+User supplied 30 s service cgroup audit: one-core CPU 0.5096%, total CPU 0.0319%, memory 11.48 MiB, one task. Service status enabled=true, blocked=false, pending=true, Origins AppID 582160 with 25 processes. Journal confirms one 0x37 attempt, original B7 f661510000ff, target B7 ffaa2200008c, successful auto_apply, total 0.766 s. Meets CPU <=0.1% total and memory <=25 MiB goals for sampled condition. Memory comparison with v0.11A.1 RSS 125.70 MiB is indicative only (different accounting methods). Excludes BlueZ, compositor and separate GUI. Restoration on exit, reboot startup, GUI closed lifecycle and Gamescope still require explicit confirmation; no claim of full release validation. Preserve v0.11B for comparison and proceed to tray integration after lifecycle checks.

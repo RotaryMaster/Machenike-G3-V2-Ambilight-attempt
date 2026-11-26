@@ -4282,3 +4282,8 @@ User clarified that none of the four v0.11A resource tests resulted in a color b
 ## v0.11A.1 — active monitor resource measurements
 
 45 samples across 15 and 120 s confirm enabled monitor, Origins AppID 582160, profile present, busy false, blocked false, pending true, no 0x37 logged within sample intervals. Main process CPU 0.0291% and 0.0333% total (0.4664% and 0.5333% one-core), RSS 125.55 and 125.70 MiB. Source inspection shows pending is set before auto_apply and remains true after success including no-op; it is not itself proof of stale backup or failure. Need prior auto_operation/auto_result records and B7/profile comparison before changing recovery logic. User explicitly requests automatic monitoring without manual window or toggle steps; persistent preference and independent lifecycle required. Preserve recovery safeguards and avoid duplicate writes.
+
+
+## v0.11A.1 — automatic application confirmed
+
+User clarified the original lack of color change was due to not opening the manual game monitor. Full audit confirms auto_apply for Origins AppID 582160, one recorded 0x37 attempt, ok=true and B7 ffaa2200008c, total 3.33 s. Original f661510000ff and target ffaa2200008c preserved in one pending automatic session backup; pending is expected while game active. No additional writes in the 45 previously observed samples. Restoration for this particular session not yet logged. v0.11A.1 automatic application confirmed; proceed with v0.11B independent single-owner service, automatic startup and persistent global enable preference default on per user request. Remove manual monitor initiation from normal workflow. Preserve recovery backup and avoid duplicate writers.

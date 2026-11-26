@@ -2999,3 +2999,8 @@ User reports all seven checklist tests passed: manual apply without authorizatio
 ## v0.11A — resource baseline
 
 User reports four 30.01 s measurements of PID 157857 on 16 logical CPUs, 11 threads: GUI open 0.0667% one-core CPU / 0.0042% total CPU, RSS 124.12 to 124.21 MiB; automation enabled 0.0000% reported CPU, RSS 125.04 MiB; game loading incomplete and AC Origins open-world tests both 0.0000% reported CPU and RSS 125.04 MiB. Main process only; excludes BlueZ, compositor and subprocesses. Zero is measurement resolution, not proof of no activity. No long-duration leak or GPU measurement. Next: independent single-owner automation service and whole-process-tree accounting; verify monitor actually active, game transitions and restoration; no duplicate writers. Preserve v0.11A baseline.
+
+
+## v0.11A.1 — functional audit correction
+
+User clarified that none of the four v0.11A resource tests resulted in a color being sent to the controller. Thus the earlier CPU baseline is only a GUI process measurement, not evidence of a functioning automatic profile transition. v0.10 remains last physically validated automation baseline. Actual archive comparison confirmed v0.11A app.py differs from v0.10 only in window title; rgb.py, games.py and monitor.py identical. Built local v0.11A.1 archive with audit events for monitor samples, profile match, automatic operations and B7 result, explicit monitor errors and persistent diagnostic log, preserving RGB/game/monitor modules byte-for-byte. Python compilation, shell syntax, game and monitor selftests and ZIP integrity passed; hardware tests pending. Defer independent service until functional evidence obtained. No claim of fixed automation yet.

@@ -3059,3 +3059,8 @@ User approved Compact UI layout for current daily use. Preserve cards, menus, la
 ## Autonomy A01/A01b/A02 — 2026-11-27
 
 A01 tray startup confirmed in current session; next login unverified. A01b InputPlumber fallback restored animations: physical event26/js2 denied, virtual event28/js3 delivered events. BLE reads succeeded despite pending restore and blocked=true after errno 38. Manual recover restored B7 22dd880000bf, cleared pending and blocked, left automation disabled. LEDs observed lit upon removing controller from dock; physical firmware lighting inconsistency remains hypothesis, not proven. A02 recovery patch supplied, installation and performance not yet confirmed. Intended retry backoff 5/15/30/60/120/300 seconds for pre-write transient connection failures only. Preserve identity/B7 safety blocks. Source/package consolidation requested; do not delete local downloads until remote copies verified. Backend reference ~0.02% total CPU and ~17 MiB RAM. No claim of source publication in this entry.
+
+
+## Media MPRIS validation (2026-11-27)
+
+User runtime probe at commit 140439c304262d46a390bd6d6e40abf83e45c756 confirmed Stremio Playing/Paused without URL, Firefox Playing/Paused with video-candidate URL, Haruna Playing/Paused with video-extension URL and removal. Stremio classification by app identity is a proposed policy; Firefox URL is not proof of visual content. Approved policy: media turns RGB off persistently; pause/stop/desktop do not restore; games take priority and restore previous off state on exit. Preserve nonzero game brightness reference; no periodic RGB writes, no capture, no GPU monitoring. Integration and resource measurements remain pending. Remote shutdown unsupported/unverified.

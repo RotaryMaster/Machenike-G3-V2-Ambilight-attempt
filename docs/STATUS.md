@@ -4317,3 +4317,8 @@ Service PID 43592: candidate None -> 582160 at 20:38:39, scan 6.22 ms, auto_appl
 ## v0.12A — Qt interface functional acceptance
 
 User reports all nine checklist tests passed: Qt opens, real G3 V2 representation visually correct, RGB and intensity preview functional, physical lighting application works, Steam library recognized, existing profiles available, automation works with GUI closed, GTK fallback remains available. Qt resource consumption not yet measured; no screenshot supplied in this acceptance. Preserve v0.12A GUI and v0.11C service as functional baselines. Next: event-driven installed-game discovery and cached automatic palette suggestions, preserving manual profiles and avoiding image analysis during gameplay. New features must be assessed for performance impact and disclosed before enabling costly behavior.
+
+
+## v0.12A — Qt preview functional acceptance
+
+User reports all nine tests passed: Qt opens, controller representation correct, RGB and intensity preview, physical apply, Steam library, prior profiles, automation with GUI closed and GTK fallback. Installation log confirms isolated PySide6 6.12.0 venv, service enabled/unblocked/no pending session at installation, KDE launcher cache refreshed, rollback provided. Full PySide6 distribution installed including Addons, WebEngine and PDF; consider Essentials-only installation after checking imports and testing in separate environment. Download size is not runtime memory usage. Qt GUI resource measurements pending. Keep v0.11C backend unchanged during GUI work. Next: compare GUI resource usage and implement event-driven new-game discovery with cached suggestions outside gameplay. No new source code publication claimed.

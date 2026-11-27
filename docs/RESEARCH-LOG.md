@@ -3044,3 +3044,8 @@ Service PID 43592: candidate None -> 582160 at 20:38:39, scan 6.22 ms, auto_appl
 ## v0.12A — Qt preview functional acceptance
 
 User reports all nine tests passed: Qt opens, controller representation correct, RGB and intensity preview, physical apply, Steam library, prior profiles, automation with GUI closed and GTK fallback. Installation log confirms isolated PySide6 6.12.0 venv, service enabled/unblocked/no pending session at installation, KDE launcher cache refreshed, rollback provided. Full PySide6 distribution installed including Addons, WebEngine and PDF; consider Essentials-only installation after checking imports and testing in separate environment. Download size is not runtime memory usage. Qt GUI resource measurements pending. Keep v0.11C backend unchanged during GUI work. Next: compare GUI resource usage and implement event-driven new-game discovery with cached suggestions outside gameplay. No new source code publication claimed.
+
+
+## v0.12A.2.15 — visual freeze (2026-11-26)
+
+User approved final controller vector and animations. Freeze visual geometry, trigger animation and indicators, piano-black stick bases, left translucent plastic edge and left shell bleed. Right bleed restored to v0.12A.2.13. Final ZIP SHA-256: `cae6f6f4390efb3edf62079e1b73208c233b26b09d05680644f45ee126a3cf30`. ZIP CRC, Python syntax (6 files), Bash syntax and SVG XML parsing passed. Compared to v2.13, input_model.py, live_input.py, ipc.py, games.py and vector_preview.py are byte-identical. Qt runtime performance and independent T/FN/rear button events remain unverified; battery, connection, charging and dock status remain pending. No backend update in this package.

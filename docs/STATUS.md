@@ -4327,3 +4327,8 @@ User reports all nine tests passed: Qt opens, controller representation correct,
 ## v0.12A.2.15 — visual freeze (2026-11-26)
 
 User approved final controller vector and animations. Freeze visual geometry, trigger animation and indicators, piano-black stick bases, left translucent plastic edge and left shell bleed. Right bleed restored to v0.12A.2.13. Final ZIP SHA-256: `cae6f6f4390efb3edf62079e1b73208c233b26b09d05680644f45ee126a3cf30`. ZIP CRC, Python syntax (6 files), Bash syntax and SVG XML parsing passed. Compared to v2.13, input_model.py, live_input.py, ipc.py, games.py and vector_preview.py are byte-identical. Qt runtime performance and independent T/FN/rear button events remain unverified; battery, connection, charging and dock status remain pending. No backend update in this package.
+
+
+## v0.12A.3.2 — approved daily-use UI baseline (2026-11-27)
+
+User approved Compact UI layout for current daily use. Preserve cards, menus, layout proportions and v0.12A.2.15 vector/animations; retain v0.11C backend. Future changes must be incremental and reversible, preserving automatic application, startup controller read and suspension of GUI-only activities while minimized, hidden in tray or closed. Visual approval is not a complete runtime/performance certification: initial physical read, automatic writes, KDE/Wayland/tray icon behavior and hidden-window resource usage still require explicit verification. Independent T/FN/rear button events and battery/connection/charging/dock features remain pending. This entry records approval, not publication of a release or source package.

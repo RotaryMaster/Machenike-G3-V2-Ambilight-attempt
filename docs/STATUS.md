@@ -4342,3 +4342,8 @@ A01 tray startup confirmed in current session; next login unverified. A01b Input
 ## Media MPRIS validation (2026-11-27)
 
 User runtime probe at commit 140439c304262d46a390bd6d6e40abf83e45c756 confirmed Stremio Playing/Paused without URL, Firefox Playing/Paused with video-candidate URL, Haruna Playing/Paused with video-extension URL and removal. Stremio classification by app identity is a proposed policy; Firefox URL is not proof of visual content. Approved policy: media turns RGB off persistently; pause/stop/desktop do not restore; games take priority and restore previous off state on exit. Preserve nonzero game brightness reference; no periodic RGB writes, no capture, no GPU monitoring. Integration and resource measurements remain pending. Remote shutdown unsupported/unverified.
+
+
+## Games-only RGB policy (2026-11-27)
+
+User requested optional RGB-on only while a game is active or GUI is visible; otherwise RGB off, including tray/minimized. Reuse existing game detection; no MPRIS/PipeWire monitoring in this mode. Preserve configured nonzero brightness/color separately; game priority, transition-only writes, existing identity and recovery safeguards. Implementation pending. Home-button LED independent color control remains unverified.

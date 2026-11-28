@@ -3164,3 +3164,8 @@ APK ButtonTestActivity.I(ArrayList) calls R1, conditionally S1 for Is_new_2_ver=
 ## A07.4 — proprietary input opcode recovered
 
 APK b1.B0 validates CRC and dispatches decimal 31 (0x1F): l(iArr) if length <20 or offset 6 !=92; otherwise m(iArr) sensor callback. l extracts offsets 5 through length-2. ButtonTestActivity.R1/S1/P1 delegate to z1.b.e().g/i/k/f for axes, additional values and button IDs; P1 excludes ID 92 from displayed macro history. No literal FN/Turbo/rear identifiers in scanned package. Test activity uses b1.P/O -> e.g0/e0 (0x1B), and onPause sends e.O (0x1C), e.N (0x1E) and conditional 0x1D mode payloads. These are test/session commands, not established passive reads; do not transmit without understanding effects. Next inspect exact z1/b.java mapping, including obfuscated numeric IDs, before deciding viability; A05b and deferred battery unchanged.
+
+
+## A07.5 — input decoder recovered; recommend deferring integration
+
+APK z1/b.java parses 0x1F input payload records: ordinary buttons two bytes [state,id], state 1 press, other states release in k(); IDs 7/8 four-byte trigger records; IDs 18/19 four or six-byte stick records depending on device version. JADX k/i/j have duplicated-control-flow warnings; exact implementation needs verification before porting. No explicit T/FN/rear IDs established. e.g0 builds 1B 08 SS NN 02 DF AB CRC; e.e0 builds 1B 09 SS NN 03 DF AB parameter CRC. Test-mode activation, coexistence and extra-button delivery remain physically unverified. Recommend deferring A07 integration rather than introducing continuous test-mode traffic; A08 Steam library and intelligent profiles proposed next. A05b unchanged; no hardware writes. Battery remains deferred.

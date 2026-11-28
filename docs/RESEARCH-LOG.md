@@ -3129,3 +3129,8 @@ User offline audit confirms mapped PE initial bytes at RVAs E674/E678/E67C/E684/
 ## A06f.5 — battery ownership clarification
 
 GamepadInterop exports readDeviceHeartbeat, readDeviceBattery, receiveDeviceBattery. GamepadDeviceManager owns HandleHeartbeatDeviceData, GetDeviceBatteryAsync, GetDeviceHeartbeatAsync, PollingDeviceHeartbeatAsync. GamepadFuncKind enum DeviceBattery=05, DeviceHeartbeat=06 (managed selectors, not wire opcodes). BatteryLed setters/getters belong to MouseDeviceManager; BatteryLedIndex belongs to MouseConfig; discard these as evidence for G3V2 HOME control. Shared DeviceModel contains IsRecharging, HasBattery and BatteryVolume, but mapping to G3V2 not established. Next inspect complete managed heartbeat/polling call paths and enum consumers, including nested state machines, before deciding on native USB read or BLE compatibility. No hardware operation.
+
+
+## A06f.6–A06f.7 — Android battery candidate and heartbeat separation
+
+Managed GetDeviceBatteryAsync independently builds readDeviceBattery and calls GetResultAsync; no direct heartbeat prerequisite in that method. Heartbeat uses separate selector 6; battery selector 5 resolves receiveDeviceBattery through SeqMap. APK com/pulsenet/inputset/util/e.java lines 290–323 reveals c0(1) builds decimal opcode 29 with payload 05 DF AB 00 00 00, exactly matching Windows battery constructor with initial zero globals. Other c0/f0 branches and f()/d0() share opcode 1D with different payloads; do not whitelist opcode alone. f() sets CurrentModel and serial 255, demonstrating mixed semantics. Next trace c0(1) call sites and receive dispatcher, confirm length B(), checksum J(), and meaning before hardware query. No BLE write, firmware or installed backend change. A05b retained.

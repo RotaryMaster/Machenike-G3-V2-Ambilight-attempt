@@ -4352,3 +4352,8 @@ User requested optional RGB-on only while a game is active or GUI is visible; ot
 ## A03 physical validation (2026-11-27)
 
 Games_gui with automation enabled: physical off in tray, on opening GUI, on launching AC Origins from tray, off on game exit all confirmed by user. Minimization fails to turn off RGB. A03b candidate GUI-only fix observes native QWindow visibility/state signals and defers one synchronization after state/show events; no periodic polling added. Runtime validation pending. A03/A03b source publication remains pending.
+
+
+## A03c — Fast Visibility: user validation (2026-11-27)
+
+User confirmed all four A03c checks: minimize turns RGB off, restore turns RGB on, opening from tray is faster, and animations remain functional. Earlier A03 tests confirmed closing to tray turns RGB off, AC Origins launch from tray turns RGB on, and game exit turns RGB off. Adopt A03c as current functional reference for tested games_gui policy. No quantitative latency or CPU/GPU measurements yet; physical reconnection, other games, policy independence from automation toggle and long-term reliability remain unverified. Source/installer publication remains pending; this commit records runtime evidence only. Preserve Compact UI and approved vector.

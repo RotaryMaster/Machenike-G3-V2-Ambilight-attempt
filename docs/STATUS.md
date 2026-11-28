@@ -4347,3 +4347,8 @@ User runtime probe at commit 140439c304262d46a390bd6d6e40abf83e45c756 confirmed 
 ## Games-only RGB policy (2026-11-27)
 
 User requested optional RGB-on only while a game is active or GUI is visible; otherwise RGB off, including tray/minimized. Reuse existing game detection; no MPRIS/PipeWire monitoring in this mode. Preserve configured nonzero brightness/color separately; game priority, transition-only writes, existing identity and recovery safeguards. Implementation pending. Home-button LED independent color control remains unverified.
+
+
+## A03 physical validation (2026-11-27)
+
+Games_gui with automation enabled: physical off in tray, on opening GUI, on launching AC Origins from tray, off on game exit all confirmed by user. Minimization fails to turn off RGB. A03b candidate GUI-only fix observes native QWindow visibility/state signals and defers one synchronization after state/show events; no periodic polling added. Runtime validation pending. A03/A03b source publication remains pending.

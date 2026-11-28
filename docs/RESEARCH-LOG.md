@@ -3114,3 +3114,8 @@ A06a: ZhiXu Controller USB 045e:028e and input57 present when powered on both ou
 ## A06f.1 — KeyLinker battery exports and decoder
 
 DLL SHA256 24c746b4607d7da448173e1e94e516c181990c6af40f575d07dab09c34115287, PE64 base 0x180000000. readDeviceBattery ordinal 10 RVA 3420 calls 0x180001690 and returns pointer plus length 11. receiveDeviceBattery ordinal 29 RVA 3ee0 calls 0x1800011c0, checks decoded offsets 5/6 DF AA and supplied length >9, uses high nibble of decoded offset 8. Jump table maps nibble 0..9 to 5,1,6,2,7,3,1,1,8,4; other nibbles and validation failure return 1. Physical semantics unknown; no percentage conversion justified. Next inspect constructor and called helpers, compare Windows/Android framing before any hardware query. A06d observed 23979 incoming USB reports all 20-byte 0014; no spontaneous battery/charge field observed. A05b unchanged.
+
+
+## A06f.2 — battery request constructor
+
+At DLL SHA256 24c746b4607d7da448173e1e94e516c181990c6af40f575d07dab09c34115287, constructor 0x180001690 builds pre-encoding frame 1D 0B SS NN 05 DF AB 00 XX YY CC, where SS comes from 0x1800014c0, NN from random-like imported function, XX/YY are bytes at 0x18000e674/0x18000e688, and CC is table-derived checksum. Checksum begins with lookup of SS xor D7; exact recurrence must be checked against codec (not assumed standard CRC). Calls existing encoder 0x180001080. Raw jump table confirms high-nibble mapping 0..9 -> 5,1,6,2,7,3,1,1,8,4. Battery/charging semantics and Android BLE compatibility unverified. Next trace global references and Android source evidence; no physical 0x1D transmission authorized by this evidence alone.

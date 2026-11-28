@@ -4372,3 +4372,8 @@ User confirmed six of six physical checks: KDE tray RGB off; entering Gaming Mod
 ## A03e — regression and rollback (2026-11-28)
 
 A03e installed successfully but user reported RGB no longer lighting. Rollback to A03d restored physical operation, confirmed by user. Reject A03e as runtime baseline; retain A03d. Root cause unknown; do not attribute failure to a specific patch hunk without evidence. Investigate isolated changes offline and prioritize resource audit of working A03d. Published A03e patch bd0a7b0 is experimental/rejected, not recommended for installation. Complete source consolidation remains pending.
+
+
+## A05a — functional acceptance (2026-11-28)
+
+User confirmed four checks: opening GUI lights RGB, closing to tray turns RGB off, controller power cycle followed by GUI opening restores RGB, and input animations remain functional. First opening after update was noticeably slow; subsequent operations worked normally. Cause not established. A05a accepted for tested normal operation; injected/real pre-write transport failure recovery remains unverified. A05b target: autonomous reconnect with GUI closed, retain active policy and avoid repeated writes or increased polling. A04 and latency optimization deferred at user request.

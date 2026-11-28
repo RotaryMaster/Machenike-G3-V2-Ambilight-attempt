@@ -3084,3 +3084,8 @@ Candidate installer built from A03c service and A03 RGB/monitor sources. Reuses 
 ## A03d — physical acceptance (2026-11-28)
 
 User confirmed six of six physical checks: KDE tray RGB off; entering Gaming Mode blue breathing; game launch applies profile; exit returns to blue breathing; returning to KDE RGB off; opening KDE GUI restores configured lighting. User reports noticeable delay turning LEDs on/off across scenarios, without quantitative timing. Adopt A03d as functional rollback reference for tested scenarios. Breathing speed not separately quantified. Proposed A03e transition optimization: measure event-to-dispatch and BLE stages, avoid redundant restore/apply transactions where safe, retain backups and B7 verification, no increased polling, permanent BLE connection or continuous writes. A04 resource audit and complete source publication remain pending.
+
+
+## A03e — regression and rollback (2026-11-28)
+
+A03e installed successfully but user reported RGB no longer lighting. Rollback to A03d restored physical operation, confirmed by user. Reject A03e as runtime baseline; retain A03d. Root cause unknown; do not attribute failure to a specific patch hunk without evidence. Investigate isolated changes offline and prioritize resource audit of working A03d. Published A03e patch bd0a7b0 is experimental/rejected, not recommended for installation. Complete source consolidation remains pending.

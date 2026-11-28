@@ -4382,3 +4382,8 @@ User confirmed four checks: opening GUI lights RGB, closing to tray turns RGB of
 ## A05b — functional acceptance and dock observations
 
 User reports GUI open/close RGB behavior remains correct, controller power cycle with GUI in tray works, and power cycle during an active game restores the game profile. Explicit sequence: power off, place on dock, remove while still off, manually power on, game profile recovers. Docking while powered on maintains PC connection and charges until inactivity shutdown. Possible intermediate standby wake-on-undock and longer full shutdown are user recollections, not verified state-machine evidence. Do not assume undocking powers on the controller or emits a Linux reconnect event. Dock wake behavior investigation deferred at user request. A05b accepted for observed normal and manual reconnect scenarios; suspend/resume, exact kernel event causality and physical LED mismatch recovery remain unverified. Source publication pending.
+
+
+## A05d — regression and rollback
+
+User reported RGB commands no longer taking effect regardless of automatic profile toggle after A05d. Rollback to A05b restored normal operation. With profiles disabled on A05b, RGB remains unchanged when GUI is minimized or closed to tray; this is the existing coupling, not a newly demonstrated regression. A05d rejected, exact cause unknown. Keep A05b as functional baseline with automatic profiles enabled. Defer independent policy and latency/performance work; remove suspension testing from active roadmap per user request. Prioritize A06 battery, charging and connection telemetry using read-only verified sources before adding hardware queries. Full source consolidation remains pending.

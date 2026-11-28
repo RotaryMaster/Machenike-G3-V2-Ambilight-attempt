@@ -3069,3 +3069,8 @@ User runtime probe at commit 140439c304262d46a390bd6d6e40abf83e45c756 confirmed 
 ## Games-only RGB policy (2026-11-27)
 
 User requested optional RGB-on only while a game is active or GUI is visible; otherwise RGB off, including tray/minimized. Reuse existing game detection; no MPRIS/PipeWire monitoring in this mode. Preserve configured nonzero brightness/color separately; game priority, transition-only writes, existing identity and recovery safeguards. Implementation pending. Home-button LED independent color control remains unverified.
+
+
+## A03c — Fast Visibility: user validation (2026-11-27)
+
+User confirmed all four A03c checks: minimize turns RGB off, restore turns RGB on, opening from tray is faster, and animations remain functional. Earlier A03 tests confirmed closing to tray turns RGB off, AC Origins launch from tray turns RGB on, and game exit turns RGB off. Adopt A03c as current functional reference for tested games_gui policy. No quantitative latency or CPU/GPU measurements yet; physical reconnection, other games, policy independence from automation toggle and long-term reliability remain unverified. Source/installer publication remains pending; this commit records runtime evidence only. Preserve Compact UI and approved vector.

@@ -3079,3 +3079,8 @@ User confirmed all four A03c checks: minimize turns RGB off, restore turns RGB o
 ## A03d — Gaming Mode idle profile
 
 Candidate installer built from A03c service and A03 RGB/monitor sources. Reuses existing /proc traversal; recognizes same-user gamescope/gamescope-wl with -e or --steam arguments. In enabled games/games_gui policies, idle Gaming Mode requests blue #0055FF, brightness 140/255, breathing flag and experimental raw speed 3000. Active games take priority; restore original before applying game profile or changing idle policy. Simulated engine transitions, no repeated stable writes, pre-write recovery, and synthetic process detection passed; Python compilation and Bash syntax passed. Physical Gaming Mode detection and breathing speed remain unverified. Some transitions can perform two writes before game profile application; no continuous RGB streaming. GUI unchanged. Installer source not yet uploaded to GitHub; documentation only.
+
+
+## A03d — physical acceptance (2026-11-28)
+
+User confirmed six of six physical checks: KDE tray RGB off; entering Gaming Mode blue breathing; game launch applies profile; exit returns to blue breathing; returning to KDE RGB off; opening KDE GUI restores configured lighting. User reports noticeable delay turning LEDs on/off across scenarios, without quantitative timing. Adopt A03d as functional rollback reference for tested scenarios. Breathing speed not separately quantified. Proposed A03e transition optimization: measure event-to-dispatch and BLE stages, avoid redundant restore/apply transactions where safe, retain backups and B7 verification, no increased polling, permanent BLE connection or continuous writes. A04 resource audit and complete source publication remain pending.

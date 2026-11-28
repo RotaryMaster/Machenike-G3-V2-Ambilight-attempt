@@ -3139,3 +3139,8 @@ Managed GetDeviceBatteryAsync independently builds readDeviceBattery and calls G
 ## A06f.8 — Android heartbeat callers
 
 APK b1.java runnable g calls c0(dynamic f2689d0) or f0(dynamic f2693f0) depending on device/version and state. Explicit c0(4), c0(6), c0(7) occur in pause, OTA preparation and connection paths. No explicit c0(1) battery caller or battery-named Android consumer found in supplied scan. B() confirms payload length +5; J() appends k() checksum; K() alternating serial. Exact c0(1) payload matches Windows readDeviceBattery initial frame but Android opcode 1D is multifunctional. Do not infer that every 1D frame is read-only. Prefer passive verification of exact request in existing official Windows captures before active BLE experiment. No hardware or installed app changes.
+
+
+## 2026-11-28 — A06 deferred; A07 next
+
+User explicitly deferred battery reading after A06f.8 and unsuccessful A06g capture location search. A06h physical USB query was not performed. Preserve recovered 0x1D request/decoder evidence; no battery percentage or charging state verified. A05b remains accepted baseline. Next A07: passive extra-button input visibility via existing 2.4 GHz dongle (T, FN, rear buttons and combinations); no remapping, exclusive grabs, driver changes or BLE writes during initial audit. Prioritize event-driven low-overhead implementation.

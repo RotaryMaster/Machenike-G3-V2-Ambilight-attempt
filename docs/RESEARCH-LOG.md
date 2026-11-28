@@ -3144,3 +3144,8 @@ APK b1.java runnable g calls c0(dynamic f2689d0) or f0(dynamic f2693f0) dependin
 ## 2026-11-28 — A06 deferred; A07 next
 
 User explicitly deferred battery reading after A06f.8 and unsuccessful A06g capture location search. A06h physical USB query was not performed. Preserve recovered 0x1D request/decoder evidence; no battery percentage or charging state verified. A05b remains accepted baseline. Next A07: passive extra-button input visibility via existing 2.4 GHz dongle (T, FN, rear buttons and combinations); no remapping, exclusive grabs, driver changes or BLE writes during initial audit. Prioritize event-driven low-overhead implementation.
+
+
+## A07.1 — passive extra-button evdev result
+
+2.4 GHz dongle 045e:028e /dev/input/event7 Microsoft X-Box 360 pad: A reference EV_KEY code 304 press/release (2 events); T, FN, rear 1 and rear 2 each zero EV_KEY/EV_MSC events during respective 8-second windows. No exclusive grab or remapping. Does not exclude raw USB report changes or other event types/interfaces. Next compare inbound dongle USB reports in labelled windows using existing usbmon access, no device writes. A05b unchanged.

@@ -3134,3 +3134,8 @@ GamepadInterop exports readDeviceHeartbeat, readDeviceBattery, receiveDeviceBatt
 ## A06f.6–A06f.7 — Android battery candidate and heartbeat separation
 
 Managed GetDeviceBatteryAsync independently builds readDeviceBattery and calls GetResultAsync; no direct heartbeat prerequisite in that method. Heartbeat uses separate selector 6; battery selector 5 resolves receiveDeviceBattery through SeqMap. APK com/pulsenet/inputset/util/e.java lines 290–323 reveals c0(1) builds decimal opcode 29 with payload 05 DF AB 00 00 00, exactly matching Windows battery constructor with initial zero globals. Other c0/f0 branches and f()/d0() share opcode 1D with different payloads; do not whitelist opcode alone. f() sets CurrentModel and serial 255, demonstrating mixed semantics. Next trace c0(1) call sites and receive dispatcher, confirm length B(), checksum J(), and meaning before hardware query. No BLE write, firmware or installed backend change. A05b retained.
+
+
+## A06f.8 — Android heartbeat callers
+
+APK b1.java runnable g calls c0(dynamic f2689d0) or f0(dynamic f2693f0) depending on device/version and state. Explicit c0(4), c0(6), c0(7) occur in pause, OTA preparation and connection paths. No explicit c0(1) battery caller or battery-named Android consumer found in supplied scan. B() confirms payload length +5; J() appends k() checksum; K() alternating serial. Exact c0(1) payload matches Windows readDeviceBattery initial frame but Android opcode 1D is multifunctional. Do not infer that every 1D frame is read-only. Prefer passive verification of exact request in existing official Windows captures before active BLE experiment. No hardware or installed app changes.

@@ -1,0 +1,35 @@
+--- a/service.py
++++ b/service.py
+@@ -56,11 +56,11 @@
+     def clear_retry(self):
+         self.retry_at=0; self.retry_count=0; self.retry_mode=None
+     def operation(self,mode,v):
+-        print('OPERAÇÃO',mode,flush=True)
++        started=time.monotonic(); print('OPERAÇÃO',mode,flush=True)
+         try:
+             b,d=restore() if mode=='auto_restore' else app.transact(mode,v)
+             self.clear_retry(); self.blocked=False
+-            self.detail=d; print('RESULTADO',mode,d,b.hex() if b else '',flush=True); return b,d
++            self.detail=d; print('RESULTADO',mode,d,b.hex() if b else '', 'elapsed_ms=',round((time.monotonic()-started)*1000),flush=True); return b,d
+         except rgb.ConnectError as e:
+             self.detail=str(e); self.blocked=False
+             if self.retry_mode!=mode: self.clear_retry()
+@@ -112,6 +112,8 @@
+             # On restart owner is unknown: do not overwrite an existing session while any game runs.
+             if not self.enabled or not self.active or (self.owner is not None and key!=self.owner and len(self.active)<=1):
+                 self.operation('auto_restore',{}); self.owner=None; self.attempted=None
++                # A03e: finish idle transition in this confirmed detector cycle.
++                if not self.active: self.reconcile_policy()
+             return
+         if not self.reconcile_policy(): return
+         if not self.enabled: return
+@@ -202,7 +204,8 @@
+                         try:
+                             data=c.makefile('rb').readline(65537)
+                             if len(data)>65536: raise ValueError('Pedido grande demais')
+-                            response=e.request(json.loads(data))
++                            request=json.loads(data); response=e.request(request)
++                            if response.get('ok') and request.get('mode') in ('enable','policy'): schedule.hint=True
+                         except Exception as exc: response={'ok':False,'detail':str(exc)}
+                         try: c.sendall(json.dumps(response).encode()+b'\n')
+                         except OSError: pass

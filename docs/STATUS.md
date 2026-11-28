@@ -4392,3 +4392,8 @@ User reported RGB commands no longer taking effect regardless of automatic profi
 ## A06a–A06d — native telemetry, BAS and FF12 evidence
 
 A06a: ZhiXu Controller USB 045e:028e and input57 present when powered on both outside and inside dock; both absent after manual power-off outside dock. No matching power_supply or UPower data. A06b: direct BLE primary services only KeyLinker d7f010e0 handles 0005–000A and FF12 handles 000B–0012; BAS 180F not observed. A06c: FF13 value 000D props 08 write; FF14 value 000F props 10 notify; FF15 value 0012 props 06 read/write-no-response, read value 00 00 00 00. No ATT writes. Exact UUID/property combination resembles Bluetrum ZK FOTA documented by wearfit-pro-ble (https://github.com/milcorix/wearfit-pro-ble/blob/master/PROTOCOL.md), an unverified cross-device clue, not chipset identification. Do not write FF12. A06d local passive usbmon diagnostic filters incoming completion reports for same USB device across dock/undock and stable samples; parser synthetic filter and syntax tested, hardware capture pending. No driver replacement or mode change. User prioritizes dongle over Xbox One Bluetooth mode. Battery and charge fields remain unknown.
+
+
+## 2026-11-28 — A06 deferred; A07 next
+
+User explicitly deferred battery reading after A06f.8 and unsuccessful A06g capture location search. A06h physical USB query was not performed. Preserve recovered 0x1D request/decoder evidence; no battery percentage or charging state verified. A05b remains accepted baseline. Next A07: passive extra-button input visibility via existing 2.4 GHz dongle (T, FN, rear buttons and combinations); no remapping, exclusive grabs, driver changes or BLE writes during initial audit. Prioritize event-driven low-overhead implementation.

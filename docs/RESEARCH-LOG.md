@@ -3074,3 +3074,8 @@ User requested optional RGB-on only while a game is active or GUI is visible; ot
 ## A03c — Fast Visibility: user validation (2026-11-27)
 
 User confirmed all four A03c checks: minimize turns RGB off, restore turns RGB on, opening from tray is faster, and animations remain functional. Earlier A03 tests confirmed closing to tray turns RGB off, AC Origins launch from tray turns RGB on, and game exit turns RGB off. Adopt A03c as current functional reference for tested games_gui policy. No quantitative latency or CPU/GPU measurements yet; physical reconnection, other games, policy independence from automation toggle and long-term reliability remain unverified. Source/installer publication remains pending; this commit records runtime evidence only. Preserve Compact UI and approved vector.
+
+
+## A03d — Gaming Mode idle profile
+
+Candidate installer built from A03c service and A03 RGB/monitor sources. Reuses existing /proc traversal; recognizes same-user gamescope/gamescope-wl with -e or --steam arguments. In enabled games/games_gui policies, idle Gaming Mode requests blue #0055FF, brightness 140/255, breathing flag and experimental raw speed 3000. Active games take priority; restore original before applying game profile or changing idle policy. Simulated engine transitions, no repeated stable writes, pre-write recovery, and synthetic process detection passed; Python compilation and Bash syntax passed. Physical Gaming Mode detection and breathing speed remain unverified. Some transitions can perform two writes before game profile application; no continuous RGB streaming. GUI unchanged. Installer source not yet uploaded to GitHub; documentation only.

@@ -4397,3 +4397,8 @@ A06a: ZhiXu Controller USB 045e:028e and input57 present when powered on both ou
 ## 2026-11-28 — A06 deferred; A07 next
 
 User explicitly deferred battery reading after A06f.8 and unsuccessful A06g capture location search. A06h physical USB query was not performed. Preserve recovered 0x1D request/decoder evidence; no battery percentage or charging state verified. A05b remains accepted baseline. Next A07: passive extra-button input visibility via existing 2.4 GHz dongle (T, FN, rear buttons and combinations); no remapping, exclusive grabs, driver changes or BLE writes during initial audit. Prioritize event-driven low-overhead implementation.
+
+
+## A07.5 — input decoder recovered; recommend deferring integration
+
+APK z1/b.java parses 0x1F input payload records: ordinary buttons two bytes [state,id], state 1 press, other states release in k(); IDs 7/8 four-byte trigger records; IDs 18/19 four or six-byte stick records depending on device version. JADX k/i/j have duplicated-control-flow warnings; exact implementation needs verification before porting. No explicit T/FN/rear IDs established. e.g0 builds 1B 08 SS NN 02 DF AB CRC; e.e0 builds 1B 09 SS NN 03 DF AB parameter CRC. Test-mode activation, coexistence and extra-button delivery remain physically unverified. Recommend deferring A07 integration rather than introducing continuous test-mode traffic; A08 Steam library and intelligent profiles proposed next. A05b unchanged; no hardware writes. Battery remains deferred.

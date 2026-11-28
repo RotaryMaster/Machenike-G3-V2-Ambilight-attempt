@@ -3149,3 +3149,8 @@ User explicitly deferred battery reading after A06f.8 and unsuccessful A06g capt
 ## A07.1 — passive extra-button evdev result
 
 2.4 GHz dongle 045e:028e /dev/input/event7 Microsoft X-Box 360 pad: A reference EV_KEY code 304 press/release (2 events); T, FN, rear 1 and rear 2 each zero EV_KEY/EV_MSC events during respective 8-second windows. No exclusive grab or remapping. Does not exclude raw USB report changes or other event types/interfaces. Next compare inbound dongle USB reports in labelled windows using existing usbmon access, no device writes. A05b unchanged.
+
+
+## A07.2 — raw dongle input reports
+
+Passive usbmon 3u, ZhiXu 045e:028e bus 3 device 22. Six 8-second windows: baseline 4174 identical zero-state reports; A 4170 (1152 byte 3=10); T 4167 (86 identical A-bit reports); FN 4166 all baseline; rear1 4169 (51 nonbaseline, 15 distinct nonbaseline reports, changes observed at offsets 10–13 in displayed subset, consistent with right-stick axes); rear2 4173 all baseline. Total 25019 reports. No unique extra-button bit demonstrated. T association may be residual boundary or firmware turbo; rear1 may be macro or incidental motion; causality not established. Parser filters only 20-byte 0014 interrupt IN completions and displays top 12 patterns. Do not implement raw USB monitoring or infer button identity from normal input fields. Next static audit APK button-test notification path for proprietary extra input visibility; no persistent changes or device writes.
